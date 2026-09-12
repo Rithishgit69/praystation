@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
-import { makeSteps } from '../props/Stone';
+import { makeBlocks, makePillar, makeSteps, stackedBlocks } from '../props/Stone';
 import type { UnitBuild, ZoneBuildContext } from '../WorldTypes';
 import { UnitAccumulator, buildRoom, setTriplanar } from './UnitKit';
 
@@ -17,13 +17,36 @@ export function* buildPassage(ctx: ZoneBuildContext): Generator<void, UnitBuild,
   yield* buildRoom(acc, { cx: 76, cz: -112, floorY: y0, width: 10, depth: 12, height: 5, doors: [{ side: 's', offset: 0, width: 3.2, height: 3.8 }], ceiling: true, dark: true });
   yield* buildRoom(acc, { cx: 60, cz: -88, floorY: y0, width: 10, depth: 12, height: 5, doors: [{ side: 'n', offset: 0, width: 3.2, height: 3.8 }], ceiling: true, dark: true });
   for (const [x, z, id] of [[76, -114, 'true'], [60, -86, 'false']] as const) {
-    const altar = new THREE.Mesh(new RoundedBoxGeometry(1.6, 1.0, 1.0, 2, 0.04), ctx.lib.sandstone);
+    const altar = new THREE.Mesh(new RoundedBoxGeometry(1.6, 1.0, 1.0, 2, 0.04), id === 'true' ? ctx.lib.sandstone : ctx.lib.sandstone.clone());
     setTriplanar(altar.geometry, 2, 0.85);
     altar.position.set(x, y0 + 0.5, z);
-    acc.mesh(altar);
-    acc.anchor(`object:passage-altar-${id}`, 'mechanism', x, y0 + 1.0, z, 0, 2.2, { real: id === 'true' });
+    if (id === 'true') acc.mesh(altar);
+    else {
+      altar.castShadow = false; // the false altar casts no shadow: the clue
+      acc.group.add(altar);
+      acc.disposables.push(() => (altar.material as THREE.Material).dispose());
+    }
+    acc.glyph('broken-circle', x, y0 + 1.01, z, new THREE.Vector3(0, 1, 0), 0.5, 0xffd98a, 0.7);
+    acc.anchor(`object:passage-altar-${id}`, 'mechanism', x, y0 + 1.0, z, 0, 2.8, { real: id === 'true' }, altar);
     acc.fire(x, y0 + 1.1, z, { scale: 0.4, intensity: 10, distance: 7 });
   }
+  // More false copies along the corridor: a pillar and a block stack that are not there.
+  const falsePillar = makePillar(ctx.lib, { height: 4.9, rng: ctx.rng.fork(31) });
+  const fpMesh = falsePillar.object as THREE.Mesh;
+  fpMesh.material = ctx.lib.sandstone.clone();
+  fpMesh.castShadow = false;
+  fpMesh.position.set(64, y0, -100);
+  acc.group.add(fpMesh);
+  acc.disposables.push(() => (fpMesh.material as THREE.Material).dispose());
+  acc.anchor('illusion:passage-pillar', 'mechanism', 64, y0 + 1.5, -100, 0, 2.6, { real: false }, fpMesh);
+  const falseBlocks = makeBlocks(ctx.lib, stackedBlocks(ctx.rng.fork(32), 3, 3, 1.1), ctx.rng.fork(33));
+  const fbMesh = falseBlocks.object as THREE.Mesh;
+  fbMesh.material = ctx.lib.sandstone.clone();
+  fbMesh.castShadow = false;
+  fbMesh.position.set(86, y0, -98.5);
+  acc.group.add(fbMesh);
+  acc.disposables.push(() => (fbMesh.material as THREE.Material).dispose());
+  acc.anchor('illusion:passage-blocks', 'mechanism', 86, y0 + 0.8, -98.5, 0, 2.6, { real: false }, fbMesh);
   yield;
   // Segment B: descending stair south-east to floor -2, then corridor to the moon chamber door.
   acc.place(makeSteps(ctx.lib, { width: 4.4, count: 16, rise: 0.245, run: 0.5, rng: ctx.rng.fork(8) }), 96, -2, -100 + 8, Math.PI); // rises toward +Z: from y=-2 at z=-92 up to 1.92 at z=-100

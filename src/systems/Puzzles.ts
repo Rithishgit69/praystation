@@ -5,7 +5,7 @@ import type { WorldStreamer } from '@/world/WorldStreamer';
 import type { Anchor } from '@/world/WorldTypes';
 import { gameStore } from '@/state/store';
 import puzzleData from '@data/puzzles/puzzles.json';
-import type { InteractionSystem } from './Interaction';
+import type { InteractionHandler, InteractionSystem } from './Interaction';
 import type { DoorSystem } from './Doors';
 import type { Journal } from '@/ui/Journal';
 import type { Subtitles } from '@/ui/Subtitles';
@@ -21,6 +21,8 @@ export interface PuzzleDef {
   anchors: string[];
   solution: number[];
   requiresMoon?: MoonState;
+  /** The puzzle is inert (no prompts, no solve) until this flag is set. */
+  requiresFlag?: string;
   clueText: string;
   reward: { flags: string[]; doors?: string[]; journal: string[]; line?: string };
 }
@@ -35,6 +37,7 @@ export const PUZZLES = puzzleData as PuzzleDef[];
 export class PuzzleSystem implements System {
   readonly name = 'puzzles';
   private readonly sequence = new Map<string, number[]>();
+  readonly handlers = new Map<string, InteractionHandler>();
 
   constructor(
     private readonly engine: Engine,
@@ -53,7 +56,12 @@ export class PuzzleSystem implements System {
     return gameStore.getState().flags[`puzzle-solved:${id}`] === true;
   }
 
+  private ready(p: PuzzleDef): boolean {
+    return !p.requiresFlag || gameStore.getState().flags[p.requiresFlag] === true;
+  }
+
   private solve(p: PuzzleDef): void {
+    if (!this.ready(p)) return;
     const s = gameStore.getState();
     s.setFlag(`puzzle-solved:${p.id}`, true);
     for (const f of p.reward.flags) s.setFlag(f, true);
@@ -71,11 +79,16 @@ export class PuzzleSystem implements System {
 
   private bind(p: PuzzleDef): void {
     const index = (a: Anchor): number => p.anchors.indexOf(a.id);
+    const register = (id: string, h: InteractionHandler): void => {
+      const wrapped: InteractionHandler = { label: (a) => (this.ready(p) ? h.label(a) : null), onInteract: (a) => h.onInteract(a) };
+      this.handlers.set(id, wrapped);
+      this.interaction.register(id, wrapped);
+    };
     switch (p.type) {
       case 'symbol-sequence':
       case 'bell-sequence':
         for (const id of p.anchors)
-          this.interaction.register(id, {
+          register(id, {
             label: () => (this.isSolved(p.id) ? null : p.type === 'bell-sequence' ? 'Ring the bell' : 'Press the symbol'),
             onInteract: (a) => {
               const seq = this.sequence.get(p.id) ?? [];
@@ -92,7 +105,7 @@ export class PuzzleSystem implements System {
       case 'choose-real':
       case 'observe':
         for (const id of p.anchors)
-          this.interaction.register(id, {
+          register(id, {
             label: () => (this.isSolved(p.id) ? null : p.requiresMoon && this.lighting.moonState !== p.requiresMoon ? null : p.type === 'observe' ? 'Examine' : 'Touch'),
             onInteract: (a) => {
               if (p.solution.includes(index(a))) this.solve(p);
@@ -103,7 +116,7 @@ export class PuzzleSystem implements System {
       case 'mirror-alignment':
       case 'rotation-match':
         for (const id of p.anchors)
-          this.interaction.register(id, {
+          register(id, {
             label: () => (this.isSolved(p.id) ? null : p.type === 'mirror-alignment' ? 'Turn the mirror' : 'Turn the fragment'),
             onInteract: (a) => {
               const i = index(a);
@@ -128,7 +141,7 @@ export class PuzzleSystem implements System {
       case 'rangoli':
       case 'water-flow':
         for (const id of p.anchors)
-          this.interaction.register(id, {
+          register(id, {
             label: () => (this.isSolved(p.id) ? null : p.type === 'rangoli' ? 'Turn the tile' : 'Open the sluice'),
             onInteract: (a) => {
               const i = index(a);

@@ -71,6 +71,8 @@ export class MaterialLibrary {
     this.water = track(new THREE.MeshStandardMaterial({ color: 0x0c1a26, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.86 }));
     this.glowTexture = track(glowSprite(128));
     this.noiseTexture = track(noiseTexture(256));
+    // Murals bake per-pixel and cost ~200 ms each: do it here, behind the title card, never during streaming.
+    for (const scene of ['broken-tusk', 'scribe', 'moon', 'serpent', 'remembrance'] as const) this.mural(scene);
   }
 
   /** Mural material per scene (lazy; each is unique so a waking mural can pulse its own emissive). */

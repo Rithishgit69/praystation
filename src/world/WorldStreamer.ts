@@ -6,10 +6,12 @@ import type { MapRect } from '@/ui/HUD';
 import { SeededRandom, hashString } from '@/util/random';
 import { gameStore } from '@/state/store';
 import type { MaterialLibrary } from './Materials';
+import type { FireEffect } from './fx/Fire';
 import type { Terrain } from './Terrain';
 import type { WorldMap } from './WorldMap';
 import type { Anchor, UnitBuild, ZoneBuildContext, ZoneDef, ZoneId } from './WorldTypes';
 import { buildForestCell } from './zones/Forest';
+import { buildMark } from './zones/UnitKit';
 
 export const CELL_SIZE = 64;
 const BUILD_BUDGET_MS = 3.0;
@@ -67,6 +69,9 @@ export class WorldStreamer implements System {
   private readonly tmp = new THREE.Vector3();
   private lastFocusCell = { ix: NaN, iz: NaN };
   onZoneChange: ((zone: ZoneId) => void) | null = null;
+  private moonState: 'moonlit' | 'shadow' = 'moonlit';
+  /** Steps slower than 8 ms, for the profiler and tests. */
+  readonly slowSteps: Array<{ key: string; step: number; ms: number; mark: string }> = [];
 
   constructor(engine: Engine, lib: MaterialLibrary, terrain: Terrain, world: WorldMap, focus: () => StreamFocus) {
     this.engine = engine;
@@ -86,6 +91,10 @@ export class WorldStreamer implements System {
   }
   get zone(): ZoneId {
     return this.currentZone;
+  }
+  /** Fire effects of a loaded zone unit (empty if not loaded). */
+  unitFires(zone: ZoneId): FireEffect[] {
+    return this.loaded.get(zoneKey(zone))?.build.fires ?? [];
   }
 
   private context(seed: number): ZoneBuildContext {
@@ -136,8 +145,21 @@ export class WorldStreamer implements System {
     return { key: q.key, zone: def.id, gen: def.build(this.context(hashString(q.key))), center, startedAt: performance.now(), step: 0 };
   }
 
+  /** Apply the moon dual-state to every loaded unit (and remember it for units loaded later). */
+  setMoonState(state: 'moonlit' | 'shadow'): void {
+    this.moonState = state;
+    for (const u of this.loaded.values()) this.applyMoon(u.build);
+  }
+
+  private applyMoon(build: UnitBuild): void {
+    if (!build.moonSets) return;
+    for (const o of build.moonSets.moonlit) o.visible = this.moonState === 'moonlit';
+    for (const o of build.moonSets.shadow) o.visible = this.moonState === 'shadow';
+  }
+
   private attach(job: BuildJob, build: UnitBuild): void {
     this.root.add(build.group);
+    this.applyMoon(build);
     if (build.shell) {
       build.shell.visible = false;
       this.root.add(build.shell);
@@ -263,6 +285,7 @@ export class WorldStreamer implements System {
       const r = this.current.gen.next();
       const stepMs = performance.now() - s0;
       const stats = this.engine.profiler.stats;
+      if (stepMs > 8) this.slowSteps.push({ key: this.current.key, step: this.current.step, ms: Math.round(stepMs * 10) / 10, mark: buildMark.label });
       if (stepMs > stats.streamStepMaxMs) {
         stats.streamStepMaxMs = stepMs;
         stats.streamWorstStep = `${this.current.key}#${this.current.step}`;

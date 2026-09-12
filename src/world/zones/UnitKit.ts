@@ -6,7 +6,8 @@ import type { MaterialLibrary } from '../Materials';
 import { FireEffect } from '../fx/Fire';
 import { GroundMist, MoonShaft } from '../fx/Atmosphere';
 import { IvyBuilder } from '../props/Foliage';
-import { makeBlocks, makePillar, makeWallSlab, stackedBlocks } from '../props/Stone';
+import { makeBlocks, makeBrazierPlinth, makePillar, makeWallSlab, stackedBlocks } from '../props/Stone';
+import { glyphDecal, type Glyph } from '../MuralArt';
 import { transformColliders, type ColliderSpec, type PropResult } from '../props/types';
 import type { Anchor, AnchorKind, UnitBuild, UpdateFn, ZoneId } from '../WorldTypes';
 
@@ -16,6 +17,9 @@ export interface FireOpts {
   intensity?: number;
   distance?: number;
 }
+
+/** Name of the build section currently executing (for the streamer's slow-step diagnostics). */
+export const buildMark = { label: '' };
 
 /** Accumulates one streamed unit: props, colliders, fires, anchors; finishes with merged static stone. */
 export class UnitAccumulator {
@@ -27,6 +31,8 @@ export class UnitAccumulator {
   readonly fires: FireEffect[] = [];
   readonly anchors: Anchor[] = [];
   readonly ivy: IvyBuilder;
+  readonly moonlitOnly: THREE.Object3D[] = [];
+  readonly shadowOnly: THREE.Object3D[] = [];
   private readonly cookieGeo = new THREE.PlaneGeometry(1, 1);
   private readonly cookieMat: THREE.MeshBasicMaterial;
 
@@ -38,6 +44,11 @@ export class UnitAccumulator {
     this.ivy = new IvyBuilder(rng.fork(3));
     this.cookieMat = new THREE.MeshBasicMaterial({ map: lib.glowTexture, color: 0xff8a3c, transparent: true, opacity: 0.32, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
     this.disposables.push(() => this.cookieGeo.dispose(), () => this.cookieMat.dispose());
+  }
+
+  /** Label the current build section for diagnostics. */
+  mark(label: string): void {
+    buildMark.label = label;
   }
 
   place(prop: PropResult, x: number, y: number, z: number, ry = 0): THREE.Object3D {
@@ -85,6 +96,13 @@ export class UnitAccumulator {
     return f;
   }
 
+  /** Stone brazier plinth with fire on top. Returns the fire so encounters can dim/relight it. */
+  brazier(x: number, y: number, z: number, o: FireOpts & { tiers?: number } = {}): FireEffect {
+    const b = makeBrazierPlinth(this.lib, { rng: this.rng.fork(Math.round(x * 7 + z * 13)), tiers: o.tiers ?? 2 });
+    this.place(b, x, y, z);
+    return this.fire(x, y + b.fireHeight, z, o);
+  }
+
   /** Baked warm light pool (additive decal) for torches that get no real light. */
   cookie(x: number, y: number, z: number, size: number, rotX = -Math.PI / 2, rotY = 0): void {
     const c = new THREE.Mesh(this.cookieGeo, this.cookieMat);
@@ -92,6 +110,22 @@ export class UnitAccumulator {
     c.rotation.set(rotX, rotY, 0);
     c.scale.setScalar(size);
     this.group.add(c);
+  }
+
+  /** Register an object that exists only in one moon state. */
+  moonOnly(obj: THREE.Object3D, state: 'moonlit' | 'shadow'): void {
+    (state === 'moonlit' ? this.moonlitOnly : this.shadowOnly).push(obj);
+    if (!obj.parent) this.group.add(obj);
+  }
+
+  /** Glyph decal on a surface: `normal` is the face direction; sits 1 cm off the surface. */
+  glyph(glyph: Glyph, x: number, y: number, z: number, normal: THREE.Vector3, size = 0.6, color = 0xffd98a, opacity = 0.85): THREE.Mesh {
+    const m = glyphDecal(glyph, size, color, opacity);
+    m.position.set(x + normal.x * 0.012, y + normal.y * 0.012, z + normal.z * 0.012);
+    m.lookAt(m.position.clone().add(normal));
+    this.group.add(m);
+    this.disposables.push(() => m.material.dispose(), () => m.geometry.dispose());
+    return m;
   }
 
   anchor(id: string, kind: AnchorKind, x: number, y: number, z: number, yaw = 0, radius = 2.2, data?: Record<string, string | number | boolean>, object?: THREE.Object3D): Anchor {
@@ -152,18 +186,22 @@ export class UnitAccumulator {
 
   /** Bakes ivy and merges rigid stone one material per step so the streamer can spread the cost. */
   *finish(): Generator<void, UnitBuild, void> {
+    this.mark('finish:ivy');
     const ivyMesh = this.ivy.build(this.lib);
     if (ivyMesh) this.group.add(ivyMesh);
     yield;
     for (const m of [this.lib.sandstone, this.lib.sandstoneDark, this.lib.flagstone, this.lib.wood, this.lib.iron]) {
+      this.mark('finish:merge');
       // Merge in batches so no single step touches more than ~10 meshes.
       let merged = 0;
       do {
-        merged = mergeStaticChildren(this.group, new Set(), new Set([m]), 6);
+        merged = mergeStaticChildren(this.group, new Set(), new Set([m]), 4);
         if (merged > 0) yield;
       } while (merged > 1);
     }
-    return { group: this.group, colliders: this.colliders, updates: this.updates, disposables: this.disposables, mapRects: this.mapRects, fires: this.fires, anchors: this.anchors };
+    const out: UnitBuild = { group: this.group, colliders: this.colliders, updates: this.updates, disposables: this.disposables, mapRects: this.mapRects, fires: this.fires, anchors: this.anchors };
+    if (this.moonlitOnly.length > 0 || this.shadowOnly.length > 0) out.moonSets = { moonlit: this.moonlitOnly, shadow: this.shadowOnly };
+    return out;
   }
 }
 
@@ -196,6 +234,7 @@ export interface RoomSpec {
  * Walls are built as slabs around each opening; the lintel above a door keeps the room sealed.
  */
 export function* buildRoom(acc: UnitAccumulator, r: RoomSpec): Generator<void, void, void> {
+  acc.mark(`room@${r.cx.toFixed(0)},${r.cz.toFixed(0)}`);
   const t = r.wallThickness ?? 1.2;
   const hw = r.width / 2;
   const hd = r.depth / 2;

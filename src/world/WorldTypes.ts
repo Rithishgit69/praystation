@@ -38,6 +38,8 @@ export interface UnitBuild {
   anchors: Anchor[];
   /** Optional low-detail shell shown beyond the LOD distance. */
   shell?: THREE.Object3D;
+  /** Objects visible only in the moonlit / shadow world state (GDD §10). */
+  moonSets?: { moonlit: THREE.Object3D[]; shadow: THREE.Object3D[] };
 }
 
 export interface ZoneBuildContext {
@@ -65,6 +67,10 @@ export interface ZoneDef {
   fog?: { color: number; density: number };
   /** Fill light for interiors (no sky above); exteriors leave it unset. */
   ambient?: { color: number; intensity: number };
+  /** Additional volumes (corridors, stairs) that count as this zone for membership. */
+  extra?: Array<{ min: THREE.Vector3; max: THREE.Vector3 }>;
+  /** When volumes overlap, the higher priority zone wins membership. */
+  priority?: number;
   build: UnitBuilder;
 }
 

@@ -87,10 +87,20 @@ export class Physics {
     return s;
   }
 
+  /** Handles of every collider containing the point (an anchor's own prop, for sight checks). */
+  collidersAt(point: THREE.Vector3): Set<number> {
+    const out = new Set<number>();
+    this.world.intersectionsWithPoint({ x: point.x, y: point.y, z: point.z }, (c) => {
+      out.add(c.handle);
+      return true;
+    });
+    return out;
+  }
+
   /** Ray query. Returns hit point, normal, distance and the collider. */
-  raycast(origin: THREE.Vector3, dir: THREE.Vector3, maxDist: number, exclude?: RAPIER.Collider): { point: THREE.Vector3; normal: THREE.Vector3; distance: number; collider: RAPIER.Collider } | null {
+  raycast(origin: THREE.Vector3, dir: THREE.Vector3, maxDist: number, exclude?: RAPIER.Collider, predicate?: (c: RAPIER.Collider) => boolean): { point: THREE.Vector3; normal: THREE.Vector3; distance: number; collider: RAPIER.Collider } | null {
     const ray = new RAPIER.Ray({ x: origin.x, y: origin.y, z: origin.z }, { x: dir.x, y: dir.y, z: dir.z });
-    const hit = this.world.castRayAndGetNormal(ray, maxDist, true, undefined, undefined, exclude);
+    const hit = this.world.castRayAndGetNormal(ray, maxDist, true, undefined, undefined, exclude, undefined, predicate);
     if (!hit) return null;
     const p = ray.pointAt(hit.timeOfImpact);
     return {

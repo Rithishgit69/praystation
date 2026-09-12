@@ -66,7 +66,9 @@ export class InteractionSystem implements System {
     const dist = this.toAnchor.length();
     if (dist < 0.3) return true;
     this.toAnchor.divideScalar(dist);
-    const hit = this.engine.physics.raycast(this.eye, this.toAnchor, dist - 0.35, this.player.collider);
+    // Anchors sit on or inside their own props: ignore colliders that contain the anchor point.
+    const own = this.engine.physics.collidersAt(a.position);
+    const hit = this.engine.physics.raycast(this.eye, this.toAnchor, dist - 0.2, this.player.collider, (c) => !own.has(c.handle));
     return hit === null;
   }
 

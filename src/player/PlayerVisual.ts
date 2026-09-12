@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import gsap from 'gsap';
 import type { Engine } from '@/engine/Engine';
 import { gameStore } from '@/state/store';
+import { glowSprite } from '@/world/TextureGen';
 import type { System } from '@/engine/types';
 import { CharacterMesh } from './CharacterMesh';
 import type { PlayerController } from './PlayerController';
@@ -26,7 +27,7 @@ export class PlayerVisual implements System {
     engine.scene.add(this.mesh.root);
     const cage = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.2, 8, 1, true), new THREE.MeshStandardMaterial({ color: 0x3e2d22, roughness: 0.6, metalness: 0.5, side: THREE.DoubleSide }));
     const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.16, 8), new THREE.MeshStandardMaterial({ color: 0xffe6b0, emissive: 0xffb15a, emissiveIntensity: 1.4, transparent: true, opacity: 0.7, roughness: 0.2 }));
-    this.lanternFlame = new THREE.Sprite(new THREE.SpriteMaterial({ color: 0xffb15a, transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+    this.lanternFlame = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowSprite(64), color: 0xffb15a, transparent: true, opacity: 0.35, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
     this.lanternFlame.scale.set(0.6, 0.6, 1);
     this.lanternLight = new THREE.PointLight(0xffb15a, 9, 9, 2);
     this.lantern.add(cage, glass, this.lanternFlame, this.lanternLight);

@@ -55,7 +55,11 @@ export function* buildMemoryTusk(ctx: ZoneBuildContext): Generator<void, UnitBui
   acc.mesh(wall);
   yield;
   // Gold braziers and the memory light.
-  for (const [dx, dz] of [[-12, -8], [12, -8], [-20, 10], [20, 10]] as const) acc.fire(cx + dx, 1.35, cz + dz, { scale: 0.9, intensity: 30, distance: 14 });
+  const braziers = [[-12, -8], [12, -8], [-20, 10], [20, 10]] as const;
+  braziers.forEach(([dx, dz], i) => {
+    acc.brazier(cx + dx, 0, cz + dz, { scale: 0.9, intensity: 30, distance: 14, tiers: 3 });
+    acc.anchor(`memory:brazier-${i}`, 'mechanism', cx + dx, 1.2, cz + dz, 0, 3.0, { index: i });
+  });
   acc.mist([{ x: cx, y: 0.6, z: cz + 20, size: 70, opacity: 0.22 }, { x: cx - 30, y: 2, z: cz, size: 60, opacity: 0.2 }, { x: cx + 30, y: 2, z: cz, size: 60, opacity: 0.2 }], 0xc79a52);
   acc.anchor('memory:tusk-gate', 'trigger', cx, 2, cz - 30, 0, 6);
   acc.anchor('memory:tusk-arena', 'trigger', cx, 0, cz, 0, 30);

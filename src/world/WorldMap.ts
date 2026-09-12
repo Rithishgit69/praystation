@@ -67,7 +67,7 @@ export class WorldMap {
       { id: 'shrine:gate', title: 'Temple gate', arrive: v(0, 0, 76), yaw: 0 },
       { id: 'shrine:courtyard', title: 'Outer courtyard', arrive: v(1.6, 1.0, 2.6), yaw: 0 },
       { id: 'shrine:moon', title: 'Moon chamber', arrive: v(136, -1.9, -156), yaw: Math.PI / 4 },
-      { id: 'shrine:tunnels', title: 'Serpent shrine', arrive: v(-32, -13.9, -228), yaw: 0 },
+      { id: 'shrine:tunnels', title: 'Evidence chamber', arrive: v(-112, -13.9, -258), yaw: Math.PI },
       { id: 'shrine:library', title: 'Ancient library', arrive: v(-80, -9.9, -82), yaw: 0 },
       { id: 'shrine:deep', title: 'Underground shrine', arrive: v(-22, -19.9, -288), yaw: 0 },
     );
@@ -79,9 +79,9 @@ export class WorldMap {
       { id: 'hall', title: 'Hall of Memories', min: v(-34, -6, -134), max: v(44, 60, -52), interior: true, visibleFrom: ['courtyard', 'passage', 'forest'], fog: { color: 0x0b1424, density: 0.034 }, ambient: { color: 0x34507a, intensity: 1.5 }, build: buildHall },
       { id: 'passage', title: 'Corrupted Passage', min: v(44, -8, -142), max: v(152, 40, -60), interior: true, visibleFrom: ['hall', 'moon'], fog: { color: 0x090d16, density: 0.06 }, ambient: { color: 0x2a2a44, intensity: 1.3 }, build: buildPassage },
       { id: 'moon', title: 'Moon Chamber', min: v(60, -8, -244), max: v(160, 60, -140), interior: true, visibleFrom: ['passage', 'tunnels', 'forest'], fog: { color: 0x0f2038, density: 0.03 }, ambient: { color: 0x34507a, intensity: 0.8 }, build: buildMoonChamber },
-      { id: 'tunnels', title: 'Serpent Tunnels', min: v(-150, -22, -284), max: v(160, -4, -150), interior: true, visibleFrom: ['moon', 'library'], fog: { color: 0x05090f, density: 0.07 }, ambient: { color: 0x22303c, intensity: 1.4 }, build: buildTunnels },
-      { id: 'library', title: 'Ancient Library', min: v(-165, -18, -160), max: v(-58, -3, -46), interior: true, visibleFrom: ['tunnels', 'shrine'], fog: { color: 0x0a0c10, density: 0.05 }, ambient: { color: 0x3a3226, intensity: 1.4 }, build: buildLibrary },
-      { id: 'shrine', title: 'Underground Shrine', min: v(-70, -28, -356), max: v(50, -6, -150), interior: true, visibleFrom: ['library', 'sanctum'], fog: { color: 0x07060c, density: 0.055 }, ambient: { color: 0x2c2238, intensity: 1.4 }, build: buildShrine },
+      { id: 'tunnels', title: 'Serpent Tunnels', min: v(-150, -22, -320), max: v(160, -4, -150), interior: true, visibleFrom: ['moon', 'library'], fog: { color: 0x05090f, density: 0.07 }, ambient: { color: 0x22303c, intensity: 1.4 }, extra: [{ min: v(-124, -16, -250), max: v(-98, -4, -66) }], priority: 1, build: buildTunnels },
+      { id: 'library', title: 'Ancient Library', min: v(-165, -18, -134), max: v(-58, -3, -46), interior: true, visibleFrom: ['tunnels', 'shrine'], fog: { color: 0x0a0c10, density: 0.05 }, ambient: { color: 0x3a3226, intensity: 1.4 }, priority: 2, build: buildLibrary },
+      { id: 'shrine', title: 'Underground Shrine', min: v(-70, -28, -356), max: v(50, -15.5, -150), interior: true, visibleFrom: ['library', 'sanctum'], fog: { color: 0x07060c, density: 0.055 }, ambient: { color: 0x2c2238, intensity: 1.4 }, extra: [{ min: v(-52, -22, -262), max: v(-36, -7, -84) }, { min: v(-74, -12, -94), max: v(-42, -4, -82) }], priority: 1, build: buildShrine },
       { id: 'memory-tusk', title: 'Memory: The Broken Tusk', min: v(1950, -10, -60), max: v(2050, 60, 60), interior: true, visibleFrom: [], fog: { color: 0xc99a58, density: 0.02 }, ambient: { color: 0xb08a50, intensity: 0.9 }, build: buildMemoryTusk },
       { id: 'sanctum', title: 'Sealed Sanctum', min: v(-58, -34, -456), max: v(58, -10, -352), interior: true, visibleFrom: ['shrine'], fog: { color: 0x0b1020, density: 0.028 }, ambient: { color: 0x34507a, intensity: 1.5 }, build: buildSanctum },
     ];
@@ -98,15 +98,22 @@ export class WorldMap {
     const z0 = iz0 * CELL_SIZE;
     const x1 = (ix1 + 1) * CELL_SIZE;
     const z1 = (iz1 + 1) * CELL_SIZE;
-    return this.zones.filter((z) => z.max.x >= x0 && z.min.x <= x1 && z.max.z >= z0 && z.min.z <= z1);
+    const hit = (min: THREE.Vector3, max: THREE.Vector3): boolean => max.x >= x0 && min.x <= x1 && max.z >= z0 && min.z <= z1;
+    return this.zones.filter((z) => hit(z.min, z.max) || (z.extra ?? []).some((b) => hit(b.min, b.max)));
   }
 
-  /** Innermost zone containing a point (interiors win over exteriors). */
+  /** Zone containing a point: highest priority wins, then interiors over exteriors, then declaration order. */
   zoneAt(p: THREE.Vector3): ZoneId | null {
     let best: ZoneDef | null = null;
+    const inside = (min: THREE.Vector3, max: THREE.Vector3): boolean => p.x >= min.x && p.x <= max.x && p.z >= min.z && p.z <= max.z && p.y >= min.y && p.y <= max.y;
     for (const z of this.zones) {
-      if (p.x < z.min.x || p.x > z.max.x || p.z < z.min.z || p.z > z.max.z || p.y < z.min.y || p.y > z.max.y) continue;
-      if (!best || (z.interior && !best.interior)) best = z;
+      if (!inside(z.min, z.max) && !(z.extra ?? []).some((b) => inside(b.min, b.max))) continue;
+      if (!best) best = z;
+      else {
+        const pb = best.priority ?? 0;
+        const pz = z.priority ?? 0;
+        if (pz > pb || (pz === pb && z.interior && !best.interior)) best = z;
+      }
     }
     return best ? best.id : null;
   }

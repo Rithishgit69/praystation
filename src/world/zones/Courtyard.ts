@@ -212,6 +212,7 @@ export function* buildCourtyard(ctx: ZoneBuildContext): Generator<void, UnitBuil
   acc.wall(-38, -12, -38, 30, 0, 5.5, 1.4);
   acc.wall(38, -50, 38, -20, 0, 5.5, 1.4);
   acc.wall(38, -12, 38, 30, 0, 5.5, 1.4);
+  acc.moonOnly(acc.glyph('broken-circle', -6.0, 3.2, -8.3, new THREE.Vector3(0, 0, 1), 0.9, 0xa9c6f0, 0.55), 'moonlit');
   acc.anchor('shrine:courtyard', 'shrine', -4.6, 1.6, -3.2, 0, 2.4, { lit: ctx.flags['shrine:courtyard'] === true });
   acc.anchor('trigger:courtyard-enter', 'trigger', 1.6, 1.0, 2.6, 0, 6);
   yield;

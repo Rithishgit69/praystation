@@ -34,10 +34,24 @@ export function* buildShrine(ctx: ZoneBuildContext): Generator<void, UnitBuild, 
   altar.position.set(cx, y + 0.96 + 0.7, cz);
   acc.mesh(altar);
   acc.anchor('encounter:corruption', 'trigger', cx, y + 0.96, cz, 0, 8, { chapter: 'ch6' }, altar);
+  // Three memory seals around the dais; each bears the remembrance mark the corruption tried to erase.
+  const sealGeo = new THREE.CylinderGeometry(0.9, 1.0, 0.5, 12);
+  for (let i = 0; i < 3; i++) {
+    const a = -Math.PI / 2 + (i - 1) * (Math.PI * 2) / 3;
+    const sx = cx + Math.cos(a) * 12;
+    const sz = cz + Math.sin(a) * 12;
+    const seal = new THREE.Mesh(sealGeo, ctx.lib.sandstone);
+    setTriplanar(seal.geometry, 2, 0.9);
+    seal.position.set(sx, y + 0.25, sz);
+    acc.mesh(seal, false);
+    const lit = ctx.flags[`seal:${i}`] === true;
+    acc.glyph('broken-circle', sx, y + 0.51, sz, new THREE.Vector3(0, 1, 0), 1.1, lit ? 0xffd98a : 0x6a4a8a, lit ? 0.9 : 0.35);
+    acc.anchor(`seal:${i}`, 'mechanism', sx, y + 0.6, sz, 0, 2.4, { index: i, lit }, seal);
+  }
   // Corrupted brazier: dark flames until cleansed.
   const cleansed = ctx.flags['shrine:cleansed'] === true;
   acc.fire(cx, y + 0.96 + 1.5, cz, { scale: cleansed ? 1 : 1.3, intensity: cleansed ? 40 : 18, distance: 14 });
-  for (const [dx, dz] of [[-22, -22], [22, -22], [-22, 22], [22, 22]] as const) acc.fire(cx + dx, y + 1.35, cz + dz, { scale: 0.7, intensity: 20, distance: 10 });
+  for (const [dx, dz] of [[-22, -22], [22, -22], [-22, 22], [22, 22]] as const) acc.brazier(cx + dx, y, cz + dz, { scale: 0.8, intensity: 22, distance: 10 });
   // Sealed sanctum door (north).
   const sealed = ctx.flags['door:shrine-sanctum'] !== true;
   const slab = new THREE.Mesh(new THREE.BoxGeometry(4.2, 5, 0.6), ctx.lib.sandstoneDark);

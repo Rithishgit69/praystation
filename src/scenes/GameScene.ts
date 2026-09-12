@@ -27,6 +27,10 @@ import { MemoryPortal, type FogOverride, type MemoryController } from '@/systems
 import { Story } from '@/systems/Story';
 import { WaypointTrail } from '@/systems/WaypointTrail';
 import { BrokenTuskEncounter } from '@/encounters/BrokenTusk';
+import { VakratundaEncounter } from '@/encounters/Vakratunda';
+import { EncounterRunner } from '@/systems/EncounterRunner';
+import { IllusionSystem } from '@/systems/Illusions';
+import { StoryChapters } from '@/systems/StoryChapters';
 import { gameStore } from '@/state/store';
 
 const EXTERIOR_FOG = { color: 0x0f2038, density: 0.022 };
@@ -42,6 +46,9 @@ class WorldAtmosphere implements System {
   private readonly tmpColor = new THREE.Color();
   /** Dark travel veil 0..1 (fast travel). */
   veil = 0;
+  /** Sunrise 0..1 (finale): fog to pale warm, background to dawn. */
+  dawn = 0;
+  private readonly dawnColor = new THREE.Color(0xd9b48a);
   overrideProvider: (() => FogOverride | null) | null = null;
 
   constructor(
@@ -72,6 +79,11 @@ class WorldAtmosphere implements System {
       color = override.color;
       density = override.density;
       k = 1 - Math.exp(-6 * dt);
+    }
+    if (this.dawn > 0.001) {
+      this.tmpColor.copy(color).lerp(this.dawnColor, this.dawn);
+      color = this.tmpColor;
+      density = density * (1 - this.dawn * 0.6);
     }
     if (this.veil > 0.001) {
       this.tmpColor.copy(color).lerp(new THREE.Color(0x03060c), this.veil);
@@ -144,16 +156,14 @@ export class GameScene implements SceneModule {
     const doors = new DoorSystem(engine, streamer, audio);
     const chapters = new ChapterManager(engine, journal, subtitles);
     const encounterContext = { engine, player: controller, visual, rig: cam, hud, audio, subtitles };
-    const factory = (id: string): MemoryController => {
-      // Every memory currently resolves through the Broken Tusk encounter framework; later chapters plug
-      // their own controllers in here without touching the portal.
-      void id;
-      return new BrokenTuskEncounter(encounterContext);
-    };
+    const factory = (id: string): MemoryController => (id === 'vakratunda' ? new VakratundaEncounter(encounterContext, lib, streamer, lighting) : new BrokenTuskEncounter(encounterContext));
     const portal = new MemoryPortal(engine, streamer, controller, visual, cam, lighting, audio, doors, journal, subtitles, interaction, factory, lib);
     atmosphere.overrideProvider = () => portal.fogOverride;
     const puzzles = new PuzzleSystem(engine, streamer, interaction, audio, doors, journal, subtitles, lighting);
     const story = new Story(engine, streamer, interaction, chapters, portal, audio, visual, journal, subtitles, lighting, doors, lib);
+    const runner = new EncounterRunner();
+    const illusions = new IllusionSystem(engine, streamer, controller, audio, subtitles);
+    const storyChapters = new StoryChapters(engine, streamer, interaction, chapters, audio, visual, subtitles, lighting, doors, puzzles, runner, encounterContext, lib, moon, (t) => (atmosphere.dawn = t));
     const save = new SaveSystem(engine, controller, cam);
     this.save = save;
     const travel = (shrineId: string): void => {
@@ -184,7 +194,8 @@ export class GameScene implements SceneModule {
       onLand: (_surface, position, hard) => audio.land(hard, position),
     };
 
-    for (const s of [controller, streamer, lighting, story, interaction, puzzles, doors, portal, chapters, visual, atmosphere, audio, save, subtitles, journal, map, pause, trail, cam, hud]) engine.addSystem(s);
+    lighting.onMoonChange((state) => streamer.setMoonState(state));
+    for (const s of [controller, streamer, lighting, story, storyChapters, interaction, puzzles, doors, portal, runner, illusions, chapters, visual, atmosphere, audio, save, subtitles, journal, map, pause, trail, cam, hud]) engine.addSystem(s);
     cam.snapBehind();
     audio.setZone(streamer.zone);
 
@@ -206,6 +217,8 @@ export class GameScene implements SceneModule {
       window.__eka.save = () => save.save();
       window.__eka.anchors = () => Array.from(streamer.anchors.values()).map((a) => ({ id: a.id, kind: a.kind, x: a.position.x, y: a.position.y, z: a.position.z }));
       window.__eka.portal = { inMemory: () => portal.inMemory };
+      window.__eka.slowSteps = () => streamer.slowSteps;
+      window.__eka.probe = () => ({ focused: interaction.focused?.id ?? null, suppressed: interaction.suppressed, moon: lighting.moonState, pinned: lighting.pinned, zone: streamer.zone, locked: controller.movementLocked, chapter: gameStore.getState().chapter, loop: chapters.loop });
     }
   }
 

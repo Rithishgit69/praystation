@@ -86,7 +86,7 @@ export interface BlockOptions {
 
 /** Single sandstone ashlar with bevelled edges. Origin at the block centre. */
 export const makeBlockGeometry = (o: BlockOptions): THREE.BufferGeometry => {
-  const g = new RoundedBoxGeometry(o.size.x, o.size.y, o.size.z, 2, Math.min(0.05, Math.min(o.size.x, o.size.y, o.size.z) * 0.12));
+  const g = new RoundedBoxGeometry(o.size.x, o.size.y, o.size.z, 1, Math.min(0.05, Math.min(o.size.x, o.size.y, o.size.z) * 0.12));
   jitterVertices(g, o.rng, 0.02);
   g.computeVertexNormals();
   g.translate(0, o.size.y / 2, 0);

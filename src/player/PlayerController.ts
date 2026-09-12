@@ -205,7 +205,7 @@ export class PlayerController implements System, CameraFollowTarget {
       else if (sprinting) targetSpeed = t.sprintSpeed;
       else if (mag < 0.55) targetSpeed = t.walkSpeed;
       else targetSpeed = t.jogSpeed;
-      targetSpeed *= this.speedScale;
+      targetSpeed *= this.speedScale * (this.surface === 'water' ? 0.72 : 1);
       // Analog: scale walk/jog by stick deflection so partial pushes creep.
       if (!sprinting && !this.crouching && mag < 0.55) targetSpeed *= clamp(mag / 0.55, 0.35, 1);
     }

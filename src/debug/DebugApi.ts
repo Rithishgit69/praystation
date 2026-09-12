@@ -28,7 +28,10 @@ export interface EkaDebugApi {
   save: (() => boolean) | null;
   anchors: (() => Array<{ id: string; kind: string; x: number; y: number; z: number }>) | null;
   portal: { inMemory(): boolean } | null;
-  encounter: (() => { phase: string; attackIndex: number; stage: string; kind: string; resolve: number; timer: number }) | null;
+  encounter: (() => Record<string, unknown>) | null;
+  slowSteps: (() => Array<{ key: string; step: number; ms: number; mark: string }>) | null;
+  /** Focused anchor id, moon state, zone: for scripted tests. */
+  probe: (() => Record<string, unknown>) | null;
 }
 
 declare global {
@@ -59,6 +62,8 @@ export const installDebugApi = (engine: Engine): EkaDebugApi => {
     anchors: null,
     portal: null,
     encounter: null,
+    slowSteps: null,
+    probe: null,
   };
   window.__eka = api;
   engine.events.on('sceneloaded', (id) => {

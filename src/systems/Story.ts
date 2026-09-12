@@ -82,7 +82,6 @@ export class Story implements System {
     interaction.onTrigger('trigger:library-enter', () => chapters.beat('beat:library-enter', 'ch5-enter'));
     interaction.onTrigger('trigger:shrine-enter', () => chapters.beat('beat:shrine-enter', 'ch6-enter'));
     interaction.onTrigger('trigger:sanctum-enter', () => chapters.beat('beat:sanctum-enter', 'finale-enter'));
-    interaction.onTrigger('lore:temple-purpose', () => chapters.beat('beat:evidence', 'ch4-twist'));
   }
 
   /** §22 07:00–10:00 — the lantern goes out and a lamp the traveller did not light answers. */
@@ -132,6 +131,7 @@ export class Story implements System {
         this.journal.unlock(text);
         if (a.id === 'lore:inscription-first') chapters.beat('beat:inscription-read');
         if (a.id === 'lore:milestone') this.journal.unlock('pro-milestone');
+        if (a.id === 'lore:temple-purpose') chapters.beat('beat:evidence', 'ch4-twist');
         chapters.setLoop('DISCOVER_CLUE');
       },
     });

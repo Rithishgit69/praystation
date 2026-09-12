@@ -1,30 +1,290 @@
 [
-  { "id": "pro-arrive", "speaker": "traveller", "text": "Nearly midnight. The forest goes quiet here.", "seconds": 4 },
-  { "id": "pro-bell", "speaker": "traveller", "text": "A bell. There is no one out here.", "seconds": 3.5 },
-  { "id": "pro-gate", "speaker": "traveller", "text": "So it is real.", "seconds": 3 },
-  { "id": "pro-courtyard", "speaker": "traveller", "text": "The braziers are still burning. Someone keeps them.", "seconds": 4 },
-  { "id": "pro-hall", "speaker": "traveller", "text": "The roof has fallen in places. Moonlight gets through.", "seconds": 4 },
-  { "id": "pro-mural", "speaker": "traveller", "text": "A single tusk. And a warrior with an axe.", "seconds": 4 },
-  { "id": "pro-lantern", "speaker": "traveller", "text": "My lantern—", "seconds": 2 },
-  { "id": "pro-diya", "speaker": "traveller", "text": "…and a lamp I did not light.", "seconds": 3.5 },
-  { "id": "pro-path", "speaker": "traveller", "text": "The lamps lead somewhere.", "seconds": 3 },
-  { "id": "pro-inscription", "speaker": "temple", "text": "What is remembered here is not lost. Under the moon, touch, and know.", "seconds": 5.5 },
-  { "id": "ch1-touch", "speaker": "traveller", "text": "The stone is warm.", "seconds": 3 },
-  { "id": "ch1-gateway", "speaker": "temple", "text": "A gateway on the mountain. A warrior who will not be refused. Hold.", "seconds": 5 },
-  { "id": "ch1-restraint", "speaker": "temple", "text": "Not every blow must be answered.", "seconds": 4 },
-  { "id": "ch1-return", "speaker": "traveller", "text": "The passage. It was sealed before.", "seconds": 4 },
-  { "id": "ch1-recognised", "speaker": "temple", "text": "The temple remembers what you allowed.", "seconds": 4.5 },
-  { "id": "ch2-enter", "speaker": "traveller", "text": "This room… I have been in this room already.", "seconds": 4 },
-  { "id": "ch2-light", "speaker": "temple", "text": "What envies the real cannot bear the light.", "seconds": 4.5 },
-  { "id": "ch3-enter", "speaker": "traveller", "text": "Open to the sky. The whole chamber is waiting for the moon.", "seconds": 4.5 },
-  { "id": "ch3-shadow", "speaker": "temple", "text": "In shadow, other doors.", "seconds": 3.5 },
-  { "id": "ch4-carving", "speaker": "traveller", "text": "The carving goes all the way around. It is moving.", "seconds": 4 },
-  { "id": "ch4-twist", "speaker": "traveller", "text": "It was guarding this. Not hunting me.", "seconds": 4 },
-  { "id": "ch5-enter", "speaker": "temple", "text": "Understand each line before you write it.", "seconds": 4.5 },
-  { "id": "ch6-enter", "speaker": "temple", "text": "Here it feeds. Here it is named: the Forgetting.", "seconds": 5 },
-  { "id": "finale-enter", "speaker": "traveller", "text": "Untouched. All this time.", "seconds": 4 },
-  { "id": "finale-restore", "speaker": "temple", "text": "Place each memory where it belongs.", "seconds": 4.5 },
-  { "id": "finale-end", "speaker": "narration", "text": "At sunrise, the temple was not dead. It was kept.", "seconds": 6 },
-  { "id": "shrine-lit", "speaker": "narration", "text": "Shrine lit. You can return here from the map.", "seconds": 3.5 },
-  { "id": "puzzle-wrong", "speaker": "temple", "text": "The order is written elsewhere. Look again.", "seconds": 3.5 }
+  {
+    "id": "pro-arrive",
+    "speaker": "traveller",
+    "text": "Nearly midnight. The forest goes quiet here.",
+    "seconds": 4
+  },
+  {
+    "id": "pro-bell",
+    "speaker": "traveller",
+    "text": "A bell. There is no one out here.",
+    "seconds": 3.5
+  },
+  {
+    "id": "pro-gate",
+    "speaker": "traveller",
+    "text": "So it is real.",
+    "seconds": 3
+  },
+  {
+    "id": "pro-courtyard",
+    "speaker": "traveller",
+    "text": "The braziers are still burning. Someone keeps them.",
+    "seconds": 4
+  },
+  {
+    "id": "pro-hall",
+    "speaker": "traveller",
+    "text": "The roof has fallen in places. Moonlight gets through.",
+    "seconds": 4
+  },
+  {
+    "id": "pro-mural",
+    "speaker": "traveller",
+    "text": "A single tusk. And a warrior with an axe.",
+    "seconds": 4
+  },
+  {
+    "id": "pro-lantern",
+    "speaker": "traveller",
+    "text": "My lantern—",
+    "seconds": 2
+  },
+  {
+    "id": "pro-diya",
+    "speaker": "traveller",
+    "text": "…and a lamp I did not light.",
+    "seconds": 3.5
+  },
+  {
+    "id": "pro-path",
+    "speaker": "traveller",
+    "text": "The lamps lead somewhere.",
+    "seconds": 3
+  },
+  {
+    "id": "pro-inscription",
+    "speaker": "temple",
+    "text": "What is remembered here is not lost. Under the moon, touch, and know.",
+    "seconds": 5.5
+  },
+  {
+    "id": "ch1-touch",
+    "speaker": "traveller",
+    "text": "The stone is warm.",
+    "seconds": 3
+  },
+  {
+    "id": "ch1-gateway",
+    "speaker": "temple",
+    "text": "A gateway on the mountain. A warrior who will not be refused. Hold.",
+    "seconds": 5
+  },
+  {
+    "id": "ch1-restraint",
+    "speaker": "temple",
+    "text": "Not every blow must be answered.",
+    "seconds": 4
+  },
+  {
+    "id": "ch1-return",
+    "speaker": "traveller",
+    "text": "The passage. It was sealed before.",
+    "seconds": 4
+  },
+  {
+    "id": "ch1-recognised",
+    "speaker": "temple",
+    "text": "The temple remembers what you allowed.",
+    "seconds": 4.5
+  },
+  {
+    "id": "ch2-enter",
+    "speaker": "traveller",
+    "text": "This room… I have been in this room already.",
+    "seconds": 4
+  },
+  {
+    "id": "ch2-light",
+    "speaker": "temple",
+    "text": "What envies the real cannot bear the light.",
+    "seconds": 4.5
+  },
+  {
+    "id": "ch3-enter",
+    "speaker": "traveller",
+    "text": "Open to the sky. The whole chamber is waiting for the moon.",
+    "seconds": 4.5
+  },
+  {
+    "id": "ch3-shadow",
+    "speaker": "temple",
+    "text": "In shadow, other doors.",
+    "seconds": 3.5
+  },
+  {
+    "id": "ch4-carving",
+    "speaker": "traveller",
+    "text": "The carving goes all the way around. It is moving.",
+    "seconds": 4
+  },
+  {
+    "id": "ch4-twist",
+    "speaker": "traveller",
+    "text": "It was guarding this. Not hunting me.",
+    "seconds": 4
+  },
+  {
+    "id": "ch5-enter",
+    "speaker": "temple",
+    "text": "Understand each line before you write it.",
+    "seconds": 4.5
+  },
+  {
+    "id": "ch6-enter",
+    "speaker": "temple",
+    "text": "Here it feeds. Here it is named: the Forgetting.",
+    "seconds": 5
+  },
+  {
+    "id": "finale-enter",
+    "speaker": "traveller",
+    "text": "Untouched. All this time.",
+    "seconds": 4
+  },
+  {
+    "id": "finale-restore",
+    "speaker": "temple",
+    "text": "Place each memory where it belongs.",
+    "seconds": 4.5
+  },
+  {
+    "id": "finale-end",
+    "speaker": "narration",
+    "text": "At sunrise, the temple was not dead. It was kept.",
+    "seconds": 6
+  },
+  {
+    "id": "shrine-lit",
+    "speaker": "narration",
+    "text": "Shrine lit. You can return here from the map.",
+    "seconds": 3.5
+  },
+  {
+    "id": "puzzle-wrong",
+    "speaker": "temple",
+    "text": "The order is written elsewhere. Look again.",
+    "seconds": 3.5
+  },
+  {
+    "id": "ch2-dark",
+    "speaker": "traveller",
+    "text": "Too dark to tell what is real. The lamps in the hall—",
+    "seconds": 4
+  },
+  {
+    "id": "ch2-illusion",
+    "speaker": "temple",
+    "text": "Three stand before you. Two are envy's copies. Touch the one that holds.",
+    "seconds": 5.5
+  },
+  {
+    "id": "ch2-envy",
+    "speaker": "temple",
+    "text": "It takes what it cannot have. Give the fires back their light.",
+    "seconds": 5
+  },
+  {
+    "id": "ch2-rage",
+    "speaker": "temple",
+    "text": "Denied, it rages. Do not answer it. Step aside; leap the ground it shakes.",
+    "seconds": 5.5
+  },
+  {
+    "id": "ch2-resolution",
+    "speaker": "temple",
+    "text": "It kneels. Release it; envy unmade is not an enemy.",
+    "seconds": 5
+  },
+  {
+    "id": "ch2-done",
+    "speaker": "traveller",
+    "text": "The passage is itself again. The memories here are being changed on purpose.",
+    "seconds": 5
+  },
+  {
+    "id": "ch3-aligned",
+    "speaker": "temple",
+    "text": "The lens is full. Now wait for the shadow.",
+    "seconds": 4
+  },
+  {
+    "id": "ch3-roof",
+    "speaker": "traveller",
+    "text": "A wheel. The whole roof moves with it.",
+    "seconds": 3.5
+  },
+  {
+    "id": "ch4-awake",
+    "speaker": "temple",
+    "text": "Run.",
+    "seconds": 2.5
+  },
+  {
+    "id": "ch5-missing",
+    "speaker": "traveller",
+    "text": "One fragment is missing from its place.",
+    "seconds": 3.5
+  },
+  {
+    "id": "ch5-found",
+    "speaker": "traveller",
+    "text": "Here. The missing piece.",
+    "seconds": 3
+  },
+  {
+    "id": "ch5-placed",
+    "speaker": "temple",
+    "text": "Now the line can be read as one.",
+    "seconds": 4
+  },
+  {
+    "id": "ch6-locked",
+    "speaker": "temple",
+    "text": "Not yet. What feeds here can only be named by one who has seen every memory.",
+    "seconds": 5.5
+  },
+  {
+    "id": "ch6-named",
+    "speaker": "temple",
+    "text": "Here it feeds. It has no story of its own: only what it takes. Name it: the Forgetting.",
+    "seconds": 6
+  },
+  {
+    "id": "ch6-seals",
+    "speaker": "temple",
+    "text": "It has hidden the moon. Press the three marks it tried to erase.",
+    "seconds": 5
+  },
+  {
+    "id": "ch6-moon",
+    "speaker": "temple",
+    "text": "Moonlight. It cannot hold what is remembered in the light.",
+    "seconds": 5
+  },
+  {
+    "id": "ch6-rage",
+    "speaker": "temple",
+    "text": "It thrashes. Step aside. Leap the ground.",
+    "seconds": 4
+  },
+  {
+    "id": "ch6-resolution",
+    "speaker": "temple",
+    "text": "It is small now. Restore the altar.",
+    "seconds": 4
+  },
+  {
+    "id": "ch6-cleansed",
+    "speaker": "traveller",
+    "text": "Quiet. The sanctum door is open.",
+    "seconds": 4
+  },
+  {
+    "id": "finale-locked",
+    "speaker": "temple",
+    "text": "Six memories, in the order the temple learned them.",
+    "seconds": 4.5
+  }
 ]

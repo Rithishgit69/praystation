@@ -101,6 +101,10 @@ export class HUD implements System {
   setThreat(v: boolean): void {
     this.threat = v;
   }
+  /** Hide the whole HUD for a cinematic (independent of the player's Cinematic Mode setting). */
+  setCinematic(v: boolean): void {
+    this.root.classList.toggle('cinematic', v || gameStore.getState().settings.cinematicMode);
+  }
   /** Encounter resolve (0–100) shown only during action sequences; null hides it. */
   setResolve(v: number | null): void {
     this.resolve.hidden = v === null;

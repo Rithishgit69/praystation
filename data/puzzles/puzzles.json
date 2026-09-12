@@ -56,10 +56,10 @@
       "mechanism:mirror-3"
     ],
     "solution": [
-      0,
-      2,
-      4,
-      6
+      5,
+      3,
+      1,
+      7
     ],
     "requiresMoon": "moonlit",
     "clueText": "Each mirror must face the lens while the moon is clear.",
@@ -70,7 +70,7 @@
       "journal": [
         "ch3-inspiration"
       ],
-      "line": "ch3-shadow"
+      "line": "ch3-aligned"
     }
   },
   {
@@ -130,8 +130,9 @@
       "journal": [
         "ch5-inspiration"
       ],
-      "line": "ch5-enter"
-    }
+      "line": "ch5-placed"
+    },
+    "requiresFlag": "fragment:placed"
   },
   {
     "id": "sanctum-seal",
@@ -156,12 +157,10 @@
     "clueText": "Six memories, in the order the temple learned them.",
     "reward": {
       "flags": [
-        "sanctum:restored"
+        "puzzle:sanctum-seal"
       ],
-      "journal": [
-        "finale-restored"
-      ],
-      "line": "finale-end"
-    }
+      "journal": []
+    },
+    "requiresFlag": "shrine:cleansed"
   }
 ]

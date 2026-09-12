@@ -384,3 +384,130 @@ export const muralTextures = (scene: MuralScene, width = 1024, height = 512, see
   emissiveMap.colorSpace = THREE.SRGBColorSpace;
   return { map, emissiveMap };
 };
+
+export type Glyph = 'tusk' | 'lamp' | 'moon' | 'axe' | 'broken-circle' | 'circle' | 'serpent' | 'scroll' | 'mirror' | 'corrupt' | 'lotus';
+
+const glyphCache = new Map<Glyph, THREE.Texture>();
+
+/** Carved-symbol decal (gold on transparent) used on symbol stones, seals and wall marks. */
+export const glyphTexture = (glyph: Glyph, size = 128): THREE.Texture => {
+  const cached = glyphCache.get(glyph);
+  if (cached) return cached;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const c = canvas.getContext('2d');
+  if (!c) throw new Error('2D context unavailable');
+  c.clearRect(0, 0, size, size);
+  c.strokeStyle = '#ffd98a';
+  c.fillStyle = '#ffd98a';
+  c.lineWidth = size * 0.07;
+  c.lineCap = 'round';
+  c.lineJoin = 'round';
+  const s = size;
+  c.beginPath();
+  switch (glyph) {
+    case 'tusk':
+      c.moveTo(s * 0.25, s * 0.7);
+      c.quadraticCurveTo(s * 0.5, s * 0.75, s * 0.75, s * 0.3);
+      c.quadraticCurveTo(s * 0.55, s * 0.5, s * 0.25, s * 0.7);
+      c.closePath();
+      c.fill();
+      break;
+    case 'lamp':
+      c.moveTo(s * 0.25, s * 0.6);
+      c.quadraticCurveTo(s * 0.5, s * 0.85, s * 0.75, s * 0.6);
+      c.lineTo(s * 0.25, s * 0.6);
+      c.closePath();
+      c.fill();
+      c.beginPath();
+      c.ellipse(s * 0.5, s * 0.42, s * 0.07, s * 0.14, 0, 0, Math.PI * 2);
+      c.fill();
+      break;
+    case 'moon':
+      c.arc(s * 0.5, s * 0.5, s * 0.28, 0, Math.PI * 2);
+      c.fill();
+      c.globalCompositeOperation = 'destination-out';
+      c.beginPath();
+      c.arc(s * 0.62, s * 0.44, s * 0.24, 0, Math.PI * 2);
+      c.fill();
+      c.globalCompositeOperation = 'source-over';
+      break;
+    case 'axe':
+      c.moveTo(s * 0.3, s * 0.78);
+      c.lineTo(s * 0.62, s * 0.34);
+      c.stroke();
+      c.beginPath();
+      c.moveTo(s * 0.56, s * 0.2);
+      c.quadraticCurveTo(s * 0.85, s * 0.3, s * 0.72, s * 0.52);
+      c.quadraticCurveTo(s * 0.64, s * 0.36, s * 0.56, s * 0.2);
+      c.closePath();
+      c.fill();
+      break;
+    case 'broken-circle':
+      c.arc(s * 0.5, s * 0.5, s * 0.28, Math.PI * 0.2, Math.PI * 1.8);
+      c.stroke();
+      break;
+    case 'circle':
+      c.arc(s * 0.5, s * 0.5, s * 0.28, 0, Math.PI * 2);
+      c.stroke();
+      break;
+    case 'serpent':
+      c.moveTo(s * 0.2, s * 0.65);
+      c.bezierCurveTo(s * 0.3, s * 0.2, s * 0.5, s * 0.9, s * 0.62, s * 0.4);
+      c.bezierCurveTo(s * 0.7, s * 0.2, s * 0.8, s * 0.4, s * 0.8, s * 0.3);
+      c.stroke();
+      break;
+    case 'scroll':
+      c.rect(s * 0.28, s * 0.28, s * 0.44, s * 0.44);
+      c.stroke();
+      for (let i = 0; i < 3; i++) {
+        c.beginPath();
+        c.moveTo(s * 0.36, s * 0.4 + i * s * 0.1);
+        c.lineTo(s * 0.64, s * 0.4 + i * s * 0.1);
+        c.stroke();
+      }
+      break;
+    case 'mirror':
+      c.moveTo(s * 0.3, s * 0.3);
+      c.lineTo(s * 0.7, s * 0.7);
+      c.stroke();
+      c.beginPath();
+      c.moveTo(s * 0.5, s * 0.2);
+      c.lineTo(s * 0.5, s * 0.8);
+      c.stroke();
+      break;
+    case 'corrupt':
+      c.strokeStyle = '#b06cff';
+      c.arc(s * 0.5, s * 0.5, s * 0.28, Math.PI * 0.2, Math.PI * 1.8);
+      c.stroke();
+      c.beginPath();
+      c.moveTo(s * 0.3, s * 0.3);
+      c.lineTo(s * 0.7, s * 0.7);
+      c.moveTo(s * 0.7, s * 0.3);
+      c.lineTo(s * 0.3, s * 0.7);
+      c.stroke();
+      break;
+    case 'lotus':
+      for (let i = 0; i < 5; i++) {
+        const a = -Math.PI / 2 + (i - 2) * 0.5;
+        c.beginPath();
+        c.moveTo(s * 0.5, s * 0.72);
+        c.quadraticCurveTo(s * 0.5 + Math.cos(a - 0.3) * s * 0.3, s * 0.72 + Math.sin(a - 0.3) * s * 0.3, s * 0.5 + Math.cos(a) * s * 0.38, s * 0.72 + Math.sin(a) * s * 0.38);
+        c.quadraticCurveTo(s * 0.5 + Math.cos(a + 0.3) * s * 0.3, s * 0.72 + Math.sin(a + 0.3) * s * 0.3, s * 0.5, s * 0.72);
+        c.fill();
+      }
+      break;
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  glyphCache.set(glyph, tex);
+  return tex;
+};
+
+/** Emissive glyph decal mesh (unlit, additive) sized `size` metres; returns the mesh with its own material. */
+export const glyphDecal = (glyph: Glyph, size: number, color = 0xffd98a, opacity = 0.9): THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> => {
+  const mat = new THREE.MeshBasicMaterial({ map: glyphTexture(glyph), color, transparent: true, opacity, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, fog: false });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(size, size), mat);
+  return mesh;
+};

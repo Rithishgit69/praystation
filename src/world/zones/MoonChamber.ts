@@ -37,7 +37,8 @@ export function* buildMoonChamber(ctx: ZoneBuildContext): Generator<void, UnitBu
     acc.mesh(ped);
     const pivot = new THREE.Group();
     pivot.position.set(mx, y + 1.0, mz);
-    pivot.rotation.y = typeof ctx.flags[`mirror:${i}`] === 'number' ? (ctx.flags[`mirror:${i}`] as number) : a + Math.PI;
+    const startOffsets = [Math.PI / 2, (3 * Math.PI) / 4, Math.PI / 2, Math.PI / 4];
+    pivot.rotation.y = typeof ctx.flags[`mirror:${i}`] === 'number' ? (ctx.flags[`mirror:${i}`] as number) : a + (startOffsets[i] ?? 0);
     const mirror = new THREE.Mesh(mirrorGeo, ctx.lib.iron);
     mirror.position.y = 1.6;
     mirror.castShadow = true;
@@ -61,9 +62,45 @@ export function* buildMoonChamber(ctx: ZoneBuildContext): Generator<void, UnitBu
   slab.position.set(cx, y + 2.3 + (sealed ? 0 : 4.7), cz - 42 - 0.6);
   acc.mesh(slab, sealed);
   acc.anchor('door:moon-tunnels', 'door', cx, y, cz - 42, 0, 3, { opened: !sealed }, slab);
-  // Hidden moon-symbols on the walls (revealed in the moonlit state), braziers, mist, rubble.
-  for (let i = 0; i < 6; i++) acc.anchor(`symbol:moon-${i}`, 'lore', cx - 41 + (i % 3) * 41, y + 2.2, cz - 30 + Math.floor(i / 3) * 60, i % 3 === 0 ? Math.PI / 2 : i % 3 === 2 ? -Math.PI / 2 : 0, 2.5, { hidden: true });
-  for (const [dx, dz] of [[-30, -30], [30, -30], [-30, 30], [30, 30]] as const) acc.fire(cx + dx, y + 1.35, cz + dz, { scale: 0.7, intensity: 22, distance: 10 });
+  // Six wall marks. Moonlit: identical silver moons appear. Shadow: five vanish and the fourth shows what
+  // the corruption wrote over it — the one that is not like the others (puzzle 'moon-shadow').
+  const marks: Array<[number, number, THREE.Vector3]> = [
+    [cx - 41.4, cz - 20, new THREE.Vector3(1, 0, 0)],
+    [cx - 41.4, cz + 20, new THREE.Vector3(1, 0, 0)],
+    [cx + 41.4, cz - 20, new THREE.Vector3(-1, 0, 0)],
+    [cx + 41.4, cz + 20, new THREE.Vector3(-1, 0, 0)],
+    [cx - 15, cz + 41.4, new THREE.Vector3(0, 0, -1)],
+    [cx + 15, cz + 41.4, new THREE.Vector3(0, 0, -1)],
+  ];
+  marks.forEach(([mx, mz, n], i) => {
+    acc.moonOnly(acc.glyph('moon', mx, y + 2.6, mz, n, 1.4, 0xa9c6f0, 0.7), 'moonlit');
+    if (i === 4) acc.moonOnly(acc.glyph('corrupt', mx, y + 2.6, mz, n, 1.5, 0xb06cff, 0.85), 'shadow');
+    acc.anchor(`symbol:moon-${i}`, 'lore', mx + n.x * 1.2, y + 2.2, mz + n.z * 1.2, Math.atan2(-n.x, -n.z), 2.6, { hidden: true, index: i });
+  });
+  // Shadow state also shows a false doorway and floor spikes that were never there in moonlight.
+  const shadowDoor = new THREE.Mesh(new THREE.PlaneGeometry(4, 5), new THREE.MeshBasicMaterial({ color: 0x1a0a2a, transparent: true, opacity: 0.85, fog: false }));
+  shadowDoor.position.set(cx + 41.3, y + 2.5, cz - 4);
+  shadowDoor.rotation.y = -Math.PI / 2;
+  acc.moonOnly(shadowDoor, 'shadow');
+  acc.disposables.push(() => shadowDoor.material.dispose(), () => shadowDoor.geometry.dispose());
+  const spikes = new THREE.Group();
+  const spikeGeo = new THREE.ConeGeometry(0.18, 0.9, 6);
+  const spikeMat = new THREE.MeshStandardMaterial({ color: 0x2a1a3a, emissive: 0x4a1a6a, emissiveIntensity: 0.4, roughness: 0.6 });
+  for (let i = 0; i < 40; i++) {
+    const sp = new THREE.Mesh(spikeGeo, spikeMat);
+    sp.position.set(cx - 30 + ctx.rng.range(0, 14), y + 0.45, cz - 6 + ctx.rng.range(-8, 8));
+    spikes.add(sp);
+  }
+  acc.moonOnly(spikes, 'shadow');
+  acc.disposables.push(() => spikeGeo.dispose(), () => spikeMat.dispose());
+  // Roof shutter: a great stone slab the wheel drags across the sky opening.
+  const shutter = new THREE.Mesh(new THREE.BoxGeometry(88, 0.8, 44), ctx.lib.sandstoneDark);
+  setTriplanar(shutter.geometry, 4, 0.5);
+  const closed = ctx.flags['moon:roof-closed'] === true;
+  shutter.position.set(cx, y + 9.5, closed ? cz - 22 : cz - 66);
+  acc.group.add(shutter);
+  acc.anchor('moon:shutter', 'mechanism', cx, y + 9.5, cz - 44, 0, 1, { closed }, shutter);
+  for (const [dx, dz] of [[-30, -30], [30, -30], [-30, 30], [30, 30]] as const) acc.brazier(cx + dx, y, cz + dz, { scale: 0.8, intensity: 24, distance: 11 });
   acc.blockStack(cx - 34, y, cz + 20, 6, 3, 1.2, 0.3);
   acc.pillar(cx + 34, y, cz - 20, 8, 4.2);
   acc.mist([{ x: cx, y: y + 0.5, z: cz, size: 40, opacity: 0.12 }, { x: cx - 25, y: y + 0.4, z: cz + 25, size: 24, opacity: 0.14 }], 0x4a6a9c);

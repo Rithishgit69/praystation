@@ -120,13 +120,18 @@ export function* buildHall(ctx: ZoneBuildContext): Generator<void, UnitBuild, vo
   acc.anchor('lore:inscription-first', 'lore', cx - 29, floorY + 1.2, cz + 6, Math.PI / 2, 2.4, { text: 'pro-inscription', line: 'pro-inscription' }, inscription);
   const symGeo = new RoundedBoxGeometry(0.9, 0.5, 0.9, 2, 0.04);
   setTriplanar(symGeo, 1.2, 0.9);
+  const hallGlyphs = ['tusk', 'lamp', 'moon', 'axe'] as const;
   for (let i = 0; i < 4; i++) {
     const sx = cx - 6 + i * 4;
     const stone = new THREE.Mesh(symGeo, ctx.lib.sandstone);
     stone.position.set(sx, floorY + 0.96 + 0.25, cz - 27);
     acc.mesh(stone, false);
+    acc.glyph(hallGlyphs[i] ?? 'circle', sx, floorY + 0.96 + 0.5, cz - 27, new THREE.Vector3(0, 1, 0), 0.6, 0xffd98a, 0.75);
     acc.anchor(`symbol:hall:${i}`, 'mechanism', sx, floorY + 0.96 + 0.5, cz - 27, 0, 2, { index: i }, stone);
   }
+  // The inscription's order, carved faintly on the dais riser: readable only in moonlight (§10 across the world).
+  const order = ['moon', 'tusk', 'axe', 'lamp'] as const;
+  order.forEach((g, i) => acc.moonOnly(acc.glyph(g, cx - 3 + i * 2, floorY + 0.5, cz - 25.95, new THREE.Vector3(0, 0, 1), 0.7, 0xa9c6f0, 0.6), 'moonlit'));
   yield;
   return yield* acc.finish();
 }

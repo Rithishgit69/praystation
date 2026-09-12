@@ -1,7 +1,7 @@
 [
   {
     "id": "prologue",
-    "title": "Prologue \u2014 The Forgotten Temple",
+    "title": "Prologue — The Forgotten Temple",
     "questTitle": "The Forgotten Temple",
     "objectives": [
       {
@@ -26,7 +26,7 @@
   },
   {
     "id": "ch1",
-    "title": "Chapter I \u2014 The Broken Tusk",
+    "title": "Chapter I — The Broken Tusk",
     "questTitle": "The Hall of Memories",
     "objectives": [
       {
@@ -84,17 +84,22 @@
   },
   {
     "id": "ch2",
-    "title": "Chapter II \u2014 Vakratunda and Matsarasura",
+    "title": "Chapter II — Vakratunda and Matsarasura",
     "questTitle": "The Corrupted Passage",
     "objectives": [
       {
+        "id": "lantern",
+        "text": "Relight your lantern at the diyas",
+        "doneFlag": "lantern:relit"
+      },
+      {
         "id": "false",
-        "text": "Find what is false",
+        "text": "Find what is false in the passage",
         "doneFlag": "puzzle:passage-illusion"
       },
       {
         "id": "source",
-        "text": "Confront the source of the distortion",
+        "text": "Confront the source at the true altar",
         "doneFlag": "memory:vakratunda"
       },
       {
@@ -121,8 +126,8 @@
       "journal": [
         "ch2-inspiration"
       ],
-      "enterLine": "ch2-light",
-      "returnLine": "ch3-enter",
+      "enterLine": "ch2-illusion",
+      "returnLine": "ch2-done",
       "afterLine": "ch1-recognised"
     },
     "journal": [
@@ -131,7 +136,7 @@
   },
   {
     "id": "ch3",
-    "title": "Chapter III \u2014 The Curse of the Moon",
+    "title": "Chapter III — The Curse of the Moon",
     "questTitle": "The Moon Chamber",
     "objectives": [
       {
@@ -141,7 +146,7 @@
       },
       {
         "id": "shadow",
-        "text": "Wait for shadow, and see what it shows",
+        "text": "Close the roof and find what shadow shows",
         "doneFlag": "puzzle:moon-shadow"
       },
       {
@@ -156,22 +161,22 @@
   },
   {
     "id": "ch4",
-    "title": "Chapter IV \u2014 The Serpent Below",
+    "title": "Chapter IV — The Serpent Below",
     "questTitle": "The Serpent Tunnels",
     "objectives": [
       {
         "id": "wake",
-        "text": "Activate the serpent shrine",
+        "text": "Find the serpent shrine",
         "doneFlag": "serpent:awake"
       },
       {
         "id": "escape",
-        "text": "Escape the collapse",
+        "text": "Run",
         "doneFlag": "beat:serpent-escaped"
       },
       {
         "id": "evidence",
-        "text": "Enter the guarded chamber",
+        "text": "Read what the serpent guarded",
         "doneFlag": "beat:evidence"
       },
       {
@@ -186,12 +191,17 @@
   },
   {
     "id": "ch5",
-    "title": "Chapter V \u2014 The Great Scribe",
+    "title": "Chapter V — The Great Scribe",
     "questTitle": "The Ancient Library",
     "objectives": [
       {
+        "id": "missing",
+        "text": "Find the missing fragment",
+        "doneFlag": "fragment:placed"
+      },
+      {
         "id": "fragments",
-        "text": "Reassemble the inscription",
+        "text": "Turn the fragments until the line reads as one",
         "doneFlag": "puzzle:scribe-fragments"
       },
       {
@@ -206,7 +216,7 @@
   },
   {
     "id": "ch6",
-    "title": "Chapter VI \u2014 The Underground Shrine",
+    "title": "Chapter VI — The Underground Shrine",
     "questTitle": "The Underground Shrine",
     "objectives": [
       {
@@ -216,7 +226,7 @@
       },
       {
         "id": "sanctum",
-        "text": "Open the sealed sanctum",
+        "text": "Enter the sealed sanctum",
         "doneFlag": "beat:sanctum-enter"
       }
     ],
@@ -226,7 +236,7 @@
   },
   {
     "id": "finale",
-    "title": "Finale \u2014 The Sealed Sanctum",
+    "title": "Finale — The Sealed Sanctum",
     "questTitle": "The Sealed Sanctum",
     "objectives": [
       {
