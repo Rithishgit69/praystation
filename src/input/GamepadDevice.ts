@@ -3,8 +3,8 @@ import type { Action, InputDevice, InputFrame } from './types';
 const DEADZONE = 0.15;
 const STICK_LOOK_SPEED = 900; // pixels-equivalent per second at full deflection
 
-/** Standard-mapping gamepad: A interact, B dodge, X block, Y journal, LB/L3 sprint, RB crouch, Start pause, Back map. */
-const BUTTONS: Record<number, Action> = { 0: 'interact', 1: 'dodge', 2: 'block', 3: 'journal', 4: 'sprint', 5: 'crouch', 8: 'map', 9: 'pause', 10: 'sprint', 11: 'cameraReset' };
+/** Standard-mapping gamepad: A interact, B dodge, X reload/block, Y journal, LB/L3 sprint, RB crouch, LT aim, RT fire, Start pause, Back map. */
+const BUTTONS: Record<number, Action> = { 0: 'interact', 1: 'dodge', 2: 'block', 3: 'journal', 4: 'sprint', 5: 'crouch', 6: 'aim', 7: 'fire', 8: 'map', 9: 'pause', 10: 'sprint', 11: 'cameraReset' };
 
 const radialDeadzone = (x: number, y: number): [number, number] => {
   const m = Math.hypot(x, y);
@@ -52,6 +52,7 @@ export class GamepadDevice implements InputDevice {
         if (!b?.pressed) continue;
         const a = BUTTONS[i];
         if (a) frame.held.add(a);
+        if (i === 2) frame.held.add('reload');
         any = true;
       }
       // Select + Start together opens the dev menu.

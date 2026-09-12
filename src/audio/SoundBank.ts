@@ -38,7 +38,17 @@ export type SoundId =
   | 'water-loop'
   | 'rumble'
   | 'serpent-hiss'
-  | 'symbol-chime';
+  | 'symbol-chime'
+  | 'astra-shot'
+  | 'astra-reload'
+  | 'astra-empty'
+  | 'asura-roar'
+  | 'asura-bolt'
+  | 'asura-hit'
+  | 'asura-death'
+  | 'heart-lost'
+  | 'task-complete'
+  | 'task-begin';
 
 /** All game audio is synthesised here at startup; no audio files ship with the game. */
 export class SoundBank {
@@ -75,6 +85,16 @@ export class SoundBank {
     this.buffers.set('rumble', this.rumble(2.5));
     this.buffers.set('serpent-hiss', this.hiss(1.8));
     this.buffers.set('symbol-chime', this.tone([523.25, 659.25, 783.99], 1.6, 0.4));
+    this.buffers.set('astra-shot', this.shot());
+    this.buffers.set('astra-reload', this.reload());
+    this.buffers.set('astra-empty', this.tick());
+    this.buffers.set('asura-roar', this.roar(1.8));
+    this.buffers.set('asura-bolt', this.whoosh(0.5, 300, 1400, 0.7));
+    this.buffers.set('asura-hit', this.impact(0.18, 260));
+    this.buffers.set('asura-death', this.roar(3.2, true));
+    this.buffers.set('heart-lost', this.tone([196, 146.83], 1.4, 0.6));
+    this.buffers.set('task-complete', this.tone([392, 523.25, 659.25, 783.99], 2.6, 0.5));
+    this.buffers.set('task-begin', this.tone([130.81, 196], 2.2, 0.6));
   }
 
   /** 16-bit PCM WAV blob URL for Howler. */
@@ -349,6 +369,54 @@ export class SoundBank {
       out[i] = Math.sin(2 * Math.PI * f * t * (1 - t * 0.5)) * Math.exp(-t * 18) + (src[i] as number) * Math.exp(-t * 40) * 0.5;
     }
     return normalize(out, 0.9);
+  }
+
+  /** The Astra: a bright crack with a ringing tail — a weapon of light rather than powder. */
+  private shot(): Float32Array {
+    const n = Math.floor(0.45 * SAMPLE_RATE);
+    const out = new Float32Array(n);
+    const src = this.noise(n);
+    let lp = 0;
+    for (let i = 0; i < n; i++) {
+      const t = i / SAMPLE_RATE;
+      lp += ((src[i] as number) - lp) * 0.35;
+      const crack = (src[i] as number) * Math.exp(-t * 90) * 1.2 + lp * Math.exp(-t * 22) * 0.8;
+      const ring = Math.sin(2 * Math.PI * 1760 * t) * Math.exp(-t * 14) * 0.25 + Math.sin(2 * Math.PI * 2640 * t) * Math.exp(-t * 20) * 0.15;
+      const thump = Math.sin(2 * Math.PI * 95 * t) * Math.exp(-t * 30) * 0.7;
+      out[i] = crack + ring + thump;
+    }
+    return normalize(out, 0.95);
+  }
+
+  private reload(): Float32Array {
+    const n = Math.floor(0.9 * SAMPLE_RATE);
+    const out = new Float32Array(n);
+    const clicks = [0.05, 0.32, 0.6];
+    for (const c of clicks) {
+      const start = Math.floor(c * SAMPLE_RATE);
+      for (let i = 0; i < 900 && start + i < n; i++) {
+        const t = i / SAMPLE_RATE;
+        out[start + i] = (out[start + i] as number) + (Math.sin(2 * Math.PI * 900 * t) + Math.sin(2 * Math.PI * 1500 * t) * 0.5) * Math.exp(-t * 120) * 0.7 + (this.rng.next() - 0.5) * Math.exp(-t * 200) * 0.4;
+      }
+    }
+    return normalize(out, 0.7);
+  }
+
+  /** Asura roar: layered low growl with a formant sweep. */
+  private roar(dur: number, dying = false): Float32Array {
+    const n = Math.floor(dur * SAMPLE_RATE);
+    const out = new Float32Array(n);
+    const src = this.noise(n);
+    let lp = 0;
+    for (let i = 0; i < n; i++) {
+      const t = i / dur / SAMPLE_RATE;
+      const f0 = dying ? 70 - t * 30 : 55 + Math.sin(t * Math.PI) * 25;
+      const env = Math.sin(Math.PI * Math.min(1, t * 1.15)) * (dying ? 1 - t * 0.5 : 1);
+      const growl = (Math.sin(2 * Math.PI * f0 * (i / SAMPLE_RATE)) + 0.6 * Math.sin(2 * Math.PI * f0 * 2.02 * (i / SAMPLE_RATE)) + 0.3 * Math.sin(2 * Math.PI * f0 * 3.1 * (i / SAMPLE_RATE))) * (0.7 + 0.3 * Math.sin(i * 0.002));
+      lp += ((src[i] as number) - lp) * (0.05 + t * 0.1);
+      out[i] = (growl * 0.8 + lp * 1.5) * env;
+    }
+    return normalize(out, 0.95);
   }
 
   private tick(): Float32Array {

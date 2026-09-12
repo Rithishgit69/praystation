@@ -15,6 +15,8 @@ export class PauseMenu implements System {
     private readonly engine: Engine,
     private readonly save: SaveSystem,
     private readonly onQuitToTitle: () => void,
+    private readonly onJournal: () => void,
+    private readonly onTaskSelect: (() => void) | null,
   ) {
     this.root = document.createElement('div');
     this.root.className = 'pause menu';
@@ -87,6 +89,21 @@ export class PauseMenu implements System {
       slider('sfxVolume', 'Effects volume', 0, 1, 0.01),
       toggle('analyticsOptIn', 'Share anonymous crash reports (off by default)'),
     );
+    const journalBtn = document.createElement('button');
+    journalBtn.textContent = 'Journal';
+    journalBtn.addEventListener('click', () => {
+      this.setVisible(false);
+      this.onJournal();
+    });
+    if (this.onTaskSelect) {
+      const tasks = document.createElement('button');
+      tasks.textContent = 'Choose a task';
+      tasks.addEventListener('click', () => {
+        this.setVisible(false);
+        this.onTaskSelect?.();
+      });
+      this.root.appendChild(tasks);
+    }
     const quit = document.createElement('button');
     quit.textContent = 'Save & return to title';
     quit.addEventListener('click', () => {
@@ -97,7 +114,7 @@ export class PauseMenu implements System {
     const note = document.createElement('p');
     note.className = 'hint';
     note.textContent = 'Inspired by traditional stories; all events, characters and the temple in this game are fictional.';
-    this.root.append(h, resume, saveBtn, opts, quit, note);
+    this.root.append(h, resume, saveBtn, journalBtn, opts, quit, note);
   }
 
   setVisible(v: boolean): void {

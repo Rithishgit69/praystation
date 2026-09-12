@@ -51,8 +51,14 @@ export class Mouse implements InputDevice {
     frame.lookY += this.dy;
     this.dx = 0;
     this.dy = 0;
-    if (this.buttons.has(0)) frame.held.add('interact');
-    if (this.buttons.has(2)) frame.held.add('block');
+    if (this.buttons.has(0)) {
+      frame.held.add('interact');
+      frame.held.add('fire');
+    }
+    if (this.buttons.has(2)) {
+      frame.held.add('block');
+      frame.held.add('aim');
+    }
     const had = this.activity;
     this.activity = false;
     return had;

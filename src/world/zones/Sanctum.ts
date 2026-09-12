@@ -15,8 +15,9 @@ export function* buildSanctum(ctx: ZoneBuildContext): Generator<void, UnitBuild,
   const cx = 0;
   const cz = -404;
   // Stair down from the shrine door (0, -20, -338) to the sanctum floor.
-  yield* buildRoom(acc, { cx, cz: -352, floorY: y, width: 6, depth: 28, height: 12, doors: [{ side: 's', offset: 0, width: 4.2, height: 5 }, { side: 'n', offset: 0, width: 5, height: 7 }], ceiling: true, dark: true });
-  acc.place(makeSteps(ctx.lib, { width: 5.6, count: 25, rise: 0.24, run: 0.5, rng: ctx.rng.fork(2) }), cx, y, -352 - 14 + 0.5 + 13.5, Math.PI);
+  yield* buildRoom(acc, { cx, cz: -352, floorY: y, width: 6, depth: 28, height: 12, doors: [{ side: 's', offset: 0, width: 4.2, height: 12 }, { side: 'n', offset: 0, width: 5, height: 7 }], ceiling: true, dark: true });
+  acc.landing(cx, -20, -339.5, 6, 4);
+  acc.place(makeSteps(ctx.lib, { width: 5.6, count: 25, rise: 0.24, run: 0.5, rng: ctx.rng.fork(2) }), cx, y, -354, Math.PI); // −26 at z −354 → −20 at z −341.5
   yield* buildRoom(acc, { cx, cz, floorY: y, width: 90, depth: 74, height: 24, doors: [{ side: 's', offset: 0, width: 5, height: 7 }], pillars: { cols: 4, rows: 4, inset: 9 }, ceiling: true, roofHoles: [{ x: 0, z: -6, w: 20, d: 20 }] });
   yield;
   // Dais.

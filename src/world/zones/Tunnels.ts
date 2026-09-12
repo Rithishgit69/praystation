@@ -13,7 +13,7 @@ export function* buildTunnels(ctx: ZoneBuildContext): Generator<void, UnitBuild,
   const acc = new UnitAccumulator(ctx.lib, ctx.rng, 'tunnels');
   const y = -14;
   // Stairwell: from the moon chamber north door (110, -2, -232) down to (110, -14, -256).
-  yield* buildRoom(acc, { cx: 110, cz: -246, floorY: y, width: 6, depth: 28, height: 15, doors: [{ side: 's', offset: 0, width: 4.2, height: 4.6 }, { side: 'w', offset: -8, width: 4, height: 4.5 }], ceiling: true, dark: true, floor: true });
+  yield* buildRoom(acc, { cx: 110, cz: -246, floorY: y, width: 6, depth: 28, height: 15, doors: [{ side: 's', offset: 0, width: 4.2, height: 15 }, { side: 'w', offset: -8, width: 4, height: 4.5 }], ceiling: true, dark: true, floor: true });
   acc.place(makeSteps(ctx.lib, { width: 5.6, count: 49, rise: 0.245, run: 0.5, rng: ctx.rng.fork(2) }), 110, y, -256.5, Math.PI);
   yield;
   // Tunnel west, then the flooded gallery with stepping stones.
@@ -55,6 +55,7 @@ export function* buildTunnels(ctx: ZoneBuildContext): Generator<void, UnitBuild,
   serpentGroup.add(coil, coil2, head);
   acc.group.add(serpentGroup);
   acc.anchor('statue:serpent', 'statue', -46, y + 5, -240, 0, 6, { awake: ctx.flags['serpent:awake'] === true }, serpentGroup);
+  for (const [dx, dz] of [[-14, -14], [14, -14], [-14, 14], [14, 14]] as const) acc.brazier(-46 + dx, y, -240 + dz, { scale: 0.8, intensity: 24, distance: 12 });
   const altar = new THREE.Mesh(new THREE.CylinderGeometry(2.4, 2.8, 1.2, 16), ctx.lib.sandstoneDark);
   setTriplanar(altar.geometry, 2, 0.8);
   altar.position.set(-46, y + 0.6, -240);
@@ -68,22 +69,21 @@ export function* buildTunnels(ctx: ZoneBuildContext): Generator<void, UnitBuild,
   acc.anchor('door:serpent-chamber', 'door', -46, y, -261, 0, 3, { opened: !sealed }, slab);
   yield;
   acc.mark('tunnels:chase');
-  // Chase route: corridor A north (collapsing), corridor B west (water passage), corridor C north to the
-  // evidence chamber.
+  // Chase route (all at floor −14): corridor A north (collapsing), corridor B west (a wading passage),
+  // corridor C north to the evidence chamber.
   yield* buildRoom(acc, { cx: -46, cz: -280, floorY: y, width: 4.4, depth: 34, height: 4.8, doors: [{ side: 's', offset: 0, width: 4.2, height: 5 }, { side: 'n', offset: 0, width: 4.2, height: 4.5 }], ceiling: true, dark: true, wallThickness: 1.6 });
   for (let i = 0; i < 4; i++) acc.anchor(`collapse:${i}`, 'trigger', -46, y, -266 - i * 7.5, 0, 2.6, { order: i });
-  yield* buildRoom(acc, { cx: -78, cz: -299, floorY: y - 1.2, width: 66, depth: 4.4, height: 4.8, doors: [{ side: 'e', offset: 0, width: 4.2, height: 4.5 }, { side: 'w', offset: 0, width: 4.2, height: 4.5 }], ceiling: true, dark: true, wallThickness: 1.6 });
+  yield* buildRoom(acc, { cx: -78, cz: -299, floorY: y, width: 66, depth: 4.4, height: 4.8, doors: [{ side: 'e', offset: 0, width: 4.2, height: 4.5 }, { side: 'w', offset: 0, width: 4.2, height: 4.5 }], ceiling: true, dark: true, wallThickness: 1.6 });
   const water2 = new THREE.Mesh(new THREE.PlaneGeometry(66, 4.4), ctx.lib.water);
   water2.rotation.x = -Math.PI / 2;
-  water2.position.set(-78, y - 0.55, -299);
+  water2.position.set(-78, y + 0.42, -299);
   acc.group.add(water2);
-  acc.colliders.push({ kind: 'box', center: new THREE.Vector3(-78, y - 0.9, -299), half: new THREE.Vector3(33, 0.3, 2.2), quaternion: new THREE.Quaternion(), surface: 'water' });
+  acc.colliders.push({ kind: 'box', center: new THREE.Vector3(-78, y + 0.2, -299), half: new THREE.Vector3(33, 0.2, 2.2), quaternion: new THREE.Quaternion(), surface: 'water' });
   // Corner junctions so the turns are sealed.
-  yield* buildRoom(acc, { cx: -46, cz: -299, floorY: y - 1.2, width: 4.4, depth: 4.4, height: 4.8, doors: [{ side: 'n', offset: 0, width: 4.2, height: 4.5 }, { side: 'w', offset: 0, width: 4.2, height: 4.5 }], ceiling: true, dark: true, wallThickness: 1.6 });
-  yield* buildRoom(acc, { cx: -112, cz: -299, floorY: y - 1.2, width: 4.4, depth: 4.4, height: 4.8, doors: [{ side: 'e', offset: 0, width: 4.2, height: 4.5 }, { side: 'n', offset: 0, width: 4.2, height: 4.5 }], ceiling: true, dark: true, wallThickness: 1.6 });
-  yield* buildRoom(acc, { cx: -112, cz: -283, floorY: y - 1.2, width: 4.4, depth: 28, height: 4.8, doors: [{ side: 's', offset: 0, width: 4.2, height: 4.5 }, { side: 'n', offset: 0, width: 4.2, height: 5 }], ceiling: true, dark: true, wallThickness: 1.6 });
-  acc.place(makeSteps(ctx.lib, { width: 4.2, count: 5, rise: 0.24, run: 0.5, rng: ctx.rng.fork(4) }), -112, y - 1.2, -271.5);
-  acc.anchor('collapse:4', 'trigger', -112, y - 1.2, -290, 0, 2.6, { order: 4 });
+  yield* buildRoom(acc, { cx: -46, cz: -299, floorY: y, width: 4.4, depth: 4.4, height: 4.8, doors: [{ side: 'n', offset: 0, width: 4.2, height: 4.5 }, { side: 'w', offset: 0, width: 4.2, height: 4.5 }], ceiling: true, dark: true, wallThickness: 1.6 });
+  yield* buildRoom(acc, { cx: -112, cz: -299, floorY: y, width: 4.4, depth: 4.4, height: 4.8, doors: [{ side: 'e', offset: 0, width: 4.2, height: 4.5 }, { side: 'n', offset: 0, width: 4.2, height: 4.5 }], ceiling: true, dark: true, wallThickness: 1.6 });
+  yield* buildRoom(acc, { cx: -112, cz: -283, floorY: y, width: 4.4, depth: 28, height: 4.8, doors: [{ side: 's', offset: 0, width: 4.2, height: 4.5 }, { side: 'n', offset: 0, width: 4.2, height: 5 }], ceiling: true, dark: true, wallThickness: 1.6 });
+  acc.anchor('collapse:4', 'trigger', -112, y, -290, 0, 2.6, { order: 4 });
   yield;
   acc.mark('tunnels:evidence');
   // Evidence chamber: untouched by corruption, the builders' purpose on its wall.
@@ -103,8 +103,10 @@ export function* buildTunnels(ctx: ZoneBuildContext): Generator<void, UnitBuild,
   yield;
   acc.mark('tunnels:climb');
   // Climb to the library: stair (y −14 → −10), a long gallery north with a pillared mid-hall, to (−110, −10, −68).
-  yield* buildRoom(acc, { cx: -112, cz: -244, floorY: y, width: 6, depth: 16, height: 9, doors: [{ side: 's', offset: 0, width: 4.2, height: 4.6 }, { side: 'n', offset: 0, width: 4.2, height: 4.6 }], ceiling: true, dark: true, floor: true });
-  acc.place(makeSteps(ctx.lib, { width: 5.6, count: 17, rise: 0.235, run: 0.5, rng: ctx.rng.fork(5) }), -112, y, -243.5);
+  yield* buildRoom(acc, { cx: -112, cz: -244, floorY: y, width: 6, depth: 16, height: 9, doors: [{ side: 's', offset: 0, width: 4.2, height: 4.6 }, { side: 'n', offset: 0, width: 4.2, height: 9 }], ceiling: true, dark: true, floor: true });
+  // Climb: bottom at the north end (y −14), rising toward +z (south) to a landing at −10 by the south door.
+  acc.place(makeSteps(ctx.lib, { width: 5.6, count: 17, rise: 0.235, run: 0.5, rng: ctx.rng.fork(5) }), -112, y, -251.5, Math.PI);
+  acc.landing(-112, -10, -239, 5.6, 8);
   yield* buildRoom(acc, { cx: -112, cz: -200, floorY: -10, width: 5, depth: 72, height: 5, doors: [{ side: 's', offset: 0, width: 4.2, height: 4.6 }, { side: 'n', offset: 0, width: 4.2, height: 4.6 }], ceiling: true, dark: true, wallThickness: 1.6 });
   yield* buildRoom(acc, { cx: -112, cz: -156, floorY: -10, width: 16, depth: 16, height: 7, doors: [{ side: 's', offset: 0, width: 4.2, height: 4.6 }, { side: 'n', offset: 2, width: 4.2, height: 4.6 }], pillars: { cols: 2, rows: 2, inset: 4 }, ceiling: true, dark: true });
   yield* buildRoom(acc, { cx: -110, cz: -108, floorY: -10, width: 5, depth: 80, height: 5, doors: [{ side: 's', offset: 0, width: 4.2, height: 4.6 }, { side: 'n', offset: 0, width: 4.2, height: 4.6 }], ceiling: true, dark: true, wallThickness: 1.6 });

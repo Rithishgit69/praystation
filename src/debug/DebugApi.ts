@@ -32,6 +32,14 @@ export interface EkaDebugApi {
   slowSteps: (() => Array<{ key: string; step: number; ms: number; mark: string }>) | null;
   /** Focused anchor id, moon state, zone: for scripted tests. */
   probe: (() => Record<string, unknown>) | null;
+  activateShrine: ((id: string) => void) | null;
+  clearSubtitles: (() => void) | null;
+  playerState: (() => Record<string, unknown>) | null;
+  mission: (() => Record<string, unknown>) | null;
+  missionSkipNarration: (() => void) | null;
+  missionDamageBoss: ((n: number) => void) | null;
+  missionHurtPlayer: ((n: number) => void) | null;
+  missionMenuChoose: ((i: number) => void) | null;
 }
 
 declare global {
@@ -64,6 +72,14 @@ export const installDebugApi = (engine: Engine): EkaDebugApi => {
     encounter: null,
     slowSteps: null,
     probe: null,
+    activateShrine: null,
+    clearSubtitles: null,
+    playerState: null,
+    mission: null,
+    missionSkipNarration: null,
+    missionDamageBoss: null,
+    missionHurtPlayer: null,
+    missionMenuChoose: null,
   };
   window.__eka = api;
   engine.events.on('sceneloaded', (id) => {

@@ -1,7 +1,7 @@
 import gsap from 'gsap';
 import type { Engine } from '@/engine/Engine';
 import type { System } from '@/engine/types';
-import type { MoonLight } from '@/world/fx/Atmosphere';
+import { moonFactor, type MoonLight } from '@/world/fx/Atmosphere';
 import { Perlin } from '@/util/noise';
 import { clamp } from '@/util/math';
 import { gameStore } from '@/state/store';
@@ -51,7 +51,7 @@ export class LightingStates implements System {
       this.mix = { from: this.state, to, t: 0 };
       this.state = to;
       const bloom = to === 'memory' ? { s: 0.95, r: 0.7, th: 0.72 } : to === 'corruption' ? { s: 0.75, r: 0.4, th: 0.8 } : { s: 0.6, r: 0.5, th: 0.86 };
-      const exposure = to === 'memory' ? 1.35 : to === 'corruption' ? 1.05 : 1.2;
+      const exposure = to === 'memory' ? 1.35 : to === 'corruption' ? 1.22 : 1.2;
       gsap.to(this.engine.renderer, { toneMappingExposure: exposure, duration: seconds });
       this.tween = gsap.to(this.mix, {
         t: 1,
@@ -88,5 +88,6 @@ export class LightingStates implements System {
     const target = (this.moonState === 'shadow' ? 0.35 : 1.7) * drift;
     this.moon.sun.intensity += (target - this.moon.sun.intensity) * (1 - Math.exp(-dt * 0.6));
     this.moon.hemi.intensity = clamp(0.55 + (this.moon.sun.intensity / 1.7) * 0.55, 0.45, 1.2);
+    moonFactor.value = clamp(this.moon.sun.intensity / 1.7, 0.15, 1);
   }
 }

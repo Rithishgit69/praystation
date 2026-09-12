@@ -98,6 +98,15 @@ export function* buildForestCell(ctx: ZoneBuildContext, cx: number, cz: number, 
       acc.anchor(`trigger:${lm.id}`, 'trigger', lm.position.x, y, lm.position.z, lm.yaw, lm.radius);
     }
   }
+  // Moonbeams between the trees near the path (volume only, no light cost).
+  for (const p of terrain.paths) {
+    const n = p.nearest(cx, cz);
+    if (n.distance < 40 && rng.chance(0.7)) {
+      const t = rng.range(0, 1);
+      const pt = p.pointAt(t);
+      if (Math.abs(pt.x - cx) < half && Math.abs(pt.z - cz) < half) acc.moonShaft(pt.x + rng.range(-6, 6), terrain.heightAt(pt.x, pt.z) + 14, terrain.heightAt(pt.x, pt.z), pt.z + rng.range(-6, 6), 3, 3, false);
+    }
+  }
   // Ambient: a few fireflies and one drifting mist card per cell.
   const flies = new Fireflies(lib, rng.fork(61), Math.floor(18 * quality.particleScale), { min: new THREE.Vector3(cx - half, terrain.heightAt(cx, cz) + 1, cz - half), max: new THREE.Vector3(cx + half, terrain.heightAt(cx, cz) + 5, cz + half) });
   acc.group.add(flies.points);

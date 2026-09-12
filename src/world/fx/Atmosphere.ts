@@ -192,6 +192,9 @@ void main() {
   gl_FragColor = vec4(color * a, a);
 }`;
 
+/** Global moonlight factor (1 moonlit, ~0.2 shadow) applied by every moon shaft. */
+export const moonFactor = { value: 1 };
+
 /**
  * Moonlight shaft through a roof opening: an unshadowed spot light, a soft additive volume and a
  * floor pool. Interiors read as "deep shadow cut by moonbeams" (GDD §18).
@@ -202,10 +205,15 @@ export class MoonShaft {
   private readonly volume: THREE.Mesh<THREE.CylinderGeometry, THREE.ShaderMaterial>;
   private readonly seed = Math.random() * 50;
 
-  constructor(lib: MaterialLibrary, x: number, topY: number, floorY: number, z: number, w: number, d: number, dirX = 0.25, dirZ = -0.2) {
+  private readonly baseIntensity: number;
+  private readonly pool: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>;
+
+  constructor(lib: MaterialLibrary, x: number, topY: number, floorY: number, z: number, w: number, d: number, dirX = 0.25, dirZ = -0.2, withLight = true) {
     const h = topY - floorY;
     const r = Math.max(w, d) * 0.5;
-    this.light = new THREE.SpotLight(0x9ac2f4, 220, h * 1.8, Math.atan((r + 1.5) / h) + 0.12, 0.7, 1.2);
+    this.baseIntensity = withLight ? 220 : 0;
+    this.light = new THREE.SpotLight(0x9ac2f4, this.baseIntensity, h * 1.8, Math.atan((r + 1.5) / h) + 0.12, 0.7, 1.2);
+    this.light.visible = withLight;
     this.light.position.set(x - dirX * h * 0.5, topY + 1, z - dirZ * h * 0.5);
     this.light.target.position.set(x + dirX * h * 0.5, floorY, z + dirZ * h * 0.5);
     this.group.add(this.light, this.light.target);
@@ -224,20 +232,26 @@ export class MoonShaft {
     this.volume.rotation.z = -dirX * 0.35;
     this.volume.rotation.x = dirZ * 0.35;
     this.group.add(this.volume);
-    const pool = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: lib.glowTexture, color: 0x5f86c4, transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
-    pool.rotation.x = -Math.PI / 2;
-    pool.position.set(x + dirX * h * 0.5, floorY + 0.03, z + dirZ * h * 0.5);
-    pool.scale.setScalar(r * 3.2);
-    this.group.add(pool);
+    this.pool = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: lib.glowTexture, color: 0x5f86c4, transparent: true, opacity: 0.22, depthWrite: false, blending: THREE.AdditiveBlending, fog: false }));
+    this.pool.rotation.x = -Math.PI / 2;
+    this.pool.position.set(x + dirX * h * 0.5, floorY + 0.03, z + dirZ * h * 0.5);
+    this.pool.scale.setScalar(r * 3.2);
+    this.group.add(this.pool);
   }
 
   update(elapsed: number): void {
     const u = this.volume.material.uniforms.time;
     if (u) u.value = elapsed + this.seed;
+    const f = moonFactor.value;
+    const o = this.volume.material.uniforms.opacity;
+    if (o) o.value = 0.16 * f;
+    this.pool.material.opacity = 0.22 * f;
+    this.light.intensity = this.baseIntensity * f;
   }
 
   dispose(): void {
     this.volume.material.dispose();
     this.volume.geometry.dispose();
+    this.pool.material.dispose();
   }
 }

@@ -22,7 +22,7 @@ export class MapScreen implements System {
   private readonly ctx: CanvasRenderingContext2D;
   private readonly legend: HTMLDivElement;
   private visible = false;
-  private zoom = 0.5; // px per metre
+  private zoom = 1.6; // px per metre
   private center = { x: 0, z: 0 };
   private dragging = false;
   private dragMoved = false;

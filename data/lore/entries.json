@@ -83,5 +83,61 @@
     "title": "Preserved",
     "chapter": "Finale — The Sealed Sanctum",
     "body": "The Forgetting dissolved when every memory was placed where it belonged. Moonlight filled the sanctum, and then, for the first time since I arrived, silence that did not feel like absence.\nAt sunrise the temple was not dead. It was kept."
+  },
+  {
+    "id": "asura-matsarasura",
+    "title": "Inspirations: Matsarasura",
+    "chapter": "Task 1",
+    "inspiration": true,
+    "body": "In the Mudgala Purana tradition (often called the Vinayaka Purana), Matsarasura is the asura of envy, one of eight demons each embodying a vice, and each subdued by a form of Ganesha — in this case Vakratunda. In most tellings the asuras are not destroyed but overcome and made to yield.\nThe form, words and powers of Matsarasura in this game are fictional. The eight asuras are traditional antagonists and are never confused with the sacred figures the temple remembers; the player never fights a deity."
+  },
+  {
+    "id": "asura-madasura",
+    "title": "Inspirations: Madasura",
+    "chapter": "Task 2",
+    "inspiration": true,
+    "body": "In the Mudgala Purana tradition (often called the Vinayaka Purana), Madasura is the asura of pride, one of eight demons each embodying a vice, and each subdued by a form of Ganesha — in this case Ekadanta. In most tellings the asuras are not destroyed but overcome and made to yield.\nThe form, words and powers of Madasura in this game are fictional. The eight asuras are traditional antagonists and are never confused with the sacred figures the temple remembers; the player never fights a deity."
+  },
+  {
+    "id": "asura-mohasura",
+    "title": "Inspirations: Mohasura",
+    "chapter": "Task 3",
+    "inspiration": true,
+    "body": "In the Mudgala Purana tradition (often called the Vinayaka Purana), Mohasura is the asura of delusion, one of eight demons each embodying a vice, and each subdued by a form of Ganesha — in this case Mahodara. In most tellings the asuras are not destroyed but overcome and made to yield.\nThe form, words and powers of Mohasura in this game are fictional. The eight asuras are traditional antagonists and are never confused with the sacred figures the temple remembers; the player never fights a deity."
+  },
+  {
+    "id": "asura-lobhasura",
+    "title": "Inspirations: Lobhasura",
+    "chapter": "Task 4",
+    "inspiration": true,
+    "body": "In the Mudgala Purana tradition (often called the Vinayaka Purana), Lobhasura is the asura of greed, one of eight demons each embodying a vice, and each subdued by a form of Ganesha — in this case Gajanana. In most tellings the asuras are not destroyed but overcome and made to yield.\nThe form, words and powers of Lobhasura in this game are fictional. The eight asuras are traditional antagonists and are never confused with the sacred figures the temple remembers; the player never fights a deity."
+  },
+  {
+    "id": "asura-krodhasura",
+    "title": "Inspirations: Krodhasura",
+    "chapter": "Task 5",
+    "inspiration": true,
+    "body": "In the Mudgala Purana tradition (often called the Vinayaka Purana), Krodhasura is the asura of anger, one of eight demons each embodying a vice, and each subdued by a form of Ganesha — in this case Lambodara. In most tellings the asuras are not destroyed but overcome and made to yield.\nThe form, words and powers of Krodhasura in this game are fictional. The eight asuras are traditional antagonists and are never confused with the sacred figures the temple remembers; the player never fights a deity."
+  },
+  {
+    "id": "asura-kamasura",
+    "title": "Inspirations: Kamasura",
+    "chapter": "Task 6",
+    "inspiration": true,
+    "body": "In the Mudgala Purana tradition (often called the Vinayaka Purana), Kamasura is the asura of desire, one of eight demons each embodying a vice, and each subdued by a form of Ganesha — in this case Vikata. In most tellings the asuras are not destroyed but overcome and made to yield.\nThe form, words and powers of Kamasura in this game are fictional. The eight asuras are traditional antagonists and are never confused with the sacred figures the temple remembers; the player never fights a deity."
+  },
+  {
+    "id": "asura-mamasura",
+    "title": "Inspirations: Mamasura",
+    "chapter": "Task 7",
+    "inspiration": true,
+    "body": "In the Mudgala Purana tradition (often called the Vinayaka Purana), Mamasura is the asura of attachment, one of eight demons each embodying a vice, and each subdued by a form of Ganesha — in this case Vighnaraja. In most tellings the asuras are not destroyed but overcome and made to yield.\nThe form, words and powers of Mamasura in this game are fictional. The eight asuras are traditional antagonists and are never confused with the sacred figures the temple remembers; the player never fights a deity."
+  },
+  {
+    "id": "asura-ahamkarasura",
+    "title": "Inspirations: Ahamkarasura",
+    "chapter": "Task 8",
+    "inspiration": true,
+    "body": "In the Mudgala Purana tradition (often called the Vinayaka Purana), Ahamkarasura is the asura of ego, one of eight demons each embodying a vice, and each subdued by a form of Ganesha — in this case Dhumravarna. In most tellings the asuras are not destroyed but overcome and made to yield.\nThe form, words and powers of Ahamkarasura in this game are fictional. The eight asuras are traditional antagonists and are never confused with the sacred figures the temple remembers; the player never fights a deity."
   }
 ]

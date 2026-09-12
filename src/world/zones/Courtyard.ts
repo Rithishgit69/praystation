@@ -24,14 +24,15 @@ export function* buildCourtyard(ctx: ZoneBuildContext): Generator<void, UnitBuil
   place(makeFloor(lib, 11, 8, 0.9, 2), 1.5, 0.9, 1.5); // foreground terrace (z -2.5..5.5)
   // Short stair descending from the terrace to the courtyard (rises toward +Z so it faces the player).
   place(makeSteps(lib, { width: 7.2, count: 4, rise: 0.225, run: 0.62, rng: rng.fork(6) }), 3.2, 0, -4.98, Math.PI);
+  place(makeSteps(lib, { width: 7.2, count: 4, rise: 0.225, run: 0.62, rng: rng.fork(15) }), 1.5, 0, 8.0); // south stair up to the terrace
   place(makeFloor(lib, 9.5, 17, 0.62, 3), 12.7, 0.62, -4); // right terrace
-  place(makeFloor(lib, 8, 34, 1.92, 4), 4.5, 1.92, -29.2); // colonnade floor
+  place(makeFloor(lib, 8, 48, 1.92, 4), 4.5, 1.92, -37); // colonnade floor, reaching the hall's south door
 
   yield;
   // ---- Great steps and colonnade ------------------------------------------------------------
   place(makeSteps(lib, { width: 7.6, count: 8, rise: 0.24, run: 0.46, rng: rng.fork(5) }), 4.5, 0, -8.5);
   const corridorZ0 = -14.2;
-  for (let i = 0; i < 9; i++) {
+  for (let i = 0; i < 12; i++) {
     const z = corridorZ0 - i * 3.6;
     for (const x of [1.4, 7.6]) {
       place(makePillar(lib, { height: 5.1, rng: rng.fork(100 + i * 2 + (x > 4 ? 1 : 0)) }), x, 1.92, z);
@@ -55,15 +56,15 @@ export function* buildCourtyard(ctx: ZoneBuildContext): Generator<void, UnitBuil
   }
   // Lintels along each pillar row, cross beams and a dark roof slab so the corridor recedes into darkness.
   for (const x of [1.4, 7.6]) {
-    const lintel = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.5, 9 * 3.6), lib.sandstoneDark);
-    lintel.position.set(x, 1.92 + 5.1 + 0.25, corridorZ0 - 4 * 3.6);
+    const lintel = new THREE.Mesh(new THREE.BoxGeometry(1.0, 0.5, 12 * 3.6), lib.sandstoneDark);
+    lintel.position.set(x, 1.92 + 5.1 + 0.25, corridorZ0 - 5.5 * 3.6);
     lintel.castShadow = true;
     lintel.receiveShadow = true;
     const col = new Float32Array(lintel.geometry.getAttribute('position').count * 3).fill(0.55);
     lintel.geometry.setAttribute('color', new THREE.BufferAttribute(col, 3));
     group.add(lintel);
   }
-  for (let i = 0; i < 9; i++) {
+  for (let i = 0; i < 12; i++) {
     const beam = new THREE.Mesh(new THREE.BoxGeometry(7.4, 0.42, 0.7), lib.sandstoneDark);
     beam.position.set(4.5, 1.92 + 5.1 + 0.55, corridorZ0 - i * 3.6);
     beam.castShadow = true;
@@ -71,15 +72,15 @@ export function* buildCourtyard(ctx: ZoneBuildContext): Generator<void, UnitBuil
     beam.geometry.setAttribute('color', new THREE.BufferAttribute(col, 3));
     group.add(beam);
   }
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(9.5, 0.4, 9 * 3.6 + 2), lib.sandstoneDark);
-  roof.position.set(4.5, 1.92 + 5.1 + 0.95, corridorZ0 - 4 * 3.6);
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(9.5, 0.4, 12 * 3.6 + 2), lib.sandstoneDark);
+  roof.position.set(4.5, 1.92 + 5.1 + 0.95, corridorZ0 - 5.5 * 3.6);
   roof.receiveShadow = true;
   const roofCol = new Float32Array(roof.geometry.getAttribute('position').count * 3).fill(0.35);
   roof.geometry.setAttribute('color', new THREE.BufferAttribute(roofCol, 3));
   group.add(roof);
   // Side walls enclosing the colonnade.
-  place(makeWallSlab(lib, 33, 5.4, 1.1, rng.fork(7), true), -0.4, 1.92, corridorZ0 - 15.3, Math.PI / 2);
-  place(makeWallSlab(lib, 33, 5.4, 1.1, rng.fork(9), true), 9.4, 1.92, corridorZ0 - 15.3, Math.PI / 2);
+  place(makeWallSlab(lib, 44, 5.4, 1.1, rng.fork(7), true), -0.4, 1.92, corridorZ0 - 20.8, Math.PI / 2);
+  place(makeWallSlab(lib, 44, 5.4, 1.1, rng.fork(9), true), 9.4, 1.92, corridorZ0 - 20.8, Math.PI / 2);
   // Flanking walls beside the stairs (retaining walls of the colonnade floor).
   place(makeBlocks(lib, stackedBlocks(rng.fork(11), 4.2, 4, 1.0), rng.fork(12)), 0.4, 0, -10.5, -Math.PI / 2);
   place(makeBlocks(lib, stackedBlocks(rng.fork(13), 4.2, 4, 1.0), rng.fork(14)), 8.6, 0, -10.5, -Math.PI / 2);

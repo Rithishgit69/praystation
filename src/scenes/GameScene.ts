@@ -15,6 +15,7 @@ import { MoonLight } from '@/world/fx/Atmosphere';
 import { patchIvyMaterial } from '@/world/props/Foliage';
 import { WorldMap } from '@/world/WorldMap';
 import { WorldStreamer } from '@/world/WorldStreamer';
+import { DistantForest } from '@/world/DistantForest';
 import type { ZoneId } from '@/world/WorldTypes';
 import { AudioSystem } from '@/audio/AudioSystem';
 import { InteractionSystem } from '@/systems/Interaction';
@@ -32,6 +33,9 @@ import { EncounterRunner } from '@/systems/EncounterRunner';
 import { IllusionSystem } from '@/systems/Illusions';
 import { StoryChapters } from '@/systems/StoryChapters';
 import { gameStore } from '@/state/store';
+import { Gun } from '@/missions/Gun';
+import { MissionHUD } from '@/missions/MissionHUD';
+import { MissionDirector } from '@/missions/MissionDirector';
 
 const EXTERIOR_FOG = { color: 0x0f2038, density: 0.022 };
 
@@ -105,6 +109,8 @@ export class GameScene implements SceneModule {
   private save: SaveSystem | null = null;
   private streamer: WorldStreamer | null = null;
   private started = false;
+  private missions: MissionDirector | null = null;
+  private mode: 'missions' | 'story' = 'missions';
 
   async init(engine: Engine): Promise<void> {
     const lib = MaterialLibrary.get(engine.maxAnisotropy);
@@ -116,7 +122,11 @@ export class GameScene implements SceneModule {
 
     const world = new WorldMap();
     const params = new URLSearchParams(location.search);
+    this.mode = params.get('mode') === 'story' ? 'story' : 'missions';
     const startZone = params.get('start') as ZoneId | null;
+    // Test/dev: preset flags before the world builds (e.g. ?flags=door:hall-east,door:passage-moon).
+    const preset = params.get('flags');
+    if (preset) for (const f of preset.split(',')) if (f) gameStore.getState().setFlag(f, true);
     const spawn = startZone && startZone !== 'forest' ? this.zoneSpawn(startZone) : world.spawn;
 
     let rig: CameraRig | null = null;
@@ -152,23 +162,11 @@ export class GameScene implements SceneModule {
     hud.bindPlayer(() => ({ x: controller.position.x, z: controller.position.z, yaw: cam.yaw, stamina: controller.stamina, sprinting: controller.state === 'sprint' }));
     const subtitles = new Subtitles(engine);
     const journal = new Journal(engine);
-    const interaction = new InteractionSystem(engine, streamer, controller, hud);
-    const doors = new DoorSystem(engine, streamer, audio);
-    const chapters = new ChapterManager(engine, journal, subtitles);
-    const encounterContext = { engine, player: controller, visual, rig: cam, hud, audio, subtitles };
-    const factory = (id: string): MemoryController => (id === 'vakratunda' ? new VakratundaEncounter(encounterContext, lib, streamer, lighting) : new BrokenTuskEncounter(encounterContext));
-    const portal = new MemoryPortal(engine, streamer, controller, visual, cam, lighting, audio, doors, journal, subtitles, interaction, factory, lib);
-    atmosphere.overrideProvider = () => portal.fogOverride;
-    const puzzles = new PuzzleSystem(engine, streamer, interaction, audio, doors, journal, subtitles, lighting);
-    const story = new Story(engine, streamer, interaction, chapters, portal, audio, visual, journal, subtitles, lighting, doors, lib);
-    const runner = new EncounterRunner();
-    const illusions = new IllusionSystem(engine, streamer, controller, audio, subtitles);
-    const storyChapters = new StoryChapters(engine, streamer, interaction, chapters, audio, visual, subtitles, lighting, doors, puzzles, runner, encounterContext, lib, moon, (t) => (atmosphere.dawn = t));
     const save = new SaveSystem(engine, controller, cam);
     this.save = save;
     const travel = (shrineId: string): void => {
       const sh = world.shrines.find((x) => x.id === shrineId);
-      if (!sh || portal.inMemory) return;
+      if (!sh) return;
       controller.movementLocked = true;
       audio.play('shimmer', { volume: 0.6, rate: 0.9 });
       gsap.to(atmosphere, {
@@ -185,17 +183,57 @@ export class GameScene implements SceneModule {
       });
     };
     const map = new MapScreen(engine, world, streamer, () => ({ x: controller.position.x, z: controller.position.z, yaw: cam.yaw }), travel);
+    hud.onMinimapTap(() => map.setVisible(true));
     const trail = new WaypointTrail(engine, lib, () => map.waypoint, () => (map.waypoint = null), () => controller.position);
-    const pause = new PauseMenu(engine, save, () => location.reload());
-
-    // Player sounds.
+    const distant = new DistantForest(engine, lib, world.terrain, () => controller.position);
     controller.events = {
       onFootstep: (surface, position, intensity) => audio.footstep(surface, position, intensity),
       onLand: (_surface, position, hard) => audio.land(hard, position),
     };
-
     lighting.onMoonChange((state) => streamer.setMoonState(state));
-    for (const s of [controller, streamer, lighting, story, storyChapters, interaction, puzzles, doors, portal, runner, illusions, chapters, visual, atmosphere, audio, save, subtitles, journal, map, pause, trail, cam, hud]) engine.addSystem(s);
+
+    if (this.mode === 'missions') {
+      // Mission mode: eight tasks, eight asuras, the Astra. The exploration story systems stay dormant.
+      const gun = new Gun(engine, lib, controller, visual, cam, audio);
+      const mhud = new MissionHUD(engine, gun);
+      const missions = new MissionDirector(engine, lib, streamer, controller, visual, cam, audio, gun, mhud, lighting, save);
+      missions.setVeil = (v) => gsap.to(atmosphere, { veil: v, duration: v > 0 ? 0.9 : 1.4, ease: v > 0 ? 'power2.in' : 'power2.out' });
+      missions.onDawn = (t) => (atmosphere.dawn = t);
+      this.missions = missions;
+      const pause = new PauseMenu(engine, save, () => location.reload(), () => journal.toggle(), () => missions.openTaskSelect());
+      for (const s of [controller, streamer, lighting, missions, gun, visual, atmosphere, audio, save, subtitles, journal, map, pause, trail, distant, cam, hud, mhud]) engine.addSystem(s);
+      if (window.__eka) {
+        window.__eka.mission = () => missions.debugState();
+        window.__eka.missionSkipNarration = () => missions.debugSkipNarration();
+        window.__eka.missionDamageBoss = (n) => missions.debugDamageBoss(n);
+        window.__eka.missionHurtPlayer = (n) => missions.debugHurtPlayer(n);
+        window.__eka.missionMenuChoose = (i) => missions.debugMenuChoose(i);
+      }
+    } else {
+      const interaction = new InteractionSystem(engine, streamer, controller, hud);
+      const doors = new DoorSystem(engine, streamer, audio);
+      const chapters = new ChapterManager(engine, journal, subtitles);
+      const encounterContext = { engine, player: controller, visual, rig: cam, hud, audio, subtitles };
+      const factory = (id: string): MemoryController => (id === 'vakratunda' ? new VakratundaEncounter(encounterContext, lib, streamer, lighting) : new BrokenTuskEncounter(encounterContext));
+      const portal = new MemoryPortal(engine, streamer, controller, visual, cam, lighting, audio, doors, journal, subtitles, interaction, factory, lib);
+      atmosphere.overrideProvider = () => portal.fogOverride;
+      const puzzles = new PuzzleSystem(engine, streamer, interaction, audio, doors, journal, subtitles, lighting);
+      const story = new Story(engine, streamer, interaction, chapters, portal, audio, visual, journal, subtitles, lighting, doors, lib);
+      const runner = new EncounterRunner();
+      const illusions = new IllusionSystem(engine, streamer, controller, audio, subtitles);
+      const storyChapters = new StoryChapters(engine, streamer, interaction, chapters, audio, visual, subtitles, lighting, doors, puzzles, runner, encounterContext, lib, moon, (t) => (atmosphere.dawn = t));
+      const pause = new PauseMenu(engine, save, () => location.reload(), () => journal.toggle(), null);
+      for (const s of [controller, streamer, lighting, story, storyChapters, interaction, puzzles, doors, portal, runner, illusions, chapters, visual, atmosphere, audio, save, subtitles, journal, map, pause, trail, distant, cam, hud]) engine.addSystem(s);
+      if (window.__eka) {
+        window.__eka.interact = () => {
+          const f = interaction.focused;
+          if (f) interaction.fire(f);
+          return f ? f.id : null;
+        };
+        window.__eka.portal = { inMemory: () => portal.inMemory };
+        if (!window.__eka.probe) window.__eka.probe = () => ({ moon: lighting.moonState, pinned: lighting.pinned, zone: streamer.zone, locked: controller.movementLocked, chapter: gameStore.getState().chapter });
+      }
+    }
     cam.snapBehind();
     audio.setZone(streamer.zone);
 
@@ -207,18 +245,15 @@ export class GameScene implements SceneModule {
         streamer.loadImmediate(1);
         cam.snapBehind();
       };
-      window.__eka.interact = () => {
-        const f = interaction.focused;
-        if (f) interaction.fire(f);
-        return f ? f.id : null;
-      };
       window.__eka.flags = () => gameStore.getState().flags;
       window.__eka.setFlag = (k, v) => gameStore.getState().setFlag(k, v);
       window.__eka.save = () => save.save();
       window.__eka.anchors = () => Array.from(streamer.anchors.values()).map((a) => ({ id: a.id, kind: a.kind, x: a.position.x, y: a.position.y, z: a.position.z }));
-      window.__eka.portal = { inMemory: () => portal.inMemory };
       window.__eka.slowSteps = () => streamer.slowSteps;
-      window.__eka.probe = () => ({ focused: interaction.focused?.id ?? null, suppressed: interaction.suppressed, moon: lighting.moonState, pinned: lighting.pinned, zone: streamer.zone, locked: controller.movementLocked, chapter: gameStore.getState().chapter, loop: chapters.loop });
+      window.__eka.activateShrine = (id) => gameStore.getState().activateShrine(id);
+      window.__eka.clearSubtitles = () => subtitles.clear();
+      window.__eka.playerState = () => ({ state: controller.state, surface: controller.surface, grounded: controller.grounded, vx: controller.velocity.x, vy: controller.velocity.y, vz: controller.velocity.z, stamina: controller.stamina, crouch: controller.crouching, locked: controller.movementLocked, scale: controller.speedScale, dodge: controller.dodgeTimer, moveX: engine.input.frame.moveX, moveY: engine.input.frame.moveY, device: engine.input.device, blocked: engine.input.gameplayBlocked, ui: engine.uiBlocking, dev: engine.devMenu.isVisible, held: Array.from(engine.input.frame.held), clips: controller.clipCount, lastClip: controller.lastClip, y: controller.position.y });
+      if (!window.__eka.probe) window.__eka.probe = () => ({ moon: lighting.moonState, pinned: lighting.pinned, zone: streamer.zone, locked: controller.movementLocked, chapter: gameStore.getState().chapter });
     }
   }
 
@@ -236,6 +271,7 @@ export class GameScene implements SceneModule {
         this.streamer.reset(1);
       }
     } else SaveSystem.clear();
+    this.missions?.begin(mode);
   }
 
   private zoneSpawn(zone: ZoneId): { position: THREE.Vector3; yaw: number } {

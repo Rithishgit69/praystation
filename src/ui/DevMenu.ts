@@ -76,7 +76,7 @@ export class DevMenu {
     this.root.appendChild(opts);
     const hint = document.createElement('p');
     hint.className = 'hint';
-    hint.textContent = 'F1 / ` close · F3 profiler · R recentre camera';
+    hint.textContent = 'F1 / ` close · F3 profiler · V recentre camera';
     this.root.appendChild(hint);
   }
 

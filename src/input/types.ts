@@ -12,9 +12,12 @@ export type Action =
   | 'map'
   | 'devmenu'
   | 'profiler'
-  | 'cameraReset';
+  | 'cameraReset'
+  | 'fire'
+  | 'reload'
+  | 'aim';
 
-export const ACTIONS: readonly Action[] = ['interact', 'sprint', 'jump', 'crouch', 'dodge', 'block', 'pause', 'journal', 'map', 'devmenu', 'profiler', 'cameraReset'];
+export const ACTIONS: readonly Action[] = ['interact', 'sprint', 'jump', 'crouch', 'dodge', 'block', 'pause', 'journal', 'map', 'devmenu', 'profiler', 'cameraReset', 'fire', 'reload', 'aim'];
 
 /** One frame of merged input. `look` is an unscaled delta (radians before sensitivity); stick look is already scaled by dt. */
 export interface InputFrame {

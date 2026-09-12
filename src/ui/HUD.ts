@@ -95,6 +95,14 @@ export class HUD implements System {
   bindPlayer(fn: () => { x: number; z: number; yaw: number; stamina: number; sprinting: boolean }): void {
     this.getPlayer = fn;
   }
+  /** Touch: tapping the compass opens the map screen. */
+  onMinimapTap(fn: () => void): void {
+    const el = this.root.querySelector('.minimap') as HTMLElement;
+    el.style.pointerEvents = 'auto';
+    el.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'touch') fn();
+    });
+  }
   setMapGeometry(rects: MapRect[]): void {
     this.rects = rects;
   }

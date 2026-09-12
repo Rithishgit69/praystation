@@ -25,7 +25,7 @@ export function* buildHall(ctx: ZoneBuildContext): Generator<void, UnitBuild, vo
       { side: 's', offset: 0, width: 7.6, height: 6.0 },
       { side: 'e', offset: -8, width: 4.2, height: 4.6 },
     ],
-    pillars: { cols: 5, rows: 6, inset: 7 },
+    pillars: { cols: 4, rows: 6, inset: 7 },
     ceiling: true,
     roofHoles: [
       { x: 4, z: 28, w: 10, d: 6 },

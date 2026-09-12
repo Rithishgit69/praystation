@@ -11,19 +11,19 @@ export function* buildShrine(ctx: ZoneBuildContext): Generator<void, UnitBuild, 
   const acc = new UnitAccumulator(ctx.lib, ctx.rng, 'shrine');
   const y = -20;
   // Corridor from the library east door (-72, -10, -88) descending south to the shrine: stair room then corridor.
-  yield* buildRoom(acc, { cx: -58, cz: -88, floorY: -10, width: 24, depth: 5, height: 5, doors: [{ side: 'w', offset: 0, width: 4.2, height: 4.6 }, { side: 'e', offset: 0, width: 4.2, height: 4.6 }], ceiling: true, dark: true });
-  yield* buildRoom(acc, { cx: -44, cz: -114, floorY: y, width: 6, depth: 56, height: 14, doors: [{ side: 'n', offset: 0, width: 4.2, height: 4.6 }, { side: 's', offset: 0, width: 4.2, height: 4.6 }], ceiling: true, dark: true });
-  acc.place(makeSteps(ctx.lib, { width: 5.6, count: 41, rise: 0.244, run: 0.5, rng: ctx.rng.fork(2) }), -44, y, -114 - 28 + 0.5 + 20.5, Math.PI); // rises toward +Z from -20 up to -10 at the north door
-  yield* buildRoom(acc, { cx: -44, cz: -200, floorY: y, width: 5, depth: 116, height: 5, doors: [{ side: 'n', offset: 0, width: 4.2, height: 4.6 }, { side: 's', offset: 0, width: 4.2, height: 4.6 }], ceiling: true, dark: true, wallThickness: 1.6 });
-  yield* buildRoom(acc, { cx: -22, cz: -260, floorY: y, width: 48, depth: 5, height: 5, doors: [{ side: 'w', offset: 0, width: 4.2, height: 4.6 }, { side: 'e', offset: 0, width: 4.2, height: 4.6 }], ceiling: true, dark: true, wallThickness: 1.6 });
+  yield* buildRoom(acc, { cx: -59, cz: -88, floorY: -10, width: 26, depth: 5, height: 5, doors: [{ side: 'w', offset: 0, width: 4.2, height: 4.6 }, { side: 'e', offset: 0, width: 4.2, height: 4.6 }], ceiling: true, dark: true });
+  yield* buildRoom(acc, { cx: -44, cz: -114, floorY: y, width: 6, depth: 56, height: 14, doors: [{ side: 'n', offset: 0, width: 4.2, height: 4.6 }, { side: 'w', offset: 26, width: 4.2, height: 14 }], ceiling: true, dark: true });
+  // Stair: landing at −10 by the south door, 41 steps descending northward to −20 at the north door.
+  acc.landing(-44, -10, -93, 6, 16);
+  acc.place(makeSteps(ctx.lib, { width: 5.6, count: 41, rise: 0.244, run: 0.5, rng: ctx.rng.fork(2) }), -44, y, -121.5, Math.PI); // rises toward +Z from −20 (z −121.5) up to −10 (z −101)
+  // Corridor south along x −44 all the way to the hall's west door, then a short jog east into it.
+  yield* buildRoom(acc, { cx: -44, cz: -226, floorY: y, width: 5, depth: 168, height: 5, doors: [{ side: 'n', offset: 0, width: 4.2, height: 4.6 }, { side: 'e', offset: -82, width: 4.2, height: 4.6 }], ceiling: true, dark: true, wallThickness: 1.6 });
+  yield* buildRoom(acc, { cx: -37, cz: -308, floorY: y, width: 9, depth: 5, height: 5, doors: [{ side: 'w', offset: 0, width: 4.2, height: 4.6 }, { side: 'e', offset: 0, width: 4.2, height: 4.6 }], ceiling: true, dark: true, wallThickness: 1.6 });
   yield;
   // The shrine hall.
   const cx = 0;
   const cz = -308;
   yield* buildRoom(acc, { cx, cz, floorY: y, width: 60, depth: 60, height: 14, doors: [{ side: 'n', offset: 0, width: 4.2, height: 5 }, { side: 'w', offset: 0, width: 4.2, height: 4.6 }], pillars: { cols: 3, rows: 3, inset: 9 }, ceiling: true, dark: true, roofHoles: [{ x: 0, z: 0, w: 6, d: 6 }] });
-  // Note: the west door of the shrine hall connects to the corridor above via (−30, −308) → corridor at (−22,−260)? The
-  // corridor's east end turns south to the hall's north door; the west door is a collapsed dead end (rubble).
-  acc.blockStack(-31.5, y, cz, 4.2, 5, 1.2, Math.PI / 2);
   acc.place(makeSteps(ctx.lib, { width: 10, count: 4, rise: 0.24, run: 0.5, rng: ctx.rng.fork(6) }), cx, y, cz + 7);
   const dais = new THREE.Mesh(new THREE.CylinderGeometry(7, 7.5, 0.96, 24), ctx.lib.flagstone);
   setTriplanar(dais.geometry, 5.6, 0.75);
@@ -51,7 +51,7 @@ export function* buildShrine(ctx: ZoneBuildContext): Generator<void, UnitBuild, 
   // Corrupted brazier: dark flames until cleansed.
   const cleansed = ctx.flags['shrine:cleansed'] === true;
   acc.fire(cx, y + 0.96 + 1.5, cz, { scale: cleansed ? 1 : 1.3, intensity: cleansed ? 40 : 18, distance: 14 });
-  for (const [dx, dz] of [[-22, -22], [22, -22], [-22, 22], [22, 22]] as const) acc.brazier(cx + dx, y, cz + dz, { scale: 0.8, intensity: 22, distance: 10 });
+  for (const [dx, dz] of [[-22, -22], [22, -22], [-22, 22], [22, 22], [-7, 12], [7, 12]] as const) acc.brazier(cx + dx, y, cz + dz, { scale: 0.8, intensity: 22, distance: 10 });
   // Sealed sanctum door (north).
   const sealed = ctx.flags['door:shrine-sanctum'] !== true;
   const slab = new THREE.Mesh(new THREE.BoxGeometry(4.2, 5, 0.6), ctx.lib.sandstoneDark);

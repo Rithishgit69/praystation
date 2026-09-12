@@ -8,6 +8,7 @@ import '@fontsource/noto-serif-devanagari/500.css';
 import { Engine } from '@/engine/Engine';
 import { findScene, SCENES } from '@/scenes/registry';
 import { installDebugApi } from '@/debug/DebugApi';
+import { initNativeShell } from '@/platform/native';
 
 const $ = <T extends HTMLElement>(id: string): T => {
   const el = document.getElementById(id);
@@ -39,6 +40,7 @@ async function boot(): Promise<void> {
   const cont = $<HTMLButtonElement>('boot-continue');
   const newBtn = $<HTMLButtonElement>('boot-new');
   const dismiss = (mode: 'new' | 'continue'): void => {
+    void initNativeShell();
     mod.start?.(mode);
     bootEl.classList.add('hidden');
     bootEl.addEventListener('transitionend', () => bootEl.remove(), { once: true });

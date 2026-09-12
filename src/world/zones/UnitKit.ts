@@ -96,6 +96,14 @@ export class UnitAccumulator {
     return f;
   }
 
+  /** Flat stone landing (top surface at `topY`). */
+  landing(x: number, topY: number, z: number, w: number, d: number): void {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, 1.0, d), this.lib.flagstone);
+    setTriplanar(m.geometry, 5.6, 0.75);
+    m.position.set(x, topY - 0.5, z);
+    this.mesh(m);
+  }
+
   /** Stone brazier plinth with fire on top. Returns the fire so encounters can dim/relight it. */
   brazier(x: number, y: number, z: number, o: FireOpts & { tiers?: number } = {}): FireEffect {
     const b = makeBrazierPlinth(this.lib, { rng: this.rng.fork(Math.round(x * 7 + z * 13)), tiers: o.tiers ?? 2 });
@@ -137,11 +145,11 @@ export class UnitAccumulator {
   }
 
   private shaftCount = 0;
-  /** Moon shaft through a roof hole (max 3 real spot lights per unit). */
-  moonShaft(x: number, topY: number, floorY: number, z: number, w: number, d: number): void {
-    if (this.shaftCount >= 3) return;
-    this.shaftCount++;
-    const shaft = new MoonShaft(this.lib, x, topY, floorY, z, w, d);
+  /** Moon shaft through a roof hole (max 3 real spot lights per unit; further shafts are volume-only). */
+  moonShaft(x: number, topY: number, floorY: number, z: number, w: number, d: number, withLight = true): void {
+    const lit = withLight && this.shaftCount < 3;
+    if (lit) this.shaftCount++;
+    const shaft = new MoonShaft(this.lib, x, topY, floorY, z, w, d, 0.25, -0.2, lit);
     this.group.add(shaft.group);
     this.updates.push((_dt, t) => shaft.update(t));
     this.disposables.push(() => shaft.dispose());
@@ -283,15 +291,17 @@ export function* buildRoom(acc: UnitAccumulator, r: RoomSpec): Generator<void, v
       const a = d.offset - d.width / 2;
       const b = d.offset + d.width / 2;
       yield* segment(cursor, a);
-      // Lintel above the opening.
-      const lx = s.x0 + dirX * (d.offset + len / 2);
-      const lz = s.z0 + dirZ * (d.offset + len / 2);
-      const lintel = new THREE.Mesh(new THREE.BoxGeometry(d.width + 0.4, r.height - d.height, t), dark ? acc.lib.sandstoneDark : acc.lib.sandstone);
-      addWhiteColor(lintel.geometry);
-      setTriplanar(lintel.geometry, 2.2, 0.8);
-      lintel.position.set(lx, r.floorY + d.height + (r.height - d.height) / 2, lz);
-      lintel.rotation.y = Math.atan2(-dirZ, dirX);
-      acc.mesh(lintel);
+      // Lintel above the opening (none when the opening is the full height, e.g. a stair landing).
+      if (r.height - d.height > 0.05) {
+        const lx = s.x0 + dirX * (d.offset + len / 2);
+        const lz = s.z0 + dirZ * (d.offset + len / 2);
+        const lintel = new THREE.Mesh(new THREE.BoxGeometry(d.width + 0.4, r.height - d.height, t), dark ? acc.lib.sandstoneDark : acc.lib.sandstone);
+        addWhiteColor(lintel.geometry);
+        setTriplanar(lintel.geometry, 2.2, 0.8);
+        lintel.position.set(lx, r.floorY + d.height + (r.height - d.height) / 2, lz);
+        lintel.rotation.y = Math.atan2(-dirZ, dirX);
+        acc.mesh(lintel);
+      }
       cursor = b;
     }
     yield* segment(cursor, len / 2);

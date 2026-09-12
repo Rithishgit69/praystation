@@ -17,7 +17,8 @@ const KEYMAP: Record<string, Action> = {
   F1: 'devmenu',
   Backquote: 'devmenu',
   F3: 'profiler',
-  KeyR: 'cameraReset',
+  KeyV: 'cameraReset',
+  KeyR: 'reload',
 };
 
 export class Keyboard implements InputDevice {

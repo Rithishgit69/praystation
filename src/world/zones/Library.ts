@@ -84,6 +84,14 @@ export function* buildLibrary(ctx: ZoneBuildContext): Generator<void, UnitBuild,
   acc.mesh(slab, sealed);
   acc.anchor('door:library-shrine', 'door', cx + 37.6, y, cz + 12, Math.PI / 2, 3, { opened: !sealed }, slab);
   for (const [dx, dz] of [[-30, 20], [30, 20], [-30, -20], [30, -20]] as const) acc.brazier(cx + dx, y, cz + dz, { scale: 0.8, intensity: 24, distance: 11 });
+  // Aisle torches on the shelf ends: the first three carry real lights, the rest baked pools.
+  for (let i = 0; i < 5; i++) {
+    const z = cz - 24 + i * 10 + 5;
+    for (const dx of [-13.5, -4.5]) {
+      acc.fire(cx + dx, y + 2.6, z, { scale: 0.5, light: i < 2, intensity: 14, distance: 9 });
+      if (i >= 2) acc.cookie(cx + dx, y + 0.03, z, 5);
+    }
+  }
   acc.mist([{ x: cx, y: y + 0.4, z: cz, size: 40, opacity: 0.12 }], 0x30281c);
   acc.anchor('trigger:library-enter', 'trigger', cx, y, cz + 28, 0, 5);
   acc.anchor('shrine:library', 'shrine', cx + 30, y + 1.35, cz + 20, 0, 2.4, { lit: ctx.flags['shrine:library'] === true });

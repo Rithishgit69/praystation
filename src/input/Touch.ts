@@ -16,6 +16,10 @@ export class Touch implements InputDevice {
   readonly actionButton: HTMLButtonElement;
   readonly secondaryButton: HTMLButtonElement;
   readonly pauseButton: HTMLButtonElement;
+  readonly fireButton: HTMLButtonElement;
+  readonly reloadButton: HTMLButtonElement;
+  private fireHeld = false;
+  private reloadPressed = false;
   private stickId: number | null = null;
   private stickOrigin = { x: 0, y: 0 };
   private stickVec = { x: 0, y: 0 };
@@ -112,6 +116,16 @@ export class Touch implements InputDevice {
     this.pauseButton.className = 'touch-btn touch-pause';
     this.pauseButton.setAttribute('aria-label', 'Pause');
     this.pauseButton.textContent = '❚❚';
+    this.fireButton = document.createElement('button');
+    this.fireButton.className = 'touch-btn touch-fire';
+    this.fireButton.setAttribute('aria-label', 'Fire');
+    this.fireButton.textContent = 'FIRE';
+    this.fireButton.hidden = true;
+    this.reloadButton = document.createElement('button');
+    this.reloadButton.className = 'touch-btn touch-reload';
+    this.reloadButton.setAttribute('aria-label', 'Reload');
+    this.reloadButton.textContent = '↻';
+    this.reloadButton.hidden = true;
     const hold = (btn: HTMLButtonElement, set: (v: boolean) => void): void => {
       btn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
@@ -125,11 +139,16 @@ export class Touch implements InputDevice {
     };
     hold(this.actionButton, (v) => (this.actionHeld = v));
     hold(this.secondaryButton, (v) => (this.secondaryHeld = v));
+    hold(this.fireButton, (v) => (this.fireHeld = v));
+    this.reloadButton.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      this.reloadPressed = true;
+    });
     this.pauseButton.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       this.pausePressed = true;
     });
-    this.root.append(this.stickBase, this.actionButton, this.secondaryButton, this.pauseButton);
+    this.root.append(this.stickBase, this.actionButton, this.secondaryButton, this.pauseButton, this.fireButton, this.reloadButton);
     uiRoot.appendChild(this.root);
     canvas.addEventListener('pointerdown', this.onStart);
     window.addEventListener('pointermove', this.onMove);
@@ -142,6 +161,11 @@ export class Touch implements InputDevice {
   }
   get isVisible(): boolean {
     return !this.root.hidden;
+  }
+  /** Show the fire/reload buttons (mission mode with a weapon). */
+  setWeaponButtons(v: boolean): void {
+    this.fireButton.hidden = !v;
+    this.reloadButton.hidden = !v;
   }
   setActionLabel(label: string | null): void {
     this.actionButton.textContent = label ?? '';
@@ -157,6 +181,11 @@ export class Touch implements InputDevice {
     if (Math.hypot(this.stickVec.x, this.stickVec.y) > SPRINT_THRESHOLD) frame.stickSprint = true;
     if (this.actionHeld) frame.held.add('interact');
     if (this.secondaryHeld) frame.held.add('dodge');
+    if (this.fireHeld) frame.held.add('fire');
+    if (this.reloadPressed) {
+      frame.held.add('reload');
+      this.reloadPressed = false;
+    }
     if (this.pausePressed) {
       frame.held.add('pause');
       this.pausePressed = false;

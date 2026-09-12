@@ -91,8 +91,13 @@ export class PlayerController implements System, CameraFollowTarget {
   private readonly downDir = new THREE.Vector3(0, -1, 0);
   moveInputForward = 0;
   moveInputMagnitude = 0;
+  /** Diagnostics: how often the KCC returned less horizontal movement than requested. */
+  clipCount = 0;
+  lastClip = { want: 0, got: 0, y: 0 };
   /** Seconds of invulnerability left after a dodge (encounters read this). */
   dodgeTimer = 0;
+  /** External horizontal push (m/s) applied this fixed step on top of input movement; cleared each step. */
+  readonly externalPush = new THREE.Vector3();
 
   constructor(engine: Engine, spawn: THREE.Vector3, getViewYaw: () => number, tuning: Partial<PlayerTuning> = {}) {
     this.engine = engine;
@@ -251,8 +256,11 @@ export class PlayerController implements System, CameraFollowTarget {
       this.events.onJump?.();
     }
 
-    // Move the capsule.
+    // Move the capsule (plus any external push such as an asura's pull).
     this.tmpDelta.copy(this.velocity).multiplyScalar(step);
+    this.tmpDelta.x += this.externalPush.x * step;
+    this.tmpDelta.z += this.externalPush.z * step;
+    this.externalPush.set(0, 0, 0);
     this.kcc.computeColliderMovement(this.collider, { x: this.tmpDelta.x, y: this.tmpDelta.y, z: this.tmpDelta.z }, undefined, undefined, (c) => c !== this.collider);
     const moved = this.kcc.computedMovement();
     const pos = this.body.translation();
@@ -260,10 +268,17 @@ export class PlayerController implements System, CameraFollowTarget {
     this.body.setNextKinematicTranslation(next);
     const wasGrounded = this.grounded;
     this.grounded = this.kcc.computedGrounded();
-    if (this.grounded && this.velocity.y < 0) this.velocity.y = -1.0;
+    // Rest lightly on the ground: pushing hard into the floor makes the KCC's depenetration cancel whole
+    // steps of horizontal motion. Snap-to-ground keeps contact on slopes and steps.
+    if (this.grounded && this.velocity.y < 0) this.velocity.y = -0.05;
     if (this.velocity.y > 0 && moved.y < this.tmpDelta.y - 1e-4) this.velocity.y = 0; // head bump
-    // Wall contacts kill velocity into the wall so we do not keep pushing.
-    if (Math.hypot(moved.x - this.tmpDelta.x, moved.z - this.tmpDelta.z) > 1e-4 && step > 0) {
+    // Wall contacts kill velocity into the wall so we do not keep pushing — but only when a real wall
+    // (steep contact normal) was hit; a ground-contact glitch frame must not collapse the run.
+    const want = Math.hypot(this.tmpDelta.x, this.tmpDelta.z);
+    const got = Math.hypot(moved.x, moved.z);
+    if (want > 1e-4 && got < want * 0.6 && step > 0 && this.touchingWall()) {
+      this.clipCount++;
+      this.lastClip = { want, got, y: moved.y };
       this.velocity.x = moved.x / step;
       this.velocity.z = moved.z / step;
     }
@@ -307,6 +322,16 @@ export class PlayerController implements System, CameraFollowTarget {
     else if (sprinting && hs > t.jogSpeed + 0.3) this.state = 'sprint';
     else if (hs < t.walkSpeed + 0.6) this.state = 'walk';
     else this.state = 'jog';
+  }
+
+  /** True if any KCC contact this step has a steep (wall-like) normal. */
+  private touchingWall(): boolean {
+    const n = this.kcc.numComputedCollisions();
+    for (let i = 0; i < n; i++) {
+      const c = this.kcc.computedCollision(i, this.collisionScratch);
+      if (c && Math.abs(c.normal1.y) < 0.5) return true;
+    }
+    return false;
   }
 
   private findSurface(): SurfaceMaterial {

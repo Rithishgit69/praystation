@@ -55,7 +55,7 @@ export class StoryChapters implements System {
     private readonly moon: MoonLight,
     private readonly setDawn: (t: number) => void,
   ) {
-    this.beamMat = new THREE.MeshBasicMaterial({ color: 0x9ac2f4, transparent: true, opacity: 0.18, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+    this.beamMat = new THREE.MeshBasicMaterial({ color: 0x9ac2f4, transparent: true, opacity: 0.1, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
     this.beamGeo = new THREE.CylinderGeometry(0.22, 0.32, 1, 10, 1, true);
     for (let i = 0; i < 4; i++) {
       const b = new THREE.Mesh(this.beamGeo, this.beamMat);

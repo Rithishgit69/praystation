@@ -44,6 +44,11 @@ export class CharacterMesh {
   private phase = 0;
   private blend = { walk: 0, jog: 0, sprint: 0, crouch: 0, air: 0, land: 0 };
   private breathe = 0;
+  /** When true the arms hold a weapon in front of the chest. */
+  holdWeapon = false;
+  get rightHand(): THREE.Group {
+    return this.rForearm;
+  }
   private readonly materials: THREE.MeshStandardMaterial[] = [];
 
   constructor() {
@@ -240,12 +245,23 @@ export class CharacterMesh {
     this.lShin.rotation.x = Math.max(0, -c * swing * 1.2) + 0.08 + b.crouch * 0.9 + b.air * 0.6;
     this.rShin.rotation.x = Math.max(0, c * swing * 1.2) + 0.08 + b.crouch * 0.9 + b.air * 0.6;
     const armSwing = swing * 0.7;
-    this.lUpperArm.rotation.x = -s * armSwing + b.air * -0.6 + b.sprint * 0.2;
-    this.rUpperArm.rotation.x = s * armSwing + b.air * -0.6 + b.sprint * 0.2;
-    this.lUpperArm.rotation.z = 0.12 + b.sprint * 0.1;
-    this.rUpperArm.rotation.z = -0.12 - b.sprint * 0.1;
-    this.lForearm.rotation.x = -0.35 - Math.max(0, -s) * armSwing * 0.8 - b.sprint * 0.7;
-    this.rForearm.rotation.x = -0.35 - Math.max(0, s) * armSwing * 0.8 - b.sprint * 0.7;
+    if (this.holdWeapon) {
+      // Two-handed hold in front of the chest; slight bob with the stride.
+      const bobArm = Math.sin(p) * 0.04 * moving;
+      this.rUpperArm.rotation.x = -1.05 + bobArm;
+      this.rUpperArm.rotation.z = -0.35;
+      this.rForearm.rotation.x = -0.75;
+      this.lUpperArm.rotation.x = -1.25 + bobArm;
+      this.lUpperArm.rotation.z = 0.55;
+      this.lForearm.rotation.x = -1.15;
+    } else {
+      this.lUpperArm.rotation.x = -s * armSwing + b.air * -0.6 + b.sprint * 0.2;
+      this.rUpperArm.rotation.x = s * armSwing + b.air * -0.6 + b.sprint * 0.2;
+      this.lUpperArm.rotation.z = 0.12 + b.sprint * 0.1;
+      this.rUpperArm.rotation.z = -0.12 - b.sprint * 0.1;
+      this.lForearm.rotation.x = -0.35 - Math.max(0, -s) * armSwing * 0.8 - b.sprint * 0.7;
+      this.rForearm.rotation.x = -0.35 - Math.max(0, s) * armSwing * 0.8 - b.sprint * 0.7;
+    }
 
     // Body: bob, lean, crouch, land squash, idle breathing.
     this.breathe = Math.sin(elapsed * 1.4) * 0.5 + 0.5;
