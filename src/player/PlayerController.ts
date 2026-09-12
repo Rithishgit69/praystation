@@ -1,0 +1,324 @@
+import * as THREE from 'three';
+import type { Engine } from '@/engine/Engine';
+import { RAPIER, type SurfaceMaterial } from '@/engine/Physics';
+import type { System } from '@/engine/types';
+import { clamp, damp, dampAngle, degToRad } from '@/util/math';
+import type { CameraFollowTarget } from './CameraRig';
+
+export type LocomotionState = 'idle' | 'walk' | 'jog' | 'sprint' | 'air' | 'land-soft' | 'land-hard' | 'crouch' | 'crouch-move';
+
+export interface PlayerTuning {
+  radius: number;
+  height: number;
+  walkSpeed: number;
+  jogSpeed: number;
+  sprintSpeed: number;
+  acceleration: number;
+  friction: number;
+  airControl: number;
+  stepOffset: number;
+  slopeLimitDeg: number;
+  coyoteTimeMs: number;
+  inputBufferMs: number;
+  gravity: number;
+  jumpHeight: number;
+  staminaDrain: number;
+  staminaRegen: number;
+  staminaRegenDelay: number;
+}
+
+export const DEFAULT_TUNING: PlayerTuning = {
+  radius: 0.4,
+  height: 1.8,
+  walkSpeed: 2.2,
+  jogSpeed: 4.4,
+  sprintSpeed: 6.6,
+  acceleration: 12,
+  friction: 14,
+  airControl: 0.25,
+  stepOffset: 0.45,
+  slopeLimitDeg: 48,
+  coyoteTimeMs: 120,
+  inputBufferMs: 150,
+  gravity: 16,
+  jumpHeight: 0.9,
+  staminaDrain: 22,
+  staminaRegen: 16,
+  staminaRegenDelay: 0.8,
+};
+
+export interface PlayerEvents {
+  onFootstep?(surface: SurfaceMaterial, position: THREE.Vector3, intensity: number): void;
+  onLand?(surface: SurfaceMaterial, position: THREE.Vector3, hard: boolean): void;
+  onJump?(): void;
+}
+
+/** Kinematic capsule character (Rapier KCC) with the §5 feel numbers. Feet-origin positions. */
+export class PlayerController implements System, CameraFollowTarget {
+  readonly name = 'player';
+  readonly tuning: PlayerTuning;
+  readonly position = new THREE.Vector3();
+  readonly prevPosition = new THREE.Vector3();
+  readonly renderPosition = new THREE.Vector3();
+  readonly velocity = new THREE.Vector3();
+  facingYaw = 0;
+  state: LocomotionState = 'idle';
+  grounded = false;
+  crouching = false;
+  stamina = 100;
+  surface: SurfaceMaterial = 'dry-stone';
+  /** Locks movement input (cinematics, interactions). Gravity still applies. */
+  movementLocked = false;
+  /** Multiplier for movement speed (memory sequences, injuries). */
+  speedScale = 1;
+  events: PlayerEvents = {};
+  readonly body: RAPIER.RigidBody;
+  readonly collider: RAPIER.Collider;
+  private readonly kcc: RAPIER.KinematicCharacterController;
+  private readonly engine: Engine;
+  private readonly getViewYaw: () => number;
+  private timeSinceGrounded = 0;
+  private staminaTimer = 0;
+  private sprintLockout = false;
+  private lastVerticalSpeed = 0;
+  private strideAccumulator = 0;
+  private landTimer = 0;
+  private readonly tmpForward = new THREE.Vector3();
+  private readonly tmpRight = new THREE.Vector3();
+  private readonly tmpWish = new THREE.Vector3();
+  private readonly tmpDelta = new THREE.Vector3();
+  private readonly collisionScratch = new RAPIER.CharacterCollision();
+  private readonly downDir = new THREE.Vector3(0, -1, 0);
+  moveInputForward = 0;
+  moveInputMagnitude = 0;
+
+  constructor(engine: Engine, spawn: THREE.Vector3, getViewYaw: () => number, tuning: Partial<PlayerTuning> = {}) {
+    this.engine = engine;
+    this.getViewYaw = getViewYaw;
+    this.tuning = { ...DEFAULT_TUNING, ...tuning };
+    const t = this.tuning;
+    this.position.copy(spawn);
+    this.prevPosition.copy(spawn);
+    this.renderPosition.copy(spawn);
+    const world = engine.physics.world;
+    this.body = world.createRigidBody(RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(spawn.x, spawn.y + t.height / 2, spawn.z));
+    this.collider = world.createCollider(RAPIER.ColliderDesc.capsule(t.height / 2 - t.radius, t.radius), this.body);
+    this.kcc = world.createCharacterController(0.03);
+    this.kcc.setUp({ x: 0, y: 1, z: 0 });
+    this.kcc.setSlideEnabled(true);
+    this.kcc.enableAutostep(t.stepOffset, 0.22, true);
+    this.kcc.setMaxSlopeClimbAngle(degToRad(t.slopeLimitDeg));
+    this.kcc.setMinSlopeSlideAngle(degToRad(t.slopeLimitDeg + 2));
+    this.kcc.enableSnapToGround(0.35);
+    this.kcc.setApplyImpulsesToDynamicBodies(true);
+    this.kcc.setCharacterMass(70);
+  }
+
+  get excludeCollider(): RAPIER.Collider {
+    return this.collider;
+  }
+  get horizontalSpeed(): number {
+    return Math.hypot(this.velocity.x, this.velocity.z);
+  }
+  get movingForward(): boolean {
+    return this.moveInputForward > 0.3 && this.moveInputMagnitude > 0.3;
+  }
+  get capsuleHeight(): number {
+    return this.crouching ? this.tuning.height * 0.72 : this.tuning.height;
+  }
+
+  teleport(position: THREE.Vector3, yaw?: number): void {
+    this.position.copy(position);
+    this.prevPosition.copy(position);
+    this.renderPosition.copy(position);
+    this.velocity.set(0, 0, 0);
+    if (yaw !== undefined) this.facingYaw = yaw;
+    this.body.setNextKinematicTranslation({ x: position.x, y: position.y + this.capsuleHeight / 2, z: position.z });
+    this.body.setTranslation({ x: position.x, y: position.y + this.capsuleHeight / 2, z: position.z }, true);
+  }
+
+  private setCrouch(v: boolean): void {
+    if (v === this.crouching) return;
+    if (!v) {
+      // Only stand if there is head room.
+      const hit = this.engine.physics.raycast(this.position.clone().setY(this.position.y + this.capsuleHeight - 0.05), new THREE.Vector3(0, 1, 0), this.tuning.height - this.capsuleHeight + 0.1, this.collider);
+      if (hit) return;
+    }
+    this.crouching = v;
+    const h = this.capsuleHeight;
+    this.collider.setHalfHeight(h / 2 - this.tuning.radius);
+    this.body.setTranslation({ x: this.position.x, y: this.position.y + h / 2, z: this.position.z }, true);
+  }
+
+  fixedUpdate(step: number): void {
+    const t = this.tuning;
+    const input = this.engine.input;
+    const f = input.frame;
+    this.prevPosition.copy(this.position);
+
+    const yaw = this.getViewYaw();
+    this.tmpForward.set(-Math.sin(yaw), 0, -Math.cos(yaw));
+    this.tmpRight.set(Math.cos(yaw), 0, -Math.sin(yaw));
+    let mx = f.moveX;
+    let my = f.moveY;
+    if (this.movementLocked || input.gameplayBlocked) {
+      mx = 0;
+      my = 0;
+    }
+    const mag = clamp(Math.hypot(mx, my), 0, 1);
+    this.moveInputForward = my;
+    this.moveInputMagnitude = mag;
+    this.tmpWish.copy(this.tmpForward).multiplyScalar(my).addScaledVector(this.tmpRight, mx);
+    if (mag > 0) this.tmpWish.normalize();
+
+    if (!this.movementLocked && !input.gameplayBlocked) {
+      if (input.pressed('crouch')) this.setCrouch(!this.crouching);
+    }
+
+    // Stamina.
+    const wantsSprint = input.sprintRequested && mag > 0.5 && !this.crouching && !this.movementLocked;
+    if (this.stamina <= 3) this.sprintLockout = true;
+    if (this.stamina >= 25) this.sprintLockout = false;
+    const sprinting = wantsSprint && !this.sprintLockout && this.grounded;
+    if (sprinting) {
+      this.stamina = Math.max(0, this.stamina - t.staminaDrain * step);
+      this.staminaTimer = 0;
+    } else {
+      this.staminaTimer += step;
+      if (this.staminaTimer > t.staminaRegenDelay) this.stamina = Math.min(100, this.stamina + t.staminaRegen * step);
+    }
+
+    let targetSpeed = 0;
+    if (mag > 0.02) {
+      if (this.crouching) targetSpeed = t.walkSpeed * 0.85;
+      else if (sprinting) targetSpeed = t.sprintSpeed;
+      else if (mag < 0.55) targetSpeed = t.walkSpeed;
+      else targetSpeed = t.jogSpeed;
+      targetSpeed *= this.speedScale;
+      // Analog: scale walk/jog by stick deflection so partial pushes creep.
+      if (!sprinting && !this.crouching && mag < 0.55) targetSpeed *= clamp(mag / 0.55, 0.35, 1);
+    }
+
+    // Horizontal acceleration / friction.
+    const control = this.grounded ? 1 : t.airControl;
+    const vx = this.velocity.x;
+    const vz = this.velocity.z;
+    if (targetSpeed > 0) {
+      const tx = this.tmpWish.x * targetSpeed;
+      const tz = this.tmpWish.z * targetSpeed;
+      const dx = tx - vx;
+      const dz = tz - vz;
+      const dl = Math.hypot(dx, dz);
+      const maxChange = t.acceleration * control * step;
+      if (dl <= maxChange) {
+        this.velocity.x = tx;
+        this.velocity.z = tz;
+      } else {
+        this.velocity.x = vx + (dx / dl) * maxChange;
+        this.velocity.z = vz + (dz / dl) * maxChange;
+      }
+    } else {
+      const sp = Math.hypot(vx, vz);
+      const drop = t.friction * control * step;
+      if (sp <= drop) this.velocity.x = this.velocity.z = 0;
+      else {
+        const k = (sp - drop) / sp;
+        this.velocity.x = vx * k;
+        this.velocity.z = vz * k;
+      }
+    }
+
+    // Vertical.
+    this.velocity.y -= t.gravity * step;
+    if (this.velocity.y < -30) this.velocity.y = -30;
+    this.timeSinceGrounded = this.grounded ? 0 : this.timeSinceGrounded + step;
+    const canJump = this.grounded || this.timeSinceGrounded * 1000 <= t.coyoteTimeMs;
+    if (!this.movementLocked && canJump && !this.crouching && input.consumeBuffered('jump', t.inputBufferMs)) {
+      this.velocity.y = Math.sqrt(2 * t.gravity * t.jumpHeight);
+      this.grounded = false;
+      this.timeSinceGrounded = t.coyoteTimeMs / 1000 + 1;
+      this.events.onJump?.();
+    }
+
+    // Move the capsule.
+    this.tmpDelta.copy(this.velocity).multiplyScalar(step);
+    this.kcc.computeColliderMovement(this.collider, { x: this.tmpDelta.x, y: this.tmpDelta.y, z: this.tmpDelta.z }, undefined, undefined, (c) => c !== this.collider);
+    const moved = this.kcc.computedMovement();
+    const pos = this.body.translation();
+    const next = { x: pos.x + moved.x, y: pos.y + moved.y, z: pos.z + moved.z };
+    this.body.setNextKinematicTranslation(next);
+    const wasGrounded = this.grounded;
+    this.grounded = this.kcc.computedGrounded();
+    if (this.grounded && this.velocity.y < 0) this.velocity.y = -1.0;
+    if (this.velocity.y > 0 && moved.y < this.tmpDelta.y - 1e-4) this.velocity.y = 0; // head bump
+    // Wall contacts kill velocity into the wall so we do not keep pushing.
+    if (Math.hypot(moved.x - this.tmpDelta.x, moved.z - this.tmpDelta.z) > 1e-4 && step > 0) {
+      this.velocity.x = moved.x / step;
+      this.velocity.z = moved.z / step;
+    }
+    this.position.set(next.x, next.y - this.capsuleHeight / 2, next.z);
+
+    // Surface under foot.
+    this.surface = this.findSurface();
+
+    // Landing.
+    if (this.grounded && !wasGrounded) {
+      const hard = this.lastVerticalSpeed < -7.5;
+      this.landTimer = hard ? 0.45 : 0.18;
+      this.events.onLand?.(this.surface, this.position, hard);
+    }
+    this.lastVerticalSpeed = this.velocity.y;
+
+    // Facing.
+    const hs = this.horizontalSpeed;
+    if (hs > 0.2 && mag > 0.02) {
+      const targetYaw = Math.atan2(-this.velocity.x, -this.velocity.z);
+      this.facingYaw = dampAngle(this.facingYaw, targetYaw, 12, step);
+    }
+
+    // Footsteps by stride distance.
+    if (this.grounded && hs > 0.3) {
+      const stride = this.crouching ? 0.9 : sprinting ? 1.9 : hs > 3.5 ? 1.45 : 1.1;
+      this.strideAccumulator += hs * step;
+      if (this.strideAccumulator >= stride) {
+        this.strideAccumulator -= stride;
+        this.events.onFootstep?.(this.surface, this.position, clamp(hs / t.sprintSpeed, 0.35, 1));
+      }
+    } else this.strideAccumulator = stride_reset(this.strideAccumulator);
+
+    // State.
+    if (this.landTimer > 0) {
+      this.landTimer -= step;
+      this.state = this.landTimer > 0.2 ? 'land-hard' : 'land-soft';
+    } else if (!this.grounded && this.timeSinceGrounded > 0.08) this.state = 'air';
+    else if (this.crouching) this.state = hs > 0.3 ? 'crouch-move' : 'crouch';
+    else if (hs < 0.25) this.state = 'idle';
+    else if (sprinting && hs > t.jogSpeed + 0.3) this.state = 'sprint';
+    else if (hs < t.walkSpeed + 0.6) this.state = 'walk';
+    else this.state = 'jog';
+  }
+
+  private findSurface(): SurfaceMaterial {
+    const n = this.kcc.numComputedCollisions();
+    for (let i = 0; i < n; i++) {
+      const c = this.kcc.computedCollision(i, this.collisionScratch);
+      if (c && c.normal1.y > 0.5 && c.collider) return this.engine.physics.surfaceOf(c.collider);
+    }
+    const origin = new THREE.Vector3(this.position.x, this.position.y + 0.3, this.position.z);
+    const hit = this.engine.physics.raycast(origin, this.downDir, 0.8, this.collider);
+    return hit ? this.engine.physics.surfaceOf(hit.collider) : this.surface;
+  }
+
+  update(): void {
+    const a = clamp(this.engine.alpha, 0, 1);
+    this.renderPosition.lerpVectors(this.prevPosition, this.position, a);
+  }
+
+  dispose(): void {
+    const world = this.engine.physics.world;
+    world.removeCharacterController(this.kcc);
+    world.removeRigidBody(this.body);
+  }
+}
+
+const stride_reset = (acc: number): number => damp(acc, 0.6, 4, 1 / 60);
