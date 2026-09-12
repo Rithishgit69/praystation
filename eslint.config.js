@@ -2,7 +2,8 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', 'android', 'ios', 'dev-dist', 'tools/**/*.js'] },
+  // tools/ are Node scripts that drive a browser page (mixed globals); they are not shipped code.
+  { ignores: ['dist', 'node_modules', 'android', 'ios', 'dev-dist', 'tools/**', 'playwright-report', 'test-results'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

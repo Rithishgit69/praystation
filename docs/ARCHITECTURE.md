@@ -91,3 +91,28 @@ systems it needs and disposes them. Every debug/test scene is a `SceneModule` li
 
 `window.__eka` (`src/debug/DebugApi.ts`) exposes readiness, frame stats, player position, camera control
 and synthetic key events for Playwright. `tools/shot.mjs <url> <out.png> "<steps>"` drives it headlessly.
+
+## Mission mode (`src/missions`)
+
+- `MissionData.ts` — eight tasks: villain, epithet, vice, narration lines, threat, arena zone, spawns,
+  boss stats and pattern pool. The asuras are the eight demons of the Mudgala (Vinayaka) Purana; their
+  forms and powers are the game's fiction (journal Inspirations notes say so per task).
+- `MissionDirector.ts` — the flow state machine: `travel → narration → arming → battle → victory | respawn |
+  failed → ended`. Persists `mission:current`, `mission:unlocked`, `mission:hearts`, `mission:bossHp` in the
+  store so Continue resumes the same task at the same villain health. Hearts refill when a task starts.
+- `Asura.ts` / `AsuraMesh.ts` — boss AI and the horned demon form. Attack selection is weighted by the
+  pattern pool; the interval tightens with lost health and shrinks again on enrage. Bolts home lightly,
+  rings punish standing still (jump), charges and slams telegraph with poses, shields absorb N shots,
+  illusions are real meshes with dim cores, shades are `ShadeMesh` targets with 30 HP.
+- `Gun.ts` — the Astra. Hitscan from the camera through the crosshair with hip/ADS spread, a 3.5° aim-assist
+  cone (helps touch/gamepad), sphere tests against `Shootable` targets, then a physics ray for walls.
+- `MissionHUD.ts`, `Narration.ts`, `TaskMenu.ts` — hearts/health/villain bar/ammo/crosshair/banners; the
+  narration card with typewriter text and Web Speech synthesis (pitch 0.45, rate 0.82); the choice card.
+- Input actions `fire`, `reload`, `aim` exist on all three devices (LMB/RMB/R, RT/LT/X, FIRE/↻ buttons).
+
+## Player controller fix worth knowing
+
+Rapier's `KinematicCharacterController` occasionally returned zero horizontal movement for a whole step
+while the capsule pressed 1 m/s into the floor; the old "wall clip" correction then zeroed the velocity,
+so jogging stuttered between 4.4 and 0.8 m/s. The controller now rests on the ground at −0.05 m/s and only
+kills velocity when a contact normal is steep (a real wall). Measured: jog 4.40 m/s, sprint 6.6 m/s.

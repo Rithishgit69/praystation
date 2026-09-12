@@ -40,7 +40,7 @@ test('boots the world with no console errors or warnings', async ({ page }) => {
 });
 
 test('traversal holds the frame budget and streams without spikes', async ({ page }) => {
-  const problems = await boot(page, 'scene=game&autostart=1');
+  const problems = await boot(page, 'scene=game&autostart=1&mode=story');
   // Sprint down the forest path for 12 s: cells stream in and out.
   await page.evaluate(() => {
     window.__eka?.key('KeyW', true);
@@ -61,7 +61,7 @@ test('traversal holds the frame budget and streams without spikes', async ({ pag
 });
 
 test('save and continue restore the exact player transform and flags', async ({ page }) => {
-  await boot(page, 'scene=game&autostart=1&start=hall');
+  await boot(page, 'scene=game&autostart=1&start=hall&mode=story');
   await page.evaluate(() => {
     window.__eka?.teleport?.(-12.25, 2.0, -70.5);
     window.__eka?.setFlag?.('beat:hall-enter', true);
@@ -70,7 +70,7 @@ test('save and continue restore the exact player transform and flags', async ({ 
   await page.waitForTimeout(800);
   const before = await page.evaluate(() => window.__eka?.playerPosition());
   expect(await page.evaluate(() => window.__eka?.save?.())).toBe(true);
-  await boot(page, 'scene=game&autostart=1&continue=1');
+  await boot(page, 'scene=game&autostart=1&continue=1&mode=story');
   const after = await page.evaluate(() => window.__eka?.playerPosition());
   const flags = await page.evaluate(() => window.__eka?.flags?.());
   expect(after && before && Math.abs(after.x - before.x) < 0.05 && Math.abs(after.z - before.z) < 0.05 && Math.abs(after.y - before.y) < 0.2).toBe(true);
@@ -78,7 +78,7 @@ test('save and continue restore the exact player transform and flags', async ({ 
 });
 
 test('interaction prompt appears within reach with line of sight only', async ({ page }) => {
-  await boot(page, 'scene=game&autostart=1&start=hall');
+  await boot(page, 'scene=game&autostart=1&start=hall&mode=story');
   await page.evaluate(() => window.__eka?.teleport?.(-22.5, 2.0, -86));
   await page.evaluate(() => window.__eka?.setCamera(Math.PI / 2, 0.3));
   await page.waitForTimeout(700);

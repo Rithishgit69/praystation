@@ -8,16 +8,18 @@ describe('grade LUTs', () => {
       expect(lut.length).toBe(LUT_SIZE ** 3 * 4);
       let min = Infinity;
       let max = -Infinity;
+      let alphaOk = true;
       for (let i = 0; i < lut.length; i += 4) {
         for (let c = 0; c < 3; c++) {
           const v = lut[i + c] as number;
-          expect(v).toBeGreaterThanOrEqual(0);
-          expect(v).toBeLessThanOrEqual(1);
-          min = Math.min(min, v);
-          max = Math.max(max, v);
+          if (v < min) min = v;
+          if (v > max) max = v;
         }
-        expect(lut[i + 3]).toBe(1);
+        if (lut[i + 3] !== 1) alphaOk = false;
       }
+      expect(alphaOk).toBe(true);
+      expect(min).toBeGreaterThanOrEqual(0);
+      expect(max).toBeLessThanOrEqual(1);
       expect(min).toBeLessThan(0.1);
       expect(max).toBeGreaterThan(0.9);
     }
