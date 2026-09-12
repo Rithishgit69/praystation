@@ -14,6 +14,14 @@ import { buildSanctum } from './zones/Sanctum';
 import { buildSideChamber } from './zones/SideChamber';
 import { buildMemoryTusk } from './zones/MemoryTusk';
 
+export interface ShrinePoint {
+  id: string;
+  title: string;
+  /** Where the player stands after fast travel (feet). */
+  arrive: THREE.Vector3;
+  yaw: number;
+}
+
 export interface Landmark {
   id: string;
   kind: 'shrine' | 'lore' | 'trigger';
@@ -32,6 +40,7 @@ export class WorldMap {
   readonly terrain = new Terrain();
   readonly zones: ZoneDef[];
   readonly landmarks: Landmark[] = [];
+  readonly shrines: ShrinePoint[] = [];
   readonly spawn = { position: v(0, 0, 470), yaw: 0 };
 
   constructor() {
@@ -51,6 +60,16 @@ export class WorldMap {
       { id: 'milestone', kind: 'lore', position: at(0.4).add(new THREE.Vector3(3.2, 0, 0)), yaw: yawAt(0.4) + Math.PI / 2, radius: 2.2 },
       { id: 'forest', kind: 'shrine', position: at(0.66).add(new THREE.Vector3(-3.6, 0, 0)), yaw: yawAt(0.66), radius: 2.4 },
       { id: 'gate-sight', kind: 'trigger', position: at(0.86), yaw: 0, radius: 10 },
+    );
+    const forestShrine = at(0.66);
+    this.shrines.push(
+      { id: 'shrine:forest', title: 'Forest shrine', arrive: v(forestShrine.x, forestShrine.y + 0.3, forestShrine.z), yaw: yawAt(0.66) },
+      { id: 'shrine:gate', title: 'Temple gate', arrive: v(0, 0, 76), yaw: 0 },
+      { id: 'shrine:courtyard', title: 'Outer courtyard', arrive: v(1.6, 1.0, 2.6), yaw: 0 },
+      { id: 'shrine:moon', title: 'Moon chamber', arrive: v(136, -1.9, -156), yaw: Math.PI / 4 },
+      { id: 'shrine:tunnels', title: 'Serpent shrine', arrive: v(-32, -13.9, -228), yaw: 0 },
+      { id: 'shrine:library', title: 'Ancient library', arrive: v(-80, -9.9, -82), yaw: 0 },
+      { id: 'shrine:deep', title: 'Underground shrine', arrive: v(-22, -19.9, -288), yaw: 0 },
     );
     this.zones = [
       { id: 'gate', title: 'Temple Gate', min: v(-40, -6, 44), max: v(40, 60, 96), interior: false, visibleFrom: ['forest', 'courtyard'], build: buildGate },

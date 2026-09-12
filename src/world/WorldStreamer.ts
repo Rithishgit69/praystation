@@ -284,6 +284,15 @@ export class WorldStreamer implements System {
     this.engine.profiler.stats.chunksLoaded = this.loaded.size;
   }
 
+  /** Unload everything (flags changed, e.g. a save was applied) and rebuild around the focus. */
+  reset(radius = 1): void {
+    for (const unit of Array.from(this.loaded.values())) this.unload(unit);
+    this.current = null;
+    this.queue.length = 0;
+    this.lastFocusCell = { ix: NaN, iz: NaN };
+    this.loadImmediate(radius);
+  }
+
   dispose(): void {
     for (const unit of Array.from(this.loaded.values())) this.unload(unit);
     this.engine.scene.remove(this.root);

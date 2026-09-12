@@ -3,56 +3,165 @@
     "id": "hall-symbols",
     "type": "symbol-sequence",
     "zone": "hall",
-    "anchors": ["symbol:hall:0", "symbol:hall:1", "symbol:hall:2", "symbol:hall:3"],
-    "solution": [2, 0, 3, 1],
+    "anchors": [
+      "symbol:hall:0",
+      "symbol:hall:1",
+      "symbol:hall:2",
+      "symbol:hall:3"
+    ],
+    "solution": [
+      2,
+      0,
+      3,
+      1
+    ],
     "clueText": "Four marks on the dais. The inscription names their order: moon, tusk, axe, lamp.",
-    "reward": { "flags": ["beat:inscription"], "journal": ["pro-inscription"], "line": "pro-inscription" }
+    "reward": {
+      "flags": [
+        "puzzle:hall-symbols"
+      ],
+      "journal": [
+        "pro-inscription"
+      ]
+    }
   },
   {
     "id": "passage-illusion",
     "type": "choose-real",
     "zone": "passage",
-    "anchors": ["object:passage-altar-true", "object:passage-altar-false"],
-    "solution": [0],
+    "anchors": [
+      "object:passage-altar-true",
+      "object:passage-altar-false"
+    ],
+    "solution": [
+      0
+    ],
     "clueText": "Two altars, two rooms. Only one casts a shadow in torchlight.",
-    "reward": { "flags": ["puzzle:passage-illusion"], "journal": [], "line": "ch2-light" }
+    "reward": {
+      "flags": [
+        "puzzle:passage-illusion"
+      ],
+      "journal": [],
+      "line": "ch2-light"
+    }
   },
   {
     "id": "moon-alignment",
     "type": "mirror-alignment",
     "zone": "moon",
-    "anchors": ["mechanism:mirror-0", "mechanism:mirror-1", "mechanism:mirror-2", "mechanism:mirror-3"],
-    "solution": [0, 2, 4, 6],
+    "anchors": [
+      "mechanism:mirror-0",
+      "mechanism:mirror-1",
+      "mechanism:mirror-2",
+      "mechanism:mirror-3"
+    ],
+    "solution": [
+      0,
+      2,
+      4,
+      6
+    ],
     "requiresMoon": "moonlit",
     "clueText": "Each mirror must face the lens while the moon is clear.",
-    "reward": { "flags": ["puzzle:moon-alignment"], "journal": ["ch3-inspiration"], "line": "ch3-shadow" }
+    "reward": {
+      "flags": [
+        "puzzle:moon-alignment"
+      ],
+      "journal": [
+        "ch3-inspiration"
+      ],
+      "line": "ch3-shadow"
+    }
   },
   {
     "id": "moon-shadow",
     "type": "observe",
     "zone": "moon",
-    "anchors": ["symbol:moon-0", "symbol:moon-1", "symbol:moon-2", "symbol:moon-3", "symbol:moon-4", "symbol:moon-5"],
-    "solution": [4],
+    "anchors": [
+      "symbol:moon-0",
+      "symbol:moon-1",
+      "symbol:moon-2",
+      "symbol:moon-3",
+      "symbol:moon-4",
+      "symbol:moon-5"
+    ],
+    "solution": [
+      4
+    ],
     "requiresMoon": "shadow",
     "clueText": "In shadow one symbol is not like the others.",
-    "reward": { "flags": ["puzzle:moon-shadow"], "doors": ["door:moon-tunnels"], "journal": [], "line": "ch3-shadow" }
+    "reward": {
+      "flags": [
+        "puzzle:moon-shadow"
+      ],
+      "doors": [
+        "door:moon-tunnels"
+      ],
+      "journal": [],
+      "line": "ch3-shadow"
+    }
   },
   {
     "id": "scribe-fragments",
     "type": "rotation-match",
     "zone": "library",
-    "anchors": ["mechanism:fragment-0", "mechanism:fragment-1", "mechanism:fragment-2", "mechanism:fragment-3", "mechanism:fragment-4"],
-    "solution": [0, 0, 0, 0, 0],
+    "anchors": [
+      "mechanism:fragment-0",
+      "mechanism:fragment-1",
+      "mechanism:fragment-2",
+      "mechanism:fragment-3",
+      "mechanism:fragment-4"
+    ],
+    "solution": [
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
     "clueText": "Turn each fragment until the line reads as one.",
-    "reward": { "flags": ["puzzle:scribe-fragments"], "doors": ["door:library-shrine"], "journal": ["ch5-inspiration"], "line": "ch5-enter" }
+    "reward": {
+      "flags": [
+        "puzzle:scribe-fragments"
+      ],
+      "doors": [
+        "door:library-shrine"
+      ],
+      "journal": [
+        "ch5-inspiration"
+      ],
+      "line": "ch5-enter"
+    }
   },
   {
     "id": "sanctum-seal",
     "type": "symbol-sequence",
     "zone": "sanctum",
-    "anchors": ["symbol:sanctum:0", "symbol:sanctum:1", "symbol:sanctum:2", "symbol:sanctum:3", "symbol:sanctum:4", "symbol:sanctum:5"],
-    "solution": [0, 1, 2, 3, 4, 5],
+    "anchors": [
+      "symbol:sanctum:0",
+      "symbol:sanctum:1",
+      "symbol:sanctum:2",
+      "symbol:sanctum:3",
+      "symbol:sanctum:4",
+      "symbol:sanctum:5"
+    ],
+    "solution": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
     "clueText": "Six memories, in the order the temple learned them.",
-    "reward": { "flags": ["sanctum:restored"], "journal": ["finale-restored"], "line": "finale-end" }
+    "reward": {
+      "flags": [
+        "sanctum:restored"
+      ],
+      "journal": [
+        "finale-restored"
+      ],
+      "line": "finale-end"
+    }
   }
 ]

@@ -116,7 +116,7 @@ export class Engine {
     if (i >= 0) this.systems.splice(i, 1);
   }
 
-  async loadScene(entry: SceneEntry): Promise<void> {
+  async loadScene(entry: SceneEntry): Promise<SceneModule> {
     this.unloadScene();
     const mod = await entry.load();
     await mod.init(this);
@@ -124,6 +124,7 @@ export class Engine {
     await this.renderer.compileAsync(this.scene, this.camera);
     this.currentScene = mod;
     this.events.emit('sceneloaded', mod.id);
+    return mod;
   }
 
   unloadScene(): void {

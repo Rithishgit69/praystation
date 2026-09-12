@@ -41,6 +41,8 @@ export class CameraRig implements System {
   boom = DEFAULT_BOOM;
   /** Cinematics take the camera: input, noise and follow are suspended. */
   cinematic = false;
+  /** Impact shake amount (decays). */
+  private shakeAmount = 0;
   private currentBoom = DEFAULT_BOOM;
   private forwardTimer = 0;
   private readonly noise = new Perlin(42);
@@ -63,6 +65,10 @@ export class CameraRig implements System {
     this.yaw = initialYaw;
     engine.camera.fov = 58;
     engine.camera.updateProjectionMatrix();
+  }
+
+  shake(amount: number): void {
+    this.shakeAmount = Math.min(2, this.shakeAmount + amount);
   }
 
   /** Set absolute yaw/pitch (radians); used by tests and cinematics hand-off. */
@@ -126,6 +132,11 @@ export class CameraRig implements System {
     if (!this.cinematic && this.target.horizontalSpeed < 0.15) {
       yaw += this.noise.noise2(t * 0.35, 3.1) * NOISE_AMPLITUDE;
       pitch += this.noise.noise2(t * 0.42, 9.7) * NOISE_AMPLITUDE;
+    }
+    if (this.shakeAmount > 0) {
+      yaw += this.noise.noise2(t * 31, 1.3) * 0.03 * this.shakeAmount;
+      pitch += this.noise.noise2(t * 37, 5.9) * 0.025 * this.shakeAmount;
+      this.shakeAmount = Math.max(0, this.shakeAmount - dt * 2.4);
     }
     const cy = Math.cos(yaw);
     const sy = Math.sin(yaw);

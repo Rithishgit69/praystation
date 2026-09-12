@@ -17,6 +17,10 @@ export interface SceneModule {
   readonly id: string;
   init(engine: Engine): Promise<void>;
   dispose(): void;
+  /** True when a saved game can be resumed (title screen shows Continue). */
+  canContinue?(): boolean;
+  /** Called once the title card is dismissed. */
+  start?(mode: 'new' | 'continue'): void;
 }
 
 export type QualityTier = 'low' | 'medium' | 'high' | 'ultra';

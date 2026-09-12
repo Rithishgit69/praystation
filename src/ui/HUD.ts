@@ -34,6 +34,8 @@ export class HUD implements System {
   private readonly promptText: HTMLElement;
   private readonly stamina: HTMLDivElement;
   private readonly staminaFill: HTMLDivElement;
+  private readonly resolve: HTMLDivElement;
+  private readonly resolveFill: HTMLDivElement;
   private opacity = 1;
   private threat = false;
   private rects: MapRect[] = [];
@@ -58,6 +60,7 @@ export class HUD implements System {
       </div>
       <div class="minimap"><canvas width="176" height="176"></canvas></div>
       <div class="prompt" hidden><span class="prompt-key"></span><span class="prompt-text"></span></div>
+      <div class="resolve" hidden><div class="resolve-fill"></div></div>
       <div class="stamina" hidden><div class="stamina-fill"></div></div>`;
     engine.uiRoot.appendChild(this.root);
     const q = <T extends HTMLElement>(sel: string): T => {
@@ -77,6 +80,8 @@ export class HUD implements System {
     this.promptText = q('.prompt-text');
     this.stamina = q('.stamina');
     this.staminaFill = q('.stamina-fill');
+    this.resolve = q('.resolve');
+    this.resolveFill = q('.resolve-fill');
     const apply = (): void => {
       const s = gameStore.getState();
       this.setQuest(s.quest);
@@ -96,6 +101,11 @@ export class HUD implements System {
   setThreat(v: boolean): void {
     this.threat = v;
   }
+  /** Encounter resolve (0–100) shown only during action sequences; null hides it. */
+  setResolve(v: number | null): void {
+    this.resolve.hidden = v === null;
+    if (v !== null) this.resolveFill.style.width = `${Math.max(0, Math.min(100, v))}%`;
+  }
   setQuest(quest: Quest): void {
     this.questTitle.textContent = quest.title;
     this.questObjective.textContent = quest.objective;
@@ -106,7 +116,7 @@ export class HUD implements System {
     this.root.querySelector('.slot-blade')?.classList.toggle('empty', !inv.hasBlade);
   }
   /** Contextual prompt; pass null to hide. Shown only when an interaction is in range (§20). */
-  setPrompt(text: string | null): void {
+  setPrompt(text: string | null, showKey = true): void {
     if (text === null) {
       this.prompt.hidden = true;
       this.engine.input.touch.setActionLabel(null);
@@ -114,7 +124,7 @@ export class HUD implements System {
     }
     const d = this.engine.input.device;
     this.promptKey.textContent = d === 'gamepad' ? 'A' : d === 'touch' ? '' : 'E';
-    this.promptKey.hidden = d === 'touch';
+    this.promptKey.hidden = d === 'touch' || !showKey;
     this.promptText.textContent = text;
     this.prompt.hidden = false;
     this.engine.input.touch.setActionLabel(text);

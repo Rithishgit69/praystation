@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import type { MaterialLibrary } from '../Materials';
-import { Perlin } from '@/util/noise';
 import type { SeededRandom } from '@/util/random';
 
 const mistVert = /* glsl */ `
@@ -136,7 +135,6 @@ export class Fireflies {
 export class MoonLight {
   readonly sun: THREE.DirectionalLight;
   readonly hemi: THREE.HemisphereLight;
-  private readonly noise = new Perlin(5);
 
   constructor(shadowMapSize: number) {
     this.sun = new THREE.DirectionalLight(0x9ac2f4, 1.7);
@@ -166,8 +164,7 @@ export class MoonLight {
     this.sun.position.copy(focus).addScaledVector(dir, d);
     this.sun.target.position.copy(focus);
     this.sun.target.updateMatrixWorld();
-    // Slow cloud-drift in moonlight intensity.
-    this.sun.intensity = 1.7 + this.noise.noise2(elapsed * 0.05, 2.2) * 0.25;
+    void elapsed;
   }
 }
 

@@ -25,10 +25,13 @@ export function* buildLibrary(ctx: ZoneBuildContext): Generator<void, UnitBuild,
   setTriplanar(dais.geometry, 5.6, 0.75);
   dais.position.set(cx, y + 0.35, cz - 27);
   acc.mesh(dais);
-  const wallPanel = new THREE.Mesh(new RoundedBoxGeometry(16, 5, 0.5, 2, 0.05), ctx.lib.sandstoneDark);
-  setTriplanar(wallPanel.geometry, 3, 0.85);
-  wallPanel.position.set(cx, y + 0.7 + 3.2, cz - 31.4);
-  acc.mesh(wallPanel, false);
+  const wallFrame = new THREE.Mesh(new RoundedBoxGeometry(16.6, 5.6, 0.5, 2, 0.05), ctx.lib.sandstoneDark);
+  setTriplanar(wallFrame.geometry, 3, 0.85);
+  wallFrame.position.set(cx, y + 0.7 + 3.2, cz - 31.5);
+  acc.mesh(wallFrame, false);
+  const wallPanel = new THREE.Mesh(new THREE.PlaneGeometry(15.6, 4.8), ctx.lib.mural('scribe'));
+  wallPanel.position.set(cx, y + 0.7 + 3.2, cz - 31.22);
+  acc.group.add(wallPanel);
   acc.anchor('puzzle:scribe-wall', 'mural', cx, y + 0.7 + 1.4, cz - 30.6, Math.PI, 3.4, { chapter: 'ch5' }, wallPanel);
   // Movable fragment plinths (statue orientation + fragment arrangement).
   for (let i = 0; i < 5; i++) {

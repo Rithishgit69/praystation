@@ -96,7 +96,10 @@ export class AudioSystem implements System {
   constructor(engine: Engine) {
     this.engine = engine;
     Howler.autoUnlock = true;
-    const ctx = Howler.ctx as AudioContext;
+    // Howler creates its AudioContext lazily on the first Howl; make one so the graph below can attach.
+    this.howl('ui-tick');
+    const ctx = Howler.ctx as AudioContext | null;
+    if (!ctx) throw new Error('AudioSystem: Web Audio unavailable');
     this.ctx = ctx;
     // Re-route Howler's master through: master → occlusion filter (ambience only bypasses via send) → duck → destination,
     // with a parallel convolution reverb send.

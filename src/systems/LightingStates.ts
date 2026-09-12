@@ -3,6 +3,7 @@ import type { Engine } from '@/engine/Engine';
 import type { System } from '@/engine/types';
 import type { MoonLight } from '@/world/fx/Atmosphere';
 import { Perlin } from '@/util/noise';
+import { clamp } from '@/util/math';
 import { gameStore } from '@/state/store';
 
 export type WorldState = 'present' | 'memory' | 'corruption';
@@ -83,7 +84,9 @@ export class LightingStates implements System {
       this.moonState = shadowNow;
       for (const l of this.listeners) l(shadowNow);
     }
-    const target = this.moonState === 'shadow' ? 0.35 : 1.7;
+    const drift = 1 + this.cloud.noise2(elapsed * 0.05, 2.2) * 0.12;
+    const target = (this.moonState === 'shadow' ? 0.35 : 1.7) * drift;
     this.moon.sun.intensity += (target - this.moon.sun.intensity) * (1 - Math.exp(-dt * 0.6));
+    this.moon.hemi.intensity = clamp(0.55 + (this.moon.sun.intensity / 1.7) * 0.55, 0.45, 1.2);
   }
 }

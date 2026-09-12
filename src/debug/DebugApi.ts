@@ -21,6 +21,14 @@ export interface EkaDebugApi {
   setCamera(yaw: number, pitch: number): void;
   /** Registered by the world scene: move the player and load the surroundings synchronously. */
   teleport: ((x: number, y: number, z: number) => void) | null;
+  /** Fire the focused interaction; returns the anchor id or null. */
+  interact: (() => string | null) | null;
+  flags: (() => Record<string, boolean | number | string>) | null;
+  setFlag: ((key: string, value: boolean | number | string) => void) | null;
+  save: (() => boolean) | null;
+  anchors: (() => Array<{ id: string; kind: string; x: number; y: number; z: number }>) | null;
+  portal: { inMemory(): boolean } | null;
+  encounter: (() => { phase: string; attackIndex: number; stage: string; kind: string; resolve: number; timer: number }) | null;
 }
 
 declare global {
@@ -44,6 +52,13 @@ export const installDebugApi = (engine: Engine): EkaDebugApi => {
     cameraControl: null,
     setCamera: (yaw, pitch) => api.cameraControl?.setYawPitch(yaw, pitch),
     teleport: null,
+    interact: null,
+    flags: null,
+    setFlag: null,
+    save: null,
+    anchors: null,
+    portal: null,
+    encounter: null,
   };
   window.__eka = api;
   engine.events.on('sceneloaded', (id) => {

@@ -91,6 +91,8 @@ export class PlayerController implements System, CameraFollowTarget {
   private readonly downDir = new THREE.Vector3(0, -1, 0);
   moveInputForward = 0;
   moveInputMagnitude = 0;
+  /** Seconds of invulnerability left after a dodge (encounters read this). */
+  dodgeTimer = 0;
 
   constructor(engine: Engine, spawn: THREE.Vector3, getViewYaw: () => number, tuning: Partial<PlayerTuning> = {}) {
     this.engine = engine;
@@ -127,6 +129,14 @@ export class PlayerController implements System, CameraFollowTarget {
     return this.crouching ? this.tuning.height * 0.72 : this.tuning.height;
   }
 
+  /** Quick sidestep/backstep used by encounters: sets horizontal velocity and grants 0.45 s of i-frames. */
+  dodge(dirX: number, dirZ: number, speed = 9): void {
+    const m = Math.hypot(dirX, dirZ) || 1;
+    this.velocity.x = (dirX / m) * speed;
+    this.velocity.z = (dirZ / m) * speed;
+    this.dodgeTimer = 0.45;
+  }
+
   teleport(position: THREE.Vector3, yaw?: number): void {
     this.position.copy(position);
     this.prevPosition.copy(position);
@@ -155,6 +165,7 @@ export class PlayerController implements System, CameraFollowTarget {
     const input = this.engine.input;
     const f = input.frame;
     this.prevPosition.copy(this.position);
+    if (this.dodgeTimer > 0) this.dodgeTimer -= step;
 
     const yaw = this.getViewYaw();
     this.tmpForward.set(-Math.sin(yaw), 0, -Math.cos(yaw));

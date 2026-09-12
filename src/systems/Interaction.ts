@@ -50,6 +50,10 @@ export class InteractionSystem implements System {
   get focused(): Anchor | null {
     return this.current;
   }
+  /** Dispatch an interaction on an anchor as if the player pressed the action (tests, touch button). */
+  fire(a: Anchor): void {
+    this.handlerFor(a)?.onInteract(a);
+  }
 
   private handlerFor(a: Anchor): InteractionHandler | undefined {
     return this.byId.get(a.id) ?? this.byKind.get(a.kind);

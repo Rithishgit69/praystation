@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { muralTextures, type MuralScene } from './MuralArt';
 import { bannerTexture, barkTextures, canopyTexture, debrisTexture, flagstoneTextures, forestFloorTextures, glowSprite, ivyLeafTexture, noiseTexture, sandstoneTextures } from './TextureGen';
 
 /** All shipped materials. Created once; textures are procedural (see TextureGen). */
@@ -14,6 +15,7 @@ export class MaterialLibrary {
   readonly iron: THREE.MeshStandardMaterial;
   readonly debris: THREE.MeshStandardMaterial;
   readonly forestFloor: THREE.MeshStandardMaterial;
+  private readonly murals = new Map<MuralScene, THREE.MeshStandardMaterial>();
   readonly water: THREE.MeshStandardMaterial;
   readonly glowTexture: THREE.Texture;
   readonly noiseTexture: THREE.Texture;
@@ -69,6 +71,19 @@ export class MaterialLibrary {
     this.water = track(new THREE.MeshStandardMaterial({ color: 0x0c1a26, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.86 }));
     this.glowTexture = track(glowSprite(128));
     this.noiseTexture = track(noiseTexture(256));
+  }
+
+  /** Mural material per scene (lazy; each is unique so a waking mural can pulse its own emissive). */
+  mural(scene: MuralScene): THREE.MeshStandardMaterial {
+    let m = this.murals.get(scene);
+    if (!m) {
+      const t = muralTextures(scene);
+      this.disposables.push(t.map, t.emissiveMap);
+      m = new THREE.MeshStandardMaterial({ map: t.map, emissiveMap: t.emissiveMap, emissive: 0xd9a55a, emissiveIntensity: 0, roughness: 0.92, metalness: 0 });
+      this.disposables.push(m);
+      this.murals.set(scene, m);
+    }
+    return m;
   }
 
   dispose(): void {

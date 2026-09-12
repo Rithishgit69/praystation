@@ -84,14 +84,17 @@ export class ChapterManager implements System {
     const s = gameStore.getState();
     const ch = this.chapter;
     for (const j of ch.journal) this.journal.unlock(j);
-    const pending = ch.objectives.find((o) => s.flags[o.doneFlag] !== true);
+    const last = ch.objectives[ch.objectives.length - 1];
+    // A chapter is complete when its final objective is met (earlier beats may have been skipped).
+    const complete = last !== undefined && s.flags[last.doneFlag] === true;
+    const pending = complete ? undefined : ch.objectives.find((o) => s.flags[o.doneFlag] !== true);
     const text = pending ? pending.text : ch.objectives.length === 0 ? '' : 'Chapter complete';
     if (s.quest.title !== ch.questTitle || s.quest.objective !== text) s.setQuest({ title: ch.questTitle, objective: text });
     if (text !== this.lastObjectiveText) {
       this.lastObjectiveText = text;
       this.engine.input.lastActivityTime = performance.now(); // wake the HUD so the new objective is seen
     }
-    if (!pending && ch.objectives.length > 0) {
+    if ((complete || !pending) && ch.objectives.length > 0) {
       const i = CHAPTERS.indexOf(ch);
       const next = CHAPTERS[i + 1];
       if (next) {

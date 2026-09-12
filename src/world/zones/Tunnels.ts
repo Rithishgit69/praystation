@@ -76,7 +76,7 @@ export function* buildTunnels(ctx: ZoneBuildContext): Generator<void, UnitBuild,
   for (let i = 0; i < 4; i++) acc.anchor(`drip:${i}`, 'trigger', -30 + i * 20, y + 3, -254, 0, 1, { audio: 'drip' });
   acc.mist([{ x: 38, y: y - 0.6, z: -254, size: 30, opacity: 0.18 }, { x: -46, y: y + 0.3, z: -240, size: 36, opacity: 0.16 }], 0x1a2a3a);
   acc.anchor('trigger:tunnels-enter', 'trigger', 110, y, -250, 0, 4);
-  acc.anchor('shrine:tunnels', 'shrine', -20, y + 1.2, -238, 0, 2.4, { lit: ctx.flags['shrine:tunnels'] === true });
+  acc.anchor('shrine:tunnels', 'shrine', -32, y + 1.2, -226, 0, 2.4, { lit: ctx.flags['shrine:tunnels'] === true });
   yield;
   return yield* acc.finish();
 }

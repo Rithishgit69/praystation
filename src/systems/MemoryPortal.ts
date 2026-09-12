@@ -23,7 +23,7 @@ export interface FogOverride {
 
 /** A memory's gameplay (encounter/puzzle) runs here and resolves when the memory completes. */
 export interface MemoryController {
-  start(ctx: { portal: MemoryPortal; done: () => void }): void;
+  start(ctx: { portal: MemoryPortal; done: (silent?: boolean) => void }): void;
   update(dt: number, elapsed: number): void;
   dispose(): void;
 }
@@ -108,12 +108,7 @@ export class MemoryPortal implements System {
     // The mural wakes: emissive pulse on its panel.
     if (anchorObject) {
       const m = (anchorObject as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
-      if (m && 'emissive' in m) {
-        const own = m.clone();
-        (anchorObject as THREE.Mesh).material = own;
-        own.emissive.set(0xd9a55a);
-        gsap.fromTo(own, { emissiveIntensity: 0 }, { emissiveIntensity: 1.6, duration: 2.4, ease: 'sine.inOut', yoyo: true, repeat: 1 });
-      }
+      if (m && 'emissive' in m) gsap.fromTo(m, { emissiveIntensity: 0 }, { emissiveIntensity: 2.2, duration: 2.6, ease: 'sine.inOut', yoyo: true, repeat: 1 });
     }
     this.scatterMotes(this.player.position, 6);
     void this.lighting.transition('memory', 3.2);
@@ -127,10 +122,16 @@ export class MemoryPortal implements System {
     this.visual.setMemoryForm(true);
     gameStore.getState().setFlag(`memory-active:${def.id}`, true);
     this.controller = this.factory(def.id);
-    this.controller.start({ portal: this, done: () => void this.exit() });
+    this.controller.start({ portal: this, done: (silent) => void this.exit(silent ?? false) });
     await gsap.to(this.veil, { t: 0, duration: 2.6, ease: 'sine.out', onUpdate: () => this.setVeil(this.veil.t, true) }).then();
     this.player.movementLocked = false;
     this.interaction.suppressed = false;
+  }
+
+  /** Brief gold flash (the memory faltering). */
+  flash(seconds: number): void {
+    gsap.killTweensOf(this.veil);
+    gsap.to(this.veil, { t: 0.75, duration: seconds * 0.3, ease: 'power2.out', onUpdate: () => this.setVeil(this.veil.t, true), onComplete: () => gsap.to(this.veil, { t: 0, duration: seconds * 0.7, ease: 'sine.inOut', onUpdate: () => this.setVeil(this.veil.t, true) }) });
   }
 
   /** Called by the memory's controller when it resolves. `silent` keeps the audio ducked (the tusk). */
@@ -139,11 +140,12 @@ export class MemoryPortal implements System {
     if (!def || !this.returnPoint) return;
     this.interaction.suppressed = true;
     this.player.movementLocked = true;
-    this.controller?.dispose();
-    this.controller = null;
     if (!silent) this.audio.play('memory-exit', { volume: 0.8 });
     this.scatterMotes(this.player.position, 5);
+    // The controller keeps running (e.g. the camera follows the falling tusk) until the veil is full.
     await gsap.to(this.veil, { t: 1, duration: 2.4, ease: 'sine.in', onUpdate: () => this.setVeil(this.veil.t, true) }).then();
+    this.controller?.dispose();
+    this.controller = null;
     // Back to the present, at the mural; the temple has changed.
     const s = gameStore.getState();
     s.setFlag(def.completionFlag, true);

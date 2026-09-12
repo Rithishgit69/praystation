@@ -31,25 +31,34 @@ async function boot(): Promise<void> {
   const sceneId = params.get('scene') ?? 'game';
   const entry = findScene(sceneId) ?? SCENES[0];
   if (!entry) throw new Error('No scenes registered');
-  await engine.loadScene(entry);
+  const mod = await engine.loadScene(entry);
   setBoot(1, 'Ready');
   engine.start();
 
   const bootEl = $('boot');
   const cont = $<HTMLButtonElement>('boot-continue');
-  const dismiss = (): void => {
+  const newBtn = $<HTMLButtonElement>('boot-new');
+  const dismiss = (mode: 'new' | 'continue'): void => {
+    mod.start?.(mode);
     bootEl.classList.add('hidden');
     bootEl.addEventListener('transitionend', () => bootEl.remove(), { once: true });
     canvas.focus();
-    window.removeEventListener('keydown', dismiss);
+    window.removeEventListener('keydown', onKey);
   };
+  const canContinue = mod.canContinue?.() === true;
+  const onKey = (): void => dismiss(canContinue ? 'continue' : 'new');
   if (params.has('autostart')) {
-    dismiss();
+    dismiss(params.has('continue') ? 'continue' : 'new');
   } else {
-    cont.hidden = false;
     $('boot-status').hidden = true;
-    cont.addEventListener('click', dismiss);
-    window.addEventListener('keydown', dismiss);
+    cont.hidden = false;
+    cont.textContent = canContinue ? 'Continue' : 'Enter';
+    cont.addEventListener('click', () => dismiss(canContinue ? 'continue' : 'new'));
+    if (canContinue) {
+      newBtn.hidden = false;
+      newBtn.addEventListener('click', () => dismiss('new'));
+    }
+    window.addEventListener('keydown', onKey);
   }
 }
 

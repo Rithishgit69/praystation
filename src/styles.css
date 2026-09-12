@@ -32,6 +32,8 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .boot-status { color: var(--muted); font-size: 14px; margin: 0 0 18px; }
 .boot-continue { font-family: var(--display); font-size: 18px; letter-spacing: 0.12em; color: var(--cream); background: rgba(217,179,112,0.08); border: 1px solid var(--gold); padding: 10px 40px; cursor: pointer; }
 .boot-continue:hover { background: rgba(217,179,112,0.18); }
+.boot-buttons { display: flex; gap: 14px; justify-content: center; }
+.boot-secondary { border-color: rgba(217,179,112,0.45); color: var(--muted); }
 
 /* Profiler */
 .profiler { position: absolute; top: 8px; right: 8px; background: rgba(11,18,32,0.72); border: 1px solid rgba(217,179,112,0.35); padding: 6px 8px; font: 11px/1.4 ui-monospace, Menlo, monospace; color: #cfd6e4; z-index: 40; }
@@ -78,6 +80,8 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .prompt-key { display: inline-flex; align-items: center; justify-content: center; min-width: calc(2 * var(--u)); height: calc(2 * var(--u)); padding: 0 6px; border: 1px solid var(--gold); background: rgba(11,18,32,0.6); font-size: calc(1.1 * var(--u)); }
 .stamina { position: absolute; left: 50%; bottom: 12%; transform: translateX(-50%); width: calc(14 * var(--u)); height: 3px; background: rgba(232,220,192,0.18); border: 1px solid rgba(217,179,112,0.35); }
 .stamina-fill { height: 100%; background: linear-gradient(90deg, #d9b370, #ffc46b); transition: width 0.1s linear; }
+.resolve { position: absolute; left: 50%; bottom: calc(12% + 10px); transform: translateX(-50%); width: calc(18 * var(--u)); height: 4px; background: rgba(232,220,192,0.14); border: 1px solid rgba(217,179,112,0.5); }
+.resolve-fill { height: 100%; background: linear-gradient(90deg, #fff1c9, #ffc46b); transition: width 0.25s ease; box-shadow: 0 0 8px rgba(255,196,107,0.6); }
 
 /* Journal / pause / subtitles */
 .journal { width: min(880px, 92vw); }
@@ -93,3 +97,9 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .subtitles { position: absolute; left: 50%; bottom: 9%; transform: translateX(-50%); max-width: 70%; text-align: center; font-family: var(--serif); font-size: clamp(15px, 1.6vw, 22px); color: var(--cream); text-shadow: 0 1px 4px #000, 0 0 12px rgba(0,0,0,0.8); line-height: 1.4; pointer-events: none; }
 .subtitles.temple { color: #d9b370; font-style: italic; letter-spacing: 0.03em; }
 .subtitle-speaker[hidden] { display: none; }
+
+/* Map screen */
+.mapscreen { position: absolute; inset: 0; z-index: 30; }
+.mapscreen canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
+.map-legend { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted); font-size: 13px; pointer-events: none; }
+.map-title { font-family: var(--display); font-size: 18px; letter-spacing: 0.12em; color: var(--gold); }

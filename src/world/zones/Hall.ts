@@ -42,10 +42,16 @@ export function* buildHall(ctx: ZoneBuildContext): Generator<void, UnitBuild, vo
   acc.mesh(dais);
   yield;
   // Mural wall: a tall carved panel on the north wall, damaged at the edges.
-  const panel = new THREE.Mesh(new RoundedBoxGeometry(12, 6, 0.5, 2, 0.05), ctx.lib.sandstoneDark);
-  setTriplanar(panel.geometry, 3, 0.85);
-  panel.position.set(cx, floorY + 0.96 + 3.6, cz - 35.4);
-  acc.mesh(panel, false);
+  const frame = new THREE.Mesh(new RoundedBoxGeometry(12.6, 6.6, 0.5, 2, 0.05), ctx.lib.sandstoneDark);
+  setTriplanar(frame.geometry, 3, 0.85);
+  frame.position.set(cx, floorY + 0.96 + 3.6, cz - 35.5);
+  acc.mesh(frame, false);
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(11.6, 5.8), ctx.lib.mural('broken-tusk'));
+  panel.position.set(cx, floorY + 0.96 + 3.6, cz - 35.22);
+  panel.receiveShadow = true;
+  acc.group.add(panel);
+  // A pair of low lamps at the mural's foot so the art reads before the diyas light.
+  for (const sx of [-4.5, 4.5]) acc.fire(cx + sx, floorY + 0.96 + 0.3, cz - 34.4, { scale: 0.4, intensity: 10, distance: 7 });
   acc.anchor('mural:broken-tusk', 'mural', cx, floorY + 0.96 + 1.4, cz - 34.6, Math.PI, 3.2, { chapter: 'ch1' }, panel);
   // Braziers flanking the dais.
   for (const s of [-1, 1]) {
