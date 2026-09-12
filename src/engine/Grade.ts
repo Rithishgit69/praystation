@@ -18,7 +18,7 @@ export interface GradeParams {
 export const GRADES: Record<'present' | 'memory' | 'corruption', GradeParams> = {
   // Cool blue/silver present-day temple.
   present: {
-    lift: [0.0, 0.008, 0.024],
+    lift: [0.0, 0.012, 0.04],
     gamma: [0.99, 1.0, 1.03],
     gain: [0.95, 1.0, 1.06],
     saturation: 0.9,

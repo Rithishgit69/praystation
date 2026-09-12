@@ -19,6 +19,8 @@ export interface EkaDebugApi {
   /** Registered by scenes that own a camera rig. */
   cameraControl: { setYawPitch(yaw: number, pitch: number): void } | null;
   setCamera(yaw: number, pitch: number): void;
+  /** Registered by the world scene: move the player and load the surroundings synchronously. */
+  teleport: ((x: number, y: number, z: number) => void) | null;
 }
 
 declare global {
@@ -41,6 +43,7 @@ export const installDebugApi = (engine: Engine): EkaDebugApi => {
     playerProvider: null,
     cameraControl: null,
     setCamera: (yaw, pitch) => api.cameraControl?.setYawPitch(yaw, pitch),
+    teleport: null,
   };
   window.__eka = api;
   engine.events.on('sceneloaded', (id) => {

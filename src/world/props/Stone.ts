@@ -237,7 +237,7 @@ export const makeWallSlab = (lib: MaterialLibrary, length: number, height: numbe
   const slab = new THREE.BoxGeometry(length, height, thickness, Math.ceil(length / 2), Math.ceil(height / 1.5), 1);
   jitterVertices(slab, rng, 0.02);
   parts.push([slab, mat4(0, height / 2, 0)]);
-  const n = Math.floor(length * 0.6);
+  const n = Math.floor(length * 0.25);
   for (let i = 0; i < n; i++) {
     const w = rng.range(0.6, 1.1);
     const h = rng.range(0.4, 0.5);

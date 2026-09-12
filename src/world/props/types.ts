@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { SurfaceMaterial } from '@/engine/Physics';
+import type { SurfaceMaterial, SurfaceSource } from '@/engine/Physics';
 
 export interface BoxCollider {
   kind: 'box';
@@ -15,7 +15,13 @@ export interface CylinderCollider {
   radius: number;
   surface: SurfaceMaterial;
 }
-export type ColliderSpec = BoxCollider | CylinderCollider;
+export interface TrimeshCollider {
+  kind: 'trimesh';
+  geometry: THREE.BufferGeometry;
+  matrix: THREE.Matrix4;
+  surface: SurfaceSource;
+}
+export type ColliderSpec = BoxCollider | CylinderCollider | TrimeshCollider;
 
 export interface PropResult {
   object: THREE.Object3D;
@@ -48,6 +54,7 @@ export const transformColliders = (specs: ColliderSpec[], matrix: THREE.Matrix4)
   const s = new THREE.Vector3();
   matrix.decompose(p, q, s);
   return specs.map((c) => {
+    if (c.kind === 'trimesh') return { ...c, matrix: matrix.clone().multiply(c.matrix) };
     const center = c.center.clone().applyMatrix4(matrix);
     if (c.kind === 'box') return { ...c, center, quaternion: q.clone().multiply(c.quaternion) };
     return { ...c, center };

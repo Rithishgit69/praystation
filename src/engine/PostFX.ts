@@ -38,7 +38,7 @@ class FilteredGTAOPass extends GTAOPass {
 }
 
 /**
- * WebGL2 post chain: scene → GTAO (tier-gated) → bloom → 3D-LUT grade → SMAA → filmic output.
+ * WebGL2 post chain: scene → GTAO (tier-gated) → bloom → filmic output (ACES + sRGB) → 3D-LUT grade → SMAA.
  * Dynamic resolution is applied through the renderer pixel ratio so every pass follows.
  */
 export class PostFX {
@@ -68,12 +68,14 @@ export class PostFX {
     this.lut = new LUTPass({ lut: this.grade.texture, intensity: 1 });
     this.smaa = new SMAAPass();
     this.output = new OutputPass();
+    // Order matters: the LUT grade is display-referred, so it runs after filmic tone mapping + sRGB
+    // encoding (OutputPass); SMAA runs last on the final LDR image.
     this.composer.addPass(this.renderPass);
     this.composer.addPass(this.gtao);
     this.composer.addPass(this.bloom);
+    this.composer.addPass(this.output);
     this.composer.addPass(this.lut);
     this.composer.addPass(this.smaa);
-    this.composer.addPass(this.output);
     this.applyQuality(q);
   }
 

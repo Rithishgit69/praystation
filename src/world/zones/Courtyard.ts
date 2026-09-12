@@ -1,67 +1,24 @@
 import * as THREE from 'three';
-import type { QualitySettings } from '@/engine/Quality';
-import { SeededRandom } from '@/util/random';
-import type { MapRect } from '@/ui/HUD';
-import type { MaterialLibrary } from '../Materials';
-import { FireEffect } from '../fx/Fire';
-import { Fireflies, GroundMist } from '../fx/Atmosphere';
+import { Fireflies } from '../fx/Atmosphere';
+import { TreeBuilder } from '../props/Foliage';
 import { makeBanner } from '../props/Banner';
-import { IvyBuilder, TreeBuilder } from '../props/Foliage';
 import { makeBlocks, makeBrazierPlinth, makeFloor, makePillar, makeSteps, makeWallSlab, scatteredBlocks, stackedBlocks } from '../props/Stone';
-import { mergeStaticChildren } from '@/util/merge';
-import { transformColliders, type ColliderSpec, type PropResult } from '../props/types';
-
-export interface ZoneBuild {
-  group: THREE.Group;
-  colliders: ColliderSpec[];
-  updates: Array<(dt: number, elapsed: number, camera: THREE.Camera) => void>;
-  disposables: Array<() => void>;
-  mapRects: MapRect[];
-  spawn: { position: THREE.Vector3; yaw: number };
-  fires: FireEffect[];
-}
+import type { UnitBuild, ZoneBuildContext } from '../WorldTypes';
+import { UnitAccumulator } from './UnitKit';
 
 /**
- * The reference-frame courtyard (§2). North is -Z; the player spawns on the foreground platform facing
+ * The reference-frame courtyard (§2). North is -Z; the player spawns on the foreground terrace facing
  * north with the banner column to the left, the great steps and colonnade ahead-right.
  */
-export const buildCourtyard = (lib: MaterialLibrary, q: QualitySettings): ZoneBuild => {
-  const rng = new SeededRandom(2024);
-  const group = new THREE.Group();
-  const colliders: ColliderSpec[] = [];
-  const updates: ZoneBuild['updates'] = [];
-  const disposables: Array<() => void> = [];
-  const mapRects: MapRect[] = [];
-  const fires: FireEffect[] = [];
-  const ivy = new IvyBuilder(rng.fork(3));
-
-  const place = (prop: PropResult, x: number, y: number, z: number, ry = 0): THREE.Object3D => {
-    prop.object.position.set(x, y, z);
-    prop.object.rotation.y = ry;
-    prop.object.updateMatrix();
-    group.add(prop.object);
-    const world = transformColliders(prop.colliders, prop.object.matrix);
-    colliders.push(...world);
-    for (const c of world) {
-      if (c.kind === 'box' && c.half.x * c.half.z * 4 < 60) {
-        const e = new THREE.Euler().setFromQuaternion(c.quaternion);
-        mapRects.push({ x: c.center.x, z: c.center.z, w: c.half.x * 2, d: c.half.z * 2, rotY: e.y });
-      } else if (c.kind === 'cylinder') mapRects.push({ x: c.center.x, z: c.center.z, w: c.radius * 2, d: c.radius * 2, rotY: 0 });
-    }
-    if (prop.update) updates.push(prop.update);
-    if (prop.dispose) disposables.push(prop.dispose);
-    return prop.object;
+export function* buildCourtyard(ctx: ZoneBuildContext): Generator<void, UnitBuild & { spawn: { position: THREE.Vector3; yaw: number } }, void> {
+  const { lib, quality: q } = ctx;
+  const rng = ctx.rng.fork(2024);
+  const acc = new UnitAccumulator(lib, rng, 'courtyard');
+  const { group, colliders, updates, disposables, ivy } = acc;
+  const place = acc.place.bind(acc);
+  const fire = (x: number, y: number, z: number, opts: { scale?: number; light?: boolean; intensity?: number; distance?: number }): void => {
+    acc.fire(x, y, z, { scale: opts.scale ?? 1, light: opts.light ?? true, intensity: opts.intensity ?? 26, distance: opts.distance ?? 16 });
   };
-  const fire = (x: number, y: number, z: number, opts: { scale?: number; light?: boolean; shadow?: boolean; intensity?: number; distance?: number }): FireEffect => {
-    const f = new FireEffect(lib, { scale: opts.scale ?? 1, light: opts.light ?? true, shadow: opts.shadow ?? false, lightIntensity: opts.intensity ?? 26, lightDistance: opts.distance ?? 16, embers: (opts.scale ?? 1) < 0.6 ? 10 : 26 });
-    f.group.position.set(x, y, z);
-    group.add(f.group);
-    updates.push((dt, t, cam) => f.update(dt, t, cam));
-    disposables.push(() => f.dispose());
-    fires.push(f);
-    return f;
-  };
-
   // ---- Floors -------------------------------------------------------------------------------
   place(makeFloor(lib, 36, 36, 1.2, 1), 0, 0, -8);
   place(makeFloor(lib, 11, 8, 0.9, 2), 1.5, 0.9, 1.5); // foreground terrace (z -2.5..5.5)
@@ -70,12 +27,10 @@ export const buildCourtyard = (lib: MaterialLibrary, q: QualitySettings): ZoneBu
   place(makeFloor(lib, 9.5, 17, 0.62, 3), 12.7, 0.62, -4); // right terrace
   place(makeFloor(lib, 8, 34, 1.92, 4), 4.5, 1.92, -29.2); // colonnade floor
 
+  yield;
   // ---- Great steps and colonnade ------------------------------------------------------------
   place(makeSteps(lib, { width: 7.6, count: 8, rise: 0.24, run: 0.46, rng: rng.fork(5) }), 4.5, 0, -8.5);
   const corridorZ0 = -14.2;
-  const cookieGeo = new THREE.PlaneGeometry(1, 1);
-  const cookieMat = new THREE.MeshBasicMaterial({ map: lib.glowTexture, color: 0xff8a3c, transparent: true, opacity: 0.32, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
-  disposables.push(() => cookieGeo.dispose(), () => cookieMat.dispose());
   for (let i = 0; i < 9; i++) {
     const z = corridorZ0 - i * 3.6;
     for (const x of [1.4, 7.6]) {
@@ -92,16 +47,8 @@ export const buildCourtyard = (lib: MaterialLibrary, q: QualitySettings): ZoneBu
         fire(x, 1.92 + 3.1, z, { scale, light: near, intensity: 14, distance: 8 });
         if (!near) {
           // Baked light pool instead of a real point light for far torches.
-          const cookie = new THREE.Mesh(cookieGeo, cookieMat);
-          cookie.position.set(x + (x < 4.5 ? 0.9 : -0.9), 1.92 + 0.03, z);
-          cookie.rotation.x = -Math.PI / 2;
-          cookie.scale.setScalar(5.5);
-          group.add(cookie);
-          const wallGlow = new THREE.Mesh(cookieGeo, cookieMat);
-          wallGlow.position.set(x + (x < 4.5 ? -0.55 : 0.55), 1.92 + 3.1, z);
-          wallGlow.rotation.y = x < 4.5 ? Math.PI / 2 : -Math.PI / 2;
-          wallGlow.scale.setScalar(3.2);
-          group.add(wallGlow);
+          acc.cookie(x + (x < 4.5 ? 0.9 : -0.9), 1.92 + 0.03, z, 5.5);
+          acc.cookie(x + (x < 4.5 ? -0.55 : 0.55), 1.92 + 3.1, z, 3.2, 0, x < 4.5 ? Math.PI / 2 : -Math.PI / 2);
         }
       }
     }
@@ -137,8 +84,9 @@ export const buildCourtyard = (lib: MaterialLibrary, q: QualitySettings): ZoneBu
   place(makeBlocks(lib, stackedBlocks(rng.fork(11), 4.2, 4, 1.0), rng.fork(12)), 0.4, 0, -10.5, -Math.PI / 2);
   place(makeBlocks(lib, stackedBlocks(rng.fork(13), 4.2, 4, 1.0), rng.fork(14)), 8.6, 0, -10.5, -Math.PI / 2);
 
+  yield;
   // ---- Left: banner column, block stack, broken pillars, rubble ------------------------------
-  const bannerCol = place(makePillar(lib, { height: 8.6, rng: rng.fork(20) }), -6.0, 0, -8.8);
+  place(makePillar(lib, { height: 8.6, rng: rng.fork(20) }), -6.0, 0, -8.8);
   const banner = makeBanner(lib, 1.75, 3.8);
   place(banner, -6.9, 5.05, -7.85, 0.06);
   place(makeBlocks(lib, stackedBlocks(rng.fork(21), 3.3, 7, 1.25, 0.03), rng.fork(22)), -8.2, 0, -4.4, -0.42);
@@ -157,17 +105,19 @@ export const buildCourtyard = (lib: MaterialLibrary, q: QualitySettings): ZoneBu
   group.add(drum);
   colliders.push({ kind: 'box', center: drum.position.clone(), half: new THREE.Vector3(0.4, 0.34, 1.3), quaternion: drum.quaternion.clone(), surface: 'dry-stone' });
 
+  yield;
   // ---- Braziers ---------------------------------------------------------------------------------
-  const brazier = (x: number, y: number, z: number, opts: { shadow?: boolean; intensity?: number; distance?: number }): void => {
+  const brazier = (x: number, y: number, z: number, opts: { intensity?: number; distance?: number }): void => {
     const b = makeBrazierPlinth(lib, { rng: rng.fork(Math.round(x * 7 + z * 13)) });
     place(b, x, y, z);
-    fire(x, y + b.fireHeight, z, { scale: 1, light: true, shadow: opts.shadow ?? false, intensity: opts.intensity ?? 30, distance: opts.distance ?? 18 });
+    fire(x, y + b.fireHeight, z, { scale: 1, light: true, intensity: opts.intensity ?? 30, distance: opts.distance ?? 18 });
   };
   brazier(-4.6, 0, -3.2, { intensity: 55, distance: 13 }); // left foreground (hero)
   brazier(1.6, 1.92, -13.6, { intensity: 45, distance: 12 }); // top of steps, left
   brazier(12.4, 0.62, -10.8, { intensity: 40, distance: 11 }); // far right
   brazier(9.6, 0.62, 0.2, { intensity: 34, distance: 9 }); // right, near the camera
 
+  yield;
   // ---- Right terrace -------------------------------------------------------------------------
   place(makeBlocks(lib, stackedBlocks(rng.fork(30), 4.4, 5, 1.3), rng.fork(31)), 13.2, 0.62, -5.2, 0.12);
   place(makeBlocks(lib, scatteredBlocks(rng.fork(32), 5, 2.2), rng.fork(33)), 11.0, 0.62, -1.2);
@@ -183,6 +133,7 @@ export const buildCourtyard = (lib: MaterialLibrary, q: QualitySettings): ZoneBu
   place(makePillar(lib, { height: 7.6, brokenAt: 5.5, rng: rng.fork(41) }), 7.5, 0, 7.5);
   place(makeBlocks(lib, scatteredBlocks(rng.fork(42), 6, 2.5), rng.fork(43)), -9, 0, 6);
 
+  yield;
   // ---- Ivy ------------------------------------------------------------------------------------------
   const stackFaces = (cx: number, cz: number, w: number, h: number, d: number, ry: number, density = 1): void => {
     const cos = Math.cos(ry);
@@ -216,36 +167,19 @@ export const buildCourtyard = (lib: MaterialLibrary, q: QualitySettings): ZoneBu
   ivy.patch(new THREE.Vector3(-2.5, 0, -7.5), 1.4, 36);
   ivy.patch(new THREE.Vector3(6.5, 0.9, 3.5), 1.2, 28);
   ivy.patch(new THREE.Vector3(-9.5, 0, 3), 2.5, 60);
-  const ivyMesh = ivy.build(lib);
-  if (ivyMesh) group.add(ivyMesh);
 
-  // ---- Forest ring -------------------------------------------------------------------------------
+  yield;
+  // ---- Near trees (inside the zone bounds; the forest cells provide the ring beyond) -----------------
   const treeRng = rng.fork(50);
   const forest = new TreeBuilder(treeRng);
-  for (let i = 0; i < 90; i++) {
-    const a = treeRng.range(0, Math.PI * 2);
-    const r = treeRng.range(21, 44);
-    const x = Math.cos(a) * r;
-    const z = -8 + Math.sin(a) * r;
-    // Keep the colonnade axis clear so it recedes into fog rather than into a trunk.
-    if (x > -2 && x < 11 && z < -12) continue;
-    forest.tree(x, z, treeRng.range(9, 15), treeRng.range(0, Math.PI * 2));
-  }
-  // Closer trees on the left so their canopies show over the ruins as in the reference.
-  for (let i = 0; i < 10; i++) forest.tree(treeRng.range(-24, -15), treeRng.range(-26, 4), treeRng.range(11, 15), treeRng.range(0, Math.PI * 2));
-  for (let i = 0; i < 26; i++) {
-    const a = treeRng.range(0, Math.PI * 2);
-    const r = treeRng.range(17, 30);
-    const x = Math.cos(a) * r;
-    const z = -8 + Math.sin(a) * r;
-    if (x > -2 && x < 11 && z < -12) continue;
-    forest.bush(x, z, treeRng.range(1.6, 3.2));
-  }
+  for (let i = 0; i < 10; i++) forest.tree(treeRng.range(-40, -22), treeRng.range(-30, 4), treeRng.range(11, 15), treeRng.range(0, Math.PI * 2));
+  for (let i = 0; i < 6; i++) forest.tree(treeRng.range(22, 40), treeRng.range(-40, 10), treeRng.range(10, 14), treeRng.range(0, Math.PI * 2));
+  for (let i = 0; i < 14; i++) forest.bush(treeRng.range(-40, -20), treeRng.range(-36, 10), treeRng.range(1.6, 3.2));
   for (const o of forest.build(lib)) group.add(o);
   colliders.push(...forest.colliders);
-
+  yield;
   // ---- Atmosphere ------------------------------------------------------------------------------
-  const mist = new GroundMist(lib, rng.fork(60), [
+  acc.mist([
     { x: -16, y: 0.5, z: -12, size: 24, opacity: 0.2 },
     { x: -20, y: 0.4, z: 4, size: 22, opacity: 0.18 },
     { x: 4.5, y: 2.4, z: -38, size: 20, opacity: 0.16 },
@@ -253,9 +187,6 @@ export const buildCourtyard = (lib: MaterialLibrary, q: QualitySettings): ZoneBu
     { x: 2, y: 0.4, z: 16, size: 24, opacity: 0.16 },
     { x: -8, y: 0.3, z: -6, size: 12, opacity: 0.1 },
   ]);
-  group.add(mist.group);
-  updates.push((dt) => mist.update(dt));
-  disposables.push(() => mist.dispose());
   const flies = new Fireflies(lib, rng.fork(61), q.tier === 'low' ? 30 : 70, { min: new THREE.Vector3(-34, 1, -34), max: new THREE.Vector3(-12, 6, 8) });
   group.add(flies.points);
   updates.push((_dt, t) => flies.update(t));
@@ -276,8 +207,17 @@ export const buildCourtyard = (lib: MaterialLibrary, q: QualitySettings): ZoneBu
     group.add(d);
   }
 
-  void bannerCol;
-  // Merge all rigid stone into one mesh per material: a handful of draw calls for the whole zone.
-  mergeStaticChildren(group, new Set(), new Set([lib.sandstone, lib.sandstoneDark, lib.flagstone]));
-  return { group, colliders, updates, disposables, mapRects, spawn: { position: new THREE.Vector3(1.6, 1.0, 2.6), yaw: 0 }, fires };
-};
+  // Side-wall openings to the lore chambers and outer walls to the forest.
+  acc.wall(-38, -50, -38, -20, 0, 5.5, 1.4);
+  acc.wall(-38, -12, -38, 30, 0, 5.5, 1.4);
+  acc.wall(38, -50, 38, -20, 0, 5.5, 1.4);
+  acc.wall(38, -12, 38, 30, 0, 5.5, 1.4);
+  acc.anchor('shrine:courtyard', 'shrine', -4.6, 1.6, -3.2, 0, 2.4, { lit: ctx.flags['shrine:courtyard'] === true });
+  acc.anchor('trigger:courtyard-enter', 'trigger', 1.6, 1.0, 2.6, 0, 6);
+  yield;
+  void q;
+  void updates;
+  void disposables;
+  const out = yield* acc.finish();
+  return { ...out, spawn: { position: new THREE.Vector3(1.6, 1.0, 2.6), yaw: 0 } };
+}

@@ -7,12 +7,14 @@ export const initRapier = (): Promise<void> => {
   return rapierReady;
 };
 
-export type SurfaceMaterial = 'wet-stone' | 'dry-stone' | 'gravel' | 'grass' | 'water' | 'wood' | 'moss';
+export type SurfaceMaterial = 'wet-stone' | 'dry-stone' | 'gravel' | 'grass' | 'water' | 'wood' | 'moss' | 'earth';
+/** Colliders can carry a fixed surface or resolve it per contact point (terrain with paths). */
+export type SurfaceSource = SurfaceMaterial | ((point: THREE.Vector3) => SurfaceMaterial);
 
 /** Rapier world wrapper. Colliders carry a user-data surface material for footsteps. */
 export class Physics {
   readonly world: RAPIER.World;
-  private readonly surfaces = new Map<number, SurfaceMaterial>();
+  private readonly surfaces = new Map<number, SurfaceSource>();
   lastStepMs = 0;
 
   constructor() {
@@ -40,7 +42,7 @@ export class Physics {
     return col;
   }
 
-  addStaticTrimesh(geometry: THREE.BufferGeometry, matrix: THREE.Matrix4, surface: SurfaceMaterial): RAPIER.Collider {
+  addStaticTrimesh(geometry: THREE.BufferGeometry, matrix: THREE.Matrix4, surface: SurfaceSource): RAPIER.Collider {
     const pos = geometry.getAttribute('position');
     const verts = new Float32Array(pos.count * 3);
     const v = new THREE.Vector3();
@@ -77,9 +79,12 @@ export class Physics {
     else this.world.removeCollider(collider, true);
   }
 
-  surfaceOf(collider: RAPIER.Collider | null | undefined): SurfaceMaterial {
+  surfaceOf(collider: RAPIER.Collider | null | undefined, point?: THREE.Vector3): SurfaceMaterial {
     if (!collider) return 'dry-stone';
-    return this.surfaces.get(collider.handle) ?? 'dry-stone';
+    const s = this.surfaces.get(collider.handle);
+    if (s === undefined) return 'dry-stone';
+    if (typeof s === 'function') return point ? s(point) : 'grass';
+    return s;
   }
 
   /** Ray query. Returns hit point, normal, distance and the collider. */

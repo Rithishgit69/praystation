@@ -9,19 +9,27 @@ import { MaterialLibrary } from '@/world/Materials';
 import { MoonLight } from '@/world/fx/Atmosphere';
 import { patchIvyMaterial } from '@/world/props/Foliage';
 import type { ColliderSpec } from '@/world/props/types';
-import { buildCourtyard, type ZoneBuild } from '@/world/zones/Courtyard';
+import { buildCourtyard } from '@/world/zones/Courtyard';
+import { WorldMap } from '@/world/WorldMap';
+import { runToCompletion, type UnitBuild } from '@/world/WorldTypes';
+import { SeededRandom } from '@/util/random';
+import { gameStore } from '@/state/store';
 import type { RAPIER } from '@/engine/Physics';
 import { degToRad } from '@/util/math';
 
 export const addColliders = (engine: Engine, specs: ColliderSpec[]): RAPIER.Collider[] =>
-  specs.map((c) => (c.kind === 'box' ? engine.physics.addStaticBox(c.center, c.half, c.quaternion, c.surface) : engine.physics.addStaticCylinder(c.center, c.halfHeight, c.radius, c.surface)));
+  specs.map((c) => {
+    if (c.kind === 'box') return engine.physics.addStaticBox(c.center, c.half, c.quaternion, c.surface);
+    if (c.kind === 'cylinder') return engine.physics.addStaticCylinder(c.center, c.halfHeight, c.radius, c.surface);
+    return engine.physics.addStaticTrimesh(c.geometry, c.matrix, c.surface);
+  });
 
 /** Runs per-frame prop/effect updates and keeps the moon's shadow frustum on the player. */
 class ZoneFX implements System {
   readonly name = 'zone-fx';
   constructor(
     private readonly engine: Engine,
-    private readonly zone: ZoneBuild,
+    private readonly zone: UnitBuild,
     private readonly moon: MoonLight,
     private readonly focus: () => THREE.Vector3,
   ) {}
@@ -36,7 +44,7 @@ class ZoneFX implements System {
 export class CourtyardScene implements SceneModule {
   readonly id = 'courtyard';
   private colliders: RAPIER.Collider[] = [];
-  private zone: ZoneBuild | null = null;
+  private zone: UnitBuild | null = null;
   private engine: Engine | null = null;
 
   async init(engine: Engine): Promise<void> {
@@ -51,7 +59,8 @@ export class CourtyardScene implements SceneModule {
     engine.postfx.setBloom(0.6, 0.5, 0.86);
     engine.postfx.grade.set('present', 'present', 0);
 
-    const zone = buildCourtyard(lib, engine.quality.settings);
+    const world = new WorldMap();
+    const zone = runToCompletion(buildCourtyard({ lib, quality: engine.quality.settings, rng: new SeededRandom(1), terrain: world.terrain, world, flags: gameStore.getState().flags }));
     this.zone = zone;
     scene.add(zone.group);
     this.colliders = addColliders(engine, zone.colliders);

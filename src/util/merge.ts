@@ -5,7 +5,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
  * Merges the direct child meshes of `group` that share a material into one mesh per material.
  * Children listed in `keep` are left untouched (animated geometry). Cuts draw calls for rigid parts.
  */
-export const mergeStaticChildren = (group: THREE.Object3D, keep: ReadonlySet<THREE.Object3D> = new Set(), onlyMaterials?: ReadonlySet<THREE.Material>): void => {
+export const mergeStaticChildren = (group: THREE.Object3D, keep: ReadonlySet<THREE.Object3D> = new Set(), onlyMaterials?: ReadonlySet<THREE.Material>, limit = Infinity): number => {
   const byMaterial = new Map<THREE.Material, THREE.BufferGeometry[]>();
   const toRemove: THREE.Mesh[] = [];
   for (const child of group.children) {
@@ -13,6 +13,8 @@ export const mergeStaticChildren = (group: THREE.Object3D, keep: ReadonlySet<THR
     if (!mesh.isMesh || keep.has(mesh) || Array.isArray(mesh.material) || mesh.children.length > 0) continue;
     if ((mesh as THREE.InstancedMesh).isInstancedMesh) continue;
     if (onlyMaterials && !onlyMaterials.has(mesh.material)) continue;
+    if (toRemove.length >= limit) break;
+    if (mesh.userData.mergedBatch === true && limit !== Infinity) continue;
     mesh.updateMatrix();
     const geo = mesh.geometry.clone().applyMatrix4(mesh.matrix);
     // Normalise attribute sets so geometries can be merged.
@@ -44,6 +46,8 @@ export const mergeStaticChildren = (group: THREE.Object3D, keep: ReadonlySet<THR
     const mesh = new THREE.Mesh(merged, material);
     mesh.castShadow = true;
     mesh.receiveShadow = true;
+    mesh.userData.mergedBatch = true;
     group.add(mesh);
   }
+  return toRemove.length;
 };

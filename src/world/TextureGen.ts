@@ -449,3 +449,40 @@ export const debrisTexture = (size = 512, seed = 131): THREE.Texture => {
   tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
   return tex;
 };
+
+/** Forest floor: dark earth, leaf litter and grass tufts; vertex colours tint grass/earth/path. */
+export const forestFloorTextures = (size = 512, seed = 151): PBRMaps => {
+  const albedo = new Uint8ClampedArray(size * size * 4);
+  const rough = new Uint8ClampedArray(size * size * 4);
+  const height = new Float32Array(size * size);
+  for (let y = 0; y < size; y++)
+    for (let x = 0; x < size; x++) {
+      const u = x / size;
+      const v = y / size;
+      const o = (y * size + x) * 4;
+      const clumps = fbmTile(u, v, 6, 4, seed);
+      const blades = fbmTile(u * 3, v * 3, 40, 2, seed + 4);
+      const litter = fbmTile(u, v, 24, 3, seed + 9);
+      const grass = smoothstepLocal(0.42, 0.62, clumps) * (0.5 + blades * 0.5);
+      const leaf = litter > 0.78 ? (litter - 0.78) * 4 : 0;
+      height[y * size + x] = 0.4 + grass * 0.35 + leaf * 0.3;
+      let r = 0.2 + clumps * 0.1;
+      let g = 0.16 + clumps * 0.09;
+      let b = 0.11 + clumps * 0.05;
+      r = r * (1 - grass) + (0.24 + blades * 0.16) * grass;
+      g = g * (1 - grass) + (0.34 + blades * 0.2) * grass;
+      b = b * (1 - grass) + (0.14 + blades * 0.08) * grass;
+      r = r * (1 - leaf) + 0.38 * leaf;
+      g = g * (1 - leaf) + 0.26 * leaf;
+      b = b * (1 - leaf) + 0.12 * leaf;
+      packRGB(albedo, o, r, g, b);
+      rough[o] = rough[o + 1] = rough[o + 2] = (0.85 + blades * 0.1) * 255;
+      rough[o + 3] = 255;
+    }
+  return { map: makeDataTexture(size, albedo, true), normalMap: makeDataTexture(size, normalFromHeight(size, height, 2.5), false), roughnessMap: makeDataTexture(size, rough, false) };
+};
+
+const smoothstepLocal = (a: number, b: number, v: number): number => {
+  const t = Math.max(0, Math.min(1, (v - a) / (b - a)));
+  return t * t * (3 - 2 * t);
+};

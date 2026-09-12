@@ -37,4 +37,8 @@ export interface FrameStats {
   renderScale: number;
   spikes25ms: number;
   chunksLoaded: number;
+  /** Worst single cooperative build step and worst attach (ms) seen this session. */
+  streamStepMaxMs: number;
+  streamAttachMaxMs: number;
+  streamWorstStep: string;
 }

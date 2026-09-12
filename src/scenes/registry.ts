@@ -9,6 +9,7 @@ export interface SceneEntry {
 
 /** Every system gets a dedicated debug/test scene here; the dev menu lists them and `?scene=` loads them. */
 export const SCENES: readonly SceneEntry[] = [
+  { id: 'game', title: 'Open world (Prologue forest start)', group: 'game', load: async () => new (await import('./GameScene')).GameScene() },
   { id: 'courtyard', title: 'Reference frame: temple courtyard', group: 'world', load: async () => new (await import('./CourtyardScene')).CourtyardScene() },
   { id: 'greybox', title: 'Grey-box traversal (camera + controller)', group: 'traversal', load: async () => new (await import('./GreyBoxScene')).GreyBoxScene() },
 ];

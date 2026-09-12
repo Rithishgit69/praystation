@@ -107,18 +107,18 @@ export class TreeBuilder {
   readonly colliders: ColliderSpec[] = [];
   constructor(private readonly rng: SeededRandom) {}
 
-  tree(x: number, z: number, height: number, yaw: number, canopyScale = 1): void {
+  tree(x: number, z: number, height: number, yaw: number, canopyScale = 1, baseY = 0): void {
     const s = height / 9;
-    this.trunks.push({ matrix: new THREE.Matrix4().compose(new THREE.Vector3(x, height * 0.36, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw, 0)), new THREE.Vector3(s, height * 0.72, s)) });
+    this.trunks.push({ matrix: new THREE.Matrix4().compose(new THREE.Vector3(x, baseY + height * 0.36, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(0, yaw, 0)), new THREE.Vector3(s, height * 0.72, s)) });
     const cs = canopyScale * height * 0.55;
     for (let i = 0; i < 3; i++) {
       const e = new THREE.Euler(this.rng.range(-0.25, 0.25), yaw + (i / 3) * Math.PI + this.rng.range(-0.3, 0.3), 0);
-      const p = new THREE.Vector3(x + this.rng.range(-0.3, 0.3), height * 0.78 + this.rng.range(-0.5, 0.5), z + this.rng.range(-0.3, 0.3));
+      const p = new THREE.Vector3(x + this.rng.range(-0.3, 0.3), baseY + height * 0.78 + this.rng.range(-0.5, 0.5), z + this.rng.range(-0.3, 0.3));
       this.cards.push({ matrix: new THREE.Matrix4().compose(p, new THREE.Quaternion().setFromEuler(e), new THREE.Vector3(cs, cs * 0.85, 1)) });
     }
     const top = new THREE.Euler(-Math.PI / 2 + this.rng.range(-0.3, 0.3), yaw, 0);
-    this.cards.push({ matrix: new THREE.Matrix4().compose(new THREE.Vector3(x, height * 0.9, z), new THREE.Quaternion().setFromEuler(top), new THREE.Vector3(cs * 0.9, cs * 0.9, 1)) });
-    this.colliders.push(cylinderCollider(new THREE.Vector3(x, height * 0.36, z), height * 0.36, 0.3 * s, 'wood'));
+    this.cards.push({ matrix: new THREE.Matrix4().compose(new THREE.Vector3(x, baseY + height * 0.9, z), new THREE.Quaternion().setFromEuler(top), new THREE.Vector3(cs * 0.9, cs * 0.9, 1)) });
+    this.colliders.push(cylinderCollider(new THREE.Vector3(x, baseY + height * 0.36, z), height * 0.36, 0.3 * s, 'wood'));
   }
 
   bush(x: number, z: number, size: number, y = 0): void {
@@ -131,7 +131,7 @@ export class TreeBuilder {
   build(lib: MaterialLibrary): THREE.Object3D[] {
     const out: THREE.Object3D[] = [];
     if (this.trunks.length > 0) {
-      const geo = new THREE.CylinderGeometry(0.12, 0.32, 1, 7, 1);
+      const geo = new THREE.CylinderGeometry(0.12, 0.32, 1, 6, 1);
       const m = new THREE.InstancedMesh(geo, lib.bark, this.trunks.length);
       this.trunks.forEach((t, i) => m.setMatrixAt(i, t.matrix));
       m.castShadow = true;
@@ -142,7 +142,7 @@ export class TreeBuilder {
       const geo = new THREE.PlaneGeometry(1, 1);
       const m = new THREE.InstancedMesh(geo, lib.canopy, this.cards.length);
       this.cards.forEach((t, i) => m.setMatrixAt(i, t.matrix));
-      m.castShadow = true;
+      m.castShadow = false;
       out.push(m);
     }
     return out;

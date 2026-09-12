@@ -22,6 +22,9 @@ export class Profiler {
     renderScale: 1,
     spikes25ms: 0,
     chunksLoaded: 0,
+    streamStepMaxMs: 0,
+    streamAttachMaxMs: 0,
+    streamWorstStep: '',
   };
   /** Exponential moving average of frame time used by the dynamic resolution scaler. */
   frameMsEma = 16.7;
@@ -116,7 +119,8 @@ export class Profiler {
       `${s.fps} fps  ${s.frameMs.toFixed(1)} ms (max ${s.frameMsMax.toFixed(1)})\n` +
       `phys ${s.physicsMs.toFixed(2)}  gpu-submit ${s.renderMs.toFixed(2)}  scale ${s.renderScale.toFixed(2)}\n` +
       `draw ${s.drawCalls}  tris ${(s.triangles / 1000).toFixed(0)}k  geo ${s.geometries}  tex ${s.textures}  prog ${s.programs}\n` +
-      `heap ${s.heapMb.toFixed(0)} MB  chunks ${s.chunksLoaded}  spikes>25ms ${s.spikes25ms}  ${this.tierLabel}`;
+      `heap ${s.heapMb.toFixed(0)} MB  chunks ${s.chunksLoaded}  spikes>25ms ${s.spikes25ms}  ${this.tierLabel}\n` +
+      `stream step max ${s.streamStepMaxMs.toFixed(1)} (${s.streamWorstStep})  attach max ${s.streamAttachMaxMs.toFixed(1)}`;
     const ctx = this.graphCtx;
     const w = this.graph.width;
     const h = this.graph.height;

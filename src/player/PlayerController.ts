@@ -302,11 +302,11 @@ export class PlayerController implements System, CameraFollowTarget {
     const n = this.kcc.numComputedCollisions();
     for (let i = 0; i < n; i++) {
       const c = this.kcc.computedCollision(i, this.collisionScratch);
-      if (c && c.normal1.y > 0.5 && c.collider) return this.engine.physics.surfaceOf(c.collider);
+      if (c && c.normal1.y > 0.5 && c.collider) return this.engine.physics.surfaceOf(c.collider, this.position);
     }
     const origin = new THREE.Vector3(this.position.x, this.position.y + 0.3, this.position.z);
     const hit = this.engine.physics.raycast(origin, this.downDir, 0.8, this.collider);
-    return hit ? this.engine.physics.surfaceOf(hit.collider) : this.surface;
+    return hit ? this.engine.physics.surfaceOf(hit.collider, hit.point) : this.surface;
   }
 
   update(): void {

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { bannerTexture, barkTextures, canopyTexture, debrisTexture, flagstoneTextures, glowSprite, ivyLeafTexture, noiseTexture, sandstoneTextures } from './TextureGen';
+import { bannerTexture, barkTextures, canopyTexture, debrisTexture, flagstoneTextures, forestFloorTextures, glowSprite, ivyLeafTexture, noiseTexture, sandstoneTextures } from './TextureGen';
 
 /** All shipped materials. Created once; textures are procedural (see TextureGen). */
 export class MaterialLibrary {
@@ -13,6 +13,8 @@ export class MaterialLibrary {
   readonly wood: THREE.MeshStandardMaterial;
   readonly iron: THREE.MeshStandardMaterial;
   readonly debris: THREE.MeshStandardMaterial;
+  readonly forestFloor: THREE.MeshStandardMaterial;
+  readonly water: THREE.MeshStandardMaterial;
   readonly glowTexture: THREE.Texture;
   readonly noiseTexture: THREE.Texture;
   private readonly disposables: Array<{ dispose(): void }> = [];
@@ -62,6 +64,9 @@ export class MaterialLibrary {
     this.wood = track(new THREE.MeshStandardMaterial({ color: 0x3b2a1c, roughness: 0.85, metalness: 0 }));
     this.iron = track(new THREE.MeshStandardMaterial({ color: 0x2a2624, roughness: 0.55, metalness: 0.7 }));
     this.debris = track(new THREE.MeshStandardMaterial({ map: track(debrisTexture(512)), transparent: true, depthWrite: false, roughness: 0.9, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+    const ff = forestFloorTextures(512, 151);
+    this.forestFloor = track(new THREE.MeshStandardMaterial({ map: aniso(ff.map), normalMap: aniso(ff.normalMap), roughnessMap: aniso(ff.roughnessMap), roughness: 1, metalness: 0, normalScale: new THREE.Vector2(0.6, 0.6), vertexColors: true }));
+    this.water = track(new THREE.MeshStandardMaterial({ color: 0x0c1a26, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.86 }));
     this.glowTexture = track(glowSprite(128));
     this.noiseTexture = track(noiseTexture(256));
   }
