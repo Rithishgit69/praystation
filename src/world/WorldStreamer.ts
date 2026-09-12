@@ -99,7 +99,7 @@ export class WorldStreamer implements System {
     const iz = Math.floor(f.position.z / CELL_SIZE);
     this.refreshQueue(f, ix, iz);
     const wanted = new Set<UnitKey>();
-    for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) wanted.add(cellKey(ix + dx, iz + dz));
+    for (let dx = -radius; dx <= radius; dx++) for (let dz = -radius; dz <= radius; dz++) if (this.world.hasForestAt(ix + dx, iz + dz)) wanted.add(cellKey(ix + dx, iz + dz));
     for (const z of this.world.zonesTouching(ix - radius, iz - radius, ix + radius, iz + radius)) wanted.add(zoneKey(z.id));
     for (let i = this.queue.length - 1; i >= 0; i--) {
       const q = this.queue[i] as (typeof this.queue)[number];
@@ -190,6 +190,7 @@ export class WorldStreamer implements System {
       for (let dz = -R; dz <= R; dz++) {
         const qx = ix + dx;
         const qz = iz + dz;
+        if (!this.world.hasForestAt(qx, qz)) continue;
         consider(cellKey(qx, qz), 'forest', (qx + 0.5) * CELL_SIZE, (qz + 0.5) * CELL_SIZE, qx, qz);
       }
     for (const z of this.world.zonesTouching(ix - R, iz - R, ix + R, iz + R)) {

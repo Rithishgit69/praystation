@@ -1,0 +1,121 @@
+[
+  {
+    "id": "prologue",
+    "title": "Prologue — The Forgotten Temple",
+    "questTitle": "The Forgotten Temple",
+    "objectives": [
+      { "id": "path", "text": "Follow the path through the forest", "doneFlag": "beat:gate-sight" },
+      { "id": "gate", "text": "Find the temple entrance", "doneFlag": "beat:gate-enter" },
+      { "id": "courtyard", "text": "Explore the temple", "doneFlag": "beat:hall-enter" }
+    ],
+    "journal": ["pro-temple"]
+  },
+  {
+    "id": "ch1",
+    "title": "Chapter I — The Broken Tusk",
+    "questTitle": "The Hall of Memories",
+    "objectives": [
+      { "id": "mural", "text": "Find the damaged mural", "doneFlag": "beat:hall-dais" },
+      { "id": "lamps", "text": "Follow the lamps", "doneFlag": "beat:inscription" },
+      { "id": "touch", "text": "Touch the mural under the moon", "doneFlag": "memory:broken-tusk" },
+      { "id": "passage", "text": "Find what has changed", "doneFlag": "beat:passage-enter" }
+    ],
+    "memory": {
+      "id": "broken-tusk",
+      "trigger": "mural:broken-tusk",
+      "zone": "memory-tusk",
+      "spawn": [2000, 0.2, 40, 0],
+      "requiresFlag": "beat:inscription",
+      "completionFlag": "memory:broken-tusk",
+      "doors": ["door:hall-east"],
+      "journal": ["ch1-inspiration", "ch1-memory"],
+      "enterLine": "ch1-touch",
+      "returnLine": "ch1-return",
+      "afterLine": "ch1-recognised"
+    },
+    "journal": ["ch1-inspiration"]
+  },
+  {
+    "id": "ch2",
+    "title": "Chapter II — Vakratunda and Matsarasura",
+    "questTitle": "The Corrupted Passage",
+    "objectives": [
+      { "id": "false", "text": "Find what is false", "doneFlag": "puzzle:passage-illusion" },
+      { "id": "source", "text": "Confront the source of the distortion", "doneFlag": "memory:vakratunda" },
+      { "id": "moon", "text": "Reach the open chamber", "doneFlag": "beat:moon-enter" }
+    ],
+    "memory": {
+      "id": "vakratunda",
+      "trigger": "object:passage-altar-true",
+      "zone": "memory-tusk",
+      "spawn": [2000, 0.2, 40, 0],
+      "requiresFlag": "puzzle:passage-illusion",
+      "completionFlag": "memory:vakratunda",
+      "doors": ["door:passage-moon"],
+      "journal": ["ch2-inspiration"],
+      "enterLine": "ch2-light",
+      "returnLine": "ch3-enter",
+      "afterLine": "ch1-recognised"
+    },
+    "journal": ["ch2-inspiration"]
+  },
+  {
+    "id": "ch3",
+    "title": "Chapter III — The Curse of the Moon",
+    "questTitle": "The Moon Chamber",
+    "objectives": [
+      { "id": "align", "text": "Turn the mirrors until the moon reaches the lens", "doneFlag": "puzzle:moon-alignment" },
+      { "id": "shadow", "text": "Wait for shadow, and see what it shows", "doneFlag": "puzzle:moon-shadow" },
+      { "id": "descend", "text": "Descend", "doneFlag": "beat:tunnels-enter" }
+    ],
+    "journal": ["ch3-inspiration"]
+  },
+  {
+    "id": "ch4",
+    "title": "Chapter IV — The Serpent Below",
+    "questTitle": "The Serpent Tunnels",
+    "objectives": [
+      { "id": "wake", "text": "Activate the serpent shrine", "doneFlag": "serpent:awake" },
+      { "id": "escape", "text": "Escape the collapse", "doneFlag": "beat:serpent-escaped" },
+      { "id": "evidence", "text": "Enter the guarded chamber", "doneFlag": "beat:evidence" },
+      { "id": "library", "text": "Climb to the library", "doneFlag": "beat:library-enter" }
+    ],
+    "journal": ["ch4-inspiration"]
+  },
+  {
+    "id": "ch5",
+    "title": "Chapter V — The Great Scribe",
+    "questTitle": "The Ancient Library",
+    "objectives": [
+      { "id": "fragments", "text": "Reassemble the inscription", "doneFlag": "puzzle:scribe-fragments" },
+      { "id": "deep", "text": "Take the deep stair", "doneFlag": "beat:shrine-enter" }
+    ],
+    "journal": ["ch5-inspiration"]
+  },
+  {
+    "id": "ch6",
+    "title": "Chapter VI — The Underground Shrine",
+    "questTitle": "The Underground Shrine",
+    "objectives": [
+      { "id": "confront", "text": "Confront the Forgetting", "doneFlag": "shrine:cleansed" },
+      { "id": "sanctum", "text": "Open the sealed sanctum", "doneFlag": "beat:sanctum-enter" }
+    ],
+    "journal": ["ch6-inspiration"]
+  },
+  {
+    "id": "finale",
+    "title": "Finale — The Sealed Sanctum",
+    "questTitle": "The Sealed Sanctum",
+    "objectives": [
+      { "id": "restore", "text": "Place each memory where it belongs", "doneFlag": "sanctum:restored" }
+    ],
+    "journal": ["finale-inspiration"]
+  },
+  {
+    "id": "epilogue",
+    "title": "Epilogue",
+    "questTitle": "Preserved",
+    "objectives": [],
+    "journal": ["finale-restored"]
+  }
+]

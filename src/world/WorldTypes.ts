@@ -8,7 +8,7 @@ import type { ColliderSpec } from './props/types';
 import type { Terrain } from './Terrain';
 import type { WorldMap } from './WorldMap';
 
-export type ZoneId = 'forest' | 'gate' | 'courtyard' | 'hall' | 'passage' | 'moon' | 'tunnels' | 'library' | 'shrine' | 'sanctum' | 'side-east' | 'side-west';
+export type ZoneId = 'forest' | 'gate' | 'courtyard' | 'hall' | 'passage' | 'moon' | 'tunnels' | 'library' | 'shrine' | 'sanctum' | 'side-east' | 'side-west' | 'memory-tusk';
 
 export type AnchorKind = 'mural' | 'statue' | 'brazier' | 'door' | 'mechanism' | 'lore' | 'shrine' | 'trigger' | 'spawn' | 'roof-hole';
 

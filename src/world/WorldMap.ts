@@ -12,6 +12,7 @@ import { buildLibrary } from './zones/Library';
 import { buildShrine } from './zones/Shrine';
 import { buildSanctum } from './zones/Sanctum';
 import { buildSideChamber } from './zones/SideChamber';
+import { buildMemoryTusk } from './zones/MemoryTusk';
 
 export interface Landmark {
   id: string;
@@ -62,8 +63,14 @@ export class WorldMap {
       { id: 'tunnels', title: 'Serpent Tunnels', min: v(-150, -22, -284), max: v(160, -4, -150), interior: true, visibleFrom: ['moon', 'library'], fog: { color: 0x05090f, density: 0.07 }, ambient: { color: 0x22303c, intensity: 1.4 }, build: buildTunnels },
       { id: 'library', title: 'Ancient Library', min: v(-165, -18, -160), max: v(-58, -3, -46), interior: true, visibleFrom: ['tunnels', 'shrine'], fog: { color: 0x0a0c10, density: 0.05 }, ambient: { color: 0x3a3226, intensity: 1.4 }, build: buildLibrary },
       { id: 'shrine', title: 'Underground Shrine', min: v(-70, -28, -356), max: v(50, -6, -150), interior: true, visibleFrom: ['library', 'sanctum'], fog: { color: 0x07060c, density: 0.055 }, ambient: { color: 0x2c2238, intensity: 1.4 }, build: buildShrine },
+      { id: 'memory-tusk', title: 'Memory: The Broken Tusk', min: v(1950, -10, -60), max: v(2050, 60, 60), interior: true, visibleFrom: [], fog: { color: 0xc99a58, density: 0.02 }, ambient: { color: 0xb08a50, intensity: 0.9 }, build: buildMemoryTusk },
       { id: 'sanctum', title: 'Sealed Sanctum', min: v(-58, -34, -456), max: v(58, -10, -352), interior: true, visibleFrom: ['shrine'], fog: { color: 0x0b1020, density: 0.028 }, ambient: { color: 0x34507a, intensity: 1.5 }, build: buildSanctum },
     ];
+  }
+
+  /** Forest cells exist only over the terrain; memory zones live far outside it. */
+  hasForestAt(ix: number, iz: number): boolean {
+    return Math.abs(ix) <= 10 && Math.abs(iz) <= 10;
   }
 
   /** Zones whose XZ bounds overlap the given cell rectangle (inclusive cell indices). */

@@ -74,6 +74,53 @@ export function* buildHall(ctx: ZoneBuildContext): Generator<void, UnitBuild, vo
   }
   acc.mist([{ x: cx - 12, y: floorY + 0.4, z: cz + 8, size: 16, opacity: 0.16 }, { x: cx + 14, y: floorY + 0.4, z: cz - 6, size: 16, opacity: 0.16 }, { x: cx, y: floorY + 0.4, z: cz - 24, size: 18, opacity: 0.14 }], 0x4a6a9c);
   acc.anchor('trigger:hall-enter', 'trigger', cx, floorY, cz + 32, 0, 6);
+  acc.anchor('trigger:hall-dais', 'trigger', cx, floorY, cz - 20, 0, 7);
+  // Diyas: small oil lamps that light one by one from the dais to the inscription and back (§22).
+  const diyas = new THREE.Group();
+  const route: Array<[number, number, number]> = [
+    [cx - 3, floorY + 0.96, cz - 30],
+    [cx - 6, floorY + 0.4, cz - 26],
+    [cx - 10, floorY, cz - 20],
+    [cx - 15, floorY, cz - 14],
+    [cx - 20, floorY, cz - 8],
+    [cx - 24, floorY, cz - 2],
+    [cx - 27, floorY, cz + 4],
+  ];
+  const diyaGeo = new THREE.LatheGeometry([new THREE.Vector2(0.02, 0), new THREE.Vector2(0.11, 0.0), new THREE.Vector2(0.13, 0.05), new THREE.Vector2(0.09, 0.07)], 10);
+  const diyaMat = new THREE.MeshStandardMaterial({ color: 0x5a3a22, roughness: 0.8 });
+  const flameMat = new THREE.SpriteMaterial({ map: ctx.lib.glowTexture, color: 0xffb15a, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
+  acc.disposables.push(() => diyaGeo.dispose(), () => diyaMat.dispose(), () => flameMat.dispose());
+  route.forEach(([x, y, z], i) => {
+    const d = new THREE.Group();
+    const bowl = new THREE.Mesh(diyaGeo, diyaMat);
+    const flame = new THREE.Sprite(flameMat.clone());
+    flame.scale.set(0.35, 0.5, 1);
+    flame.position.y = 0.16;
+    flame.visible = ctx.flags['diyas:hall'] === true;
+    const glow = new THREE.PointLight(0xffb15a, 3, 4, 2);
+    glow.position.y = 0.2;
+    glow.visible = flame.visible && i % 2 === 0;
+    d.add(bowl, flame, glow);
+    d.position.set(x, y, z);
+    diyas.add(d);
+  });
+  acc.group.add(diyas);
+  acc.anchor('diyas:hall', 'mechanism', cx - 12, floorY, cz - 16, 0, 1, { count: route.length }, diyas);
+  // Inscription stone at the west wall, and the four symbol stones on the dais edge.
+  const inscription = new THREE.Mesh(new RoundedBoxGeometry(1.6, 2.2, 0.4, 2, 0.05), ctx.lib.sandstoneDark);
+  setTriplanar(inscription.geometry, 1.6, 0.85);
+  inscription.position.set(cx - 29.6, floorY + 1.3, cz + 6);
+  acc.mesh(inscription, false);
+  acc.anchor('lore:inscription-first', 'lore', cx - 29, floorY + 1.2, cz + 6, Math.PI / 2, 2.4, { text: 'pro-inscription', line: 'pro-inscription' }, inscription);
+  const symGeo = new RoundedBoxGeometry(0.9, 0.5, 0.9, 2, 0.04);
+  setTriplanar(symGeo, 1.2, 0.9);
+  for (let i = 0; i < 4; i++) {
+    const sx = cx - 6 + i * 4;
+    const stone = new THREE.Mesh(symGeo, ctx.lib.sandstone);
+    stone.position.set(sx, floorY + 0.96 + 0.25, cz - 27);
+    acc.mesh(stone, false);
+    acc.anchor(`symbol:hall:${i}`, 'mechanism', sx, floorY + 0.96 + 0.5, cz - 27, 0, 2, { index: i }, stone);
+  }
   yield;
   return yield* acc.finish();
 }

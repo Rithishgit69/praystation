@@ -1,0 +1,87 @@
+[
+  {
+    "id": "pro-temple",
+    "title": "A temple in the forest",
+    "chapter": "Prologue",
+    "body": "Maps of this valley stop at the ravine. Whoever built the temple beyond it wanted it found only by those who walked the long way in.\nThe braziers in the courtyard are lit. Nobody answers."
+  },
+  {
+    "id": "pro-milestone",
+    "title": "The milestone",
+    "chapter": "Prologue",
+    "body": "A waymark stone, worn smooth by centuries of hands. A single carved symbol remains legible: a circle broken on one side, like a tusk.\nThe same mark appears on the gate."
+  },
+  {
+    "id": "pro-inscription",
+    "title": "First inscription",
+    "chapter": "Prologue",
+    "body": "\"What is remembered here is not lost. Under the moon, touch, and know.\"\nThe letters are cut deep. Someone meant them to outlast the roof."
+  },
+  {
+    "id": "ch1-inspiration",
+    "title": "Inspirations: The Broken Tusk",
+    "chapter": "Chapter I — The Broken Tusk",
+    "inspiration": true,
+    "body": "Traditional narratives describe a confrontation at Mount Kailash between Ganesha and the warrior-sage Parashurama, in which Parashurama's axe — a gift from Shiva — strikes Ganesha's tusk. In many tellings Ganesha chooses not to turn the blow aside, out of respect for the weapon his father gave.\nThis memory adapts that episode into a sequence about restraint rather than victory. The retelling is an interpretation: the sources differ in detail, and no version is presented here as the only truth. The temple itself, its memories and the force corrupting them are fictional inventions of this game."
+  },
+  {
+    "id": "ch1-memory",
+    "title": "The gateway on the mountain",
+    "chapter": "Chapter I — The Broken Tusk",
+    "body": "The memory held a gateway of stone above the clouds and a warrior who would not be refused.\nI did not win by striking. The blow was allowed, and something in the temple recognised the choice: the sealed passage in the Hall stood open when I returned."
+  },
+  {
+    "id": "ch2-inspiration",
+    "title": "Inspirations: Vakratunda and Matsarasura",
+    "chapter": "Chapter II — The Corrupted Passage",
+    "inspiration": true,
+    "body": "The Mudgala Purana includes an account of Vakratunda, a form of Ganesha, confronting Matsarasura, a demon associated with envy (matsara). In the tradition the confrontation ends not in destruction but in the demon's surrender and reform.\nIn this game the encounter is reimagined as a distortion that copies rooms and objects so that what is false envies what is real. The corrupted passage, its illusions and the source behind them are fictional."
+  },
+  {
+    "id": "ch3-inspiration",
+    "title": "Inspirations: The Moon",
+    "chapter": "Chapter III — The Curse of the Moon",
+    "inspiration": true,
+    "body": "Traditional stories connect Ganesha and the Moon. In one widely told episode the Moon laughs at Ganesha after a fall, and is rebuked; some versions link the story to customs about looking at the moon on Ganesha Chaturthi, and describe the Moon's light waxing and waning ever after.\nVersions differ across regions and sources, and this journal does not claim one as definitive. The chamber's mechanism — moonlight that changes what the temple shows — is the game's own invention."
+  },
+  {
+    "id": "ch4-inspiration",
+    "title": "Inspirations: The Serpent Below",
+    "chapter": "Chapter IV — The Serpent Below",
+    "inspiration": true,
+    "body": "This chapter is an original story written for the game. Serpent imagery is common in Indian temple architecture and in naga stones found near shrines and trees, and the carving here borrows that visual language.\nThe serpent, the chase and the sealed chamber it guards are fiction, and are not drawn from any particular tradition."
+  },
+  {
+    "id": "ch4-evidence",
+    "title": "What the serpent guarded",
+    "chapter": "Chapter IV — The Serpent Below",
+    "body": "Behind the serpent's coil, a chamber that no corruption had touched. The builders left their purpose on the wall in plain words: the temple was raised to keep memories, so that what mattered could not be forgotten.\nThe serpent was never the enemy. It was the lock."
+  },
+  {
+    "id": "ch5-inspiration",
+    "title": "Inspirations: The Great Scribe",
+    "chapter": "Chapter V — The Ancient Library",
+    "inspiration": true,
+    "body": "A popular tradition holds that Ganesha served as the scribe of the sage Vyasa for the Mahabharata, on the condition that the dictation never pause — and, by Ganesha's own condition, that he understand each verse before writing it.\nThe library puzzles are inspired by that image of understanding before writing. The fragments, the inscriptions and the library itself are fictional."
+  },
+  {
+    "id": "ch6-inspiration",
+    "title": "Inspirations: The Underground Shrine",
+    "chapter": "Chapter VI — The Underground Shrine",
+    "inspiration": true,
+    "body": "The corrupting force in this game is an original fictional antagonist, named by the builders' inscriptions as the Forgetting. It is not drawn from any deity, demon or tradition, and it is kept deliberately separate from the revered figures the memories depict.\nNothing in this chapter asks the player to fight a sacred figure."
+  },
+  {
+    "id": "finale-inspiration",
+    "title": "Inspirations: The Sealed Sanctum",
+    "chapter": "Finale — The Sealed Sanctum",
+    "inspiration": true,
+    "body": "The sanctum's statue is portrayed with the calm, monumental stillness of temple sculpture: one tusk, a raised palm, a sweet held in the other hand. It is never an opponent.\nThe ending restores the temple with what the memories taught. The hidden symbol shared by every chapter — the broken circle — was the builders' mark for remembrance."
+  },
+  {
+    "id": "finale-restored",
+    "title": "Preserved",
+    "chapter": "Finale — The Sealed Sanctum",
+    "body": "The Forgetting dissolved when every memory was placed where it belonged. Moonlight filled the sanctum, and then, for the first time since I arrived, silence that did not feel like absence.\nAt sunrise the temple was not dead. It was kept."
+  }
+]
