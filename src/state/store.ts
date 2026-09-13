@@ -13,6 +13,12 @@ export interface Settings {
   masterVolume: number;
   musicVolume: number;
   sfxVolume: number;
+  /** Narration voice volume (pre-rendered voice lines). */
+  voiceVolume: number;
+  /** Narrator voice: Neerja (Indian English) or Ava (American English). */
+  narrator: 'neerja' | 'ava';
+  /** When true, tapping Shift toggles running instead of holding it. */
+  sprintToggle: boolean;
   analyticsOptIn: boolean;
   language: 'en';
 }
@@ -64,6 +70,9 @@ export const DEFAULT_SETTINGS: Settings = {
   masterVolume: 1,
   musicVolume: 0.8,
   sfxVolume: 1,
+  voiceVolume: 1,
+  narrator: 'neerja',
+  sprintToggle: false,
   analyticsOptIn: false,
   language: 'en',
 };

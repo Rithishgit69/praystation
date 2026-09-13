@@ -103,6 +103,10 @@ export class HUD implements System {
       if (e.pointerType === 'touch') fn();
     });
   }
+  /** Mission mode has no pouch/scroll/blade: hide the inventory diamonds so nothing implies a melee weapon. */
+  setSlotsVisible(v: boolean): void {
+    (this.root.querySelector('.slots') as HTMLElement).hidden = !v;
+  }
   setMapGeometry(rects: MapRect[]): void {
     this.rects = rects;
   }

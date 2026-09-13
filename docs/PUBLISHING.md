@@ -22,8 +22,22 @@ npm run build            # dist/ — offline-capable PWA (manifest + service wor
 npm run preview          # verify at http://127.0.0.1:4173
 ```
 
-Host `dist/` on any static host over HTTPS. The service worker precaches every asset (≈4.5 MB), so the
-game installs from the browser and plays fully offline. No runtime CDN calls are made.
+Host `dist/` on any static host over HTTPS. The service worker precaches every asset (≈4.7 MB) and caches
+narration clips as they are played, so the game installs from the browser and plays offline. No runtime
+CDN or API calls are made — the voice lines are pre-rendered files under `dist/voice/`.
+
+### Vercel (primary target)
+
+`vercel.json` in the repository root already sets framework **Vite**, build command `npm run build`,
+output directory `dist`, immutable caching for `assets/`, and revalidation for `index.html` / the service
+worker. Either:
+
+- **Dashboard:** vercel.com/new → import the Git repository → Deploy (no settings to change), or
+- **CLI:** `npm i -g vercel` (or `npx vercel`), then `vercel` for a preview and `vercel --prod` for
+  production. `.vercelignore` keeps the native projects and screenshots out of the upload.
+
+Every push to the connected branch redeploys. Netlify (`netlify.toml` not needed: build `npm run build`,
+publish `dist`), Cloudflare Pages and GitHub Pages work the same way because all asset paths are relative.
 
 ## 2. Android — signed AAB
 

@@ -1,6 +1,6 @@
 {
   "name": "temple-of-eka-danta",
-  "version": "0.1.0",
+  "version": "1.1.0",
   "description": "The Temple of Eka-Danta — a cinematic mythological adventure",
   "main": "index.js",
   "scripts": {
@@ -15,12 +15,15 @@
     "mobile:android": "npm run build && npx cap sync android && cd android && ./gradlew bundleRelease && cd .. && mkdir -p dist && cp android/app/build/outputs/bundle/release/app-release.aab dist/",
     "mobile:ios": "npm run build && npx cap sync ios && npx cap open ios",
     "screenshots": "node tools/screenshots.mjs",
-    "play:missions": "node tools/play-missions.mjs test-results/missions http://127.0.0.1:5173 8"
+    "play:missions": "node tools/play-missions.mjs test-results/missions http://127.0.0.1:5173 8",
+    "voice": "node tools/gen-voice.mjs",
+    "deploy": "vercel --prod"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "module",
+  "engines": { "node": ">=22.12" },
   "private": "true",
   "dependencies": {
     "@capacitor-community/keep-awake": "^8.0.1",

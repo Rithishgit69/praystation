@@ -48,7 +48,8 @@ export type SoundId =
   | 'asura-death'
   | 'heart-lost'
   | 'task-complete'
-  | 'task-begin';
+  | 'task-begin'
+  | 'om-chant-loop';
 
 /** All game audio is synthesised here at startup; no audio files ship with the game. */
 export class SoundBank {
@@ -95,6 +96,7 @@ export class SoundBank {
     this.buffers.set('heart-lost', this.tone([196, 146.83], 1.4, 0.6));
     this.buffers.set('task-complete', this.tone([392, 523.25, 659.25, 783.99], 2.6, 0.5));
     this.buffers.set('task-begin', this.tone([130.81, 196], 2.2, 0.6));
+    this.buffers.set('om-chant-loop', this.omChant(14));
   }
 
   /** 16-bit PCM WAV blob URL for Howler. */
@@ -272,6 +274,109 @@ export class SoundBank {
       out[i] = Math.sin(2 * Math.PI * f * t) * Math.exp(-t * 9) * (1 - Math.exp(-i / 30));
     }
     return normalize(out, 0.7);
+  }
+
+  /**
+   * A chanted "Om": a small chorus of low voices (harmonic-rich glottal buzz through three gliding
+   * vowel formants) moving A → U → M with a breath before the next repeat. Loops seamlessly.
+   */
+  private omChant(dur: number): Float32Array {
+    const n = Math.floor(dur * SAMPLE_RATE);
+    const out = new Float32Array(n);
+    // Vowel formants (Hz) and relative gains for a low male voice.
+    const F = {
+      a: { f: [700, 1150, 2600], g: [1, 0.5, 0.22] },
+      u: { f: [350, 800, 2400], g: [1, 0.32, 0.12] },
+      m: { f: [250, 1000, 2000], g: [1, 0.1, 0.05] },
+    };
+    // Timeline in seconds: attack, A, glide, U, glide, M hum, release, breath.
+    const tA0 = 0.0, tA1 = 2.4, tU0 = 3.4, tU1 = 5.4, tM0 = 6.2, tM1 = 10.4, tEnd = 11.9;
+    const lerp = (a: number, b: number, k: number): number => a + (b - a) * k;
+    const smooth = (k: number): number => k * k * (3 - 2 * k);
+    const vowelAt = (t: number): { f: number[]; g: number[]; closed: number } => {
+      let k: number;
+      if (t < tA1) return { f: F.a.f, g: F.a.g, closed: 0 };
+      if (t < tU0) {
+        k = smooth((t - tA1) / (tU0 - tA1));
+        return { f: F.a.f.map((v, i) => lerp(v, F.u.f[i] as number, k)), g: F.a.g.map((v, i) => lerp(v, F.u.g[i] as number, k)), closed: 0 };
+      }
+      if (t < tU1) return { f: F.u.f, g: F.u.g, closed: 0 };
+      if (t < tM0) {
+        k = smooth((t - tU1) / (tM0 - tU1));
+        return { f: F.u.f.map((v, i) => lerp(v, F.m.f[i] as number, k)), g: F.u.g.map((v, i) => lerp(v, F.m.g[i] as number, k)), closed: k };
+      }
+      return { f: F.m.f, g: F.m.g, closed: 1 };
+    };
+    const envAt = (t: number): number => {
+      if (t < tA0 + 0.7) return smooth(Math.max(0, t - tA0) / 0.7);
+      if (t < tM1) return 1;
+      if (t < tEnd) return 1 - smooth((t - tM1) / (tEnd - tM1));
+      return 0;
+    };
+    interface Biquad { b0: number; b1: number; b2: number; a1: number; a2: number; x1: number; x2: number; y1: number; y2: number }
+    const bandpass = (): Biquad => ({ b0: 0, b1: 0, b2: 0, a1: 0, a2: 0, x1: 0, x2: 0, y1: 0, y2: 0 });
+    const setBandpass = (q: Biquad, fc: number, Q: number): void => {
+      const w = (2 * Math.PI * Math.min(fc, SAMPLE_RATE * 0.45)) / SAMPLE_RATE;
+      const alpha = Math.sin(w) / (2 * Q);
+      const a0 = 1 + alpha;
+      q.b0 = alpha / a0;
+      q.b1 = 0;
+      q.b2 = -alpha / a0;
+      q.a1 = (-2 * Math.cos(w)) / a0;
+      q.a2 = (1 - alpha) / a0;
+    };
+    const tick = (q: Biquad, x: number): number => {
+      const y = q.b0 * x + q.b1 * q.x1 + q.b2 * q.x2 - q.a1 * q.y1 - q.a2 * q.y2;
+      q.x2 = q.x1;
+      q.x1 = x;
+      q.y2 = q.y1;
+      q.y1 = y;
+      return y;
+    };
+    // Voices: unison around G2 with a soft octave below and a quiet fifth above (a small chorus of chanters).
+    const voices = [
+      { f0: 98, amp: 1, vib: 5.1, vibDepth: 0.005, drift: 0.3, phase: 0.0 },
+      { f0: 98 * 1.006, amp: 0.85, vib: 4.6, vibDepth: 0.006, drift: 1.7, phase: 1.3 },
+      { f0: 98 * 0.994, amp: 0.85, vib: 5.6, vibDepth: 0.005, drift: 2.9, phase: 2.1 },
+      { f0: 49, amp: 0.55, vib: 4.2, vibDepth: 0.004, drift: 0.9, phase: 0.7 },
+      { f0: 147, amp: 0.22, vib: 5.3, vibDepth: 0.006, drift: 2.2, phase: 1.9 },
+    ];
+    const HARMONICS = 18;
+    for (const v of voices) {
+      const filters = [bandpass(), bandpass(), bandpass()];
+      let ph = v.phase;
+      let vowel = vowelAt(0);
+      for (let i = 0; i < n; i++) {
+        const t = i / SAMPLE_RATE;
+        if (i % 64 === 0) {
+          vowel = vowelAt(t);
+          for (let k = 0; k < 3; k++) setBandpass(filters[k] as Biquad, vowel.f[k] as number, k === 0 ? 7 : 10);
+        }
+        const env = envAt(t);
+        if (env <= 0) continue;
+        const vib = 1 + v.vibDepth * Math.sin(2 * Math.PI * v.vib * t + v.phase) + 0.002 * Math.sin(2 * Math.PI * 0.23 * t + v.drift);
+        ph += (2 * Math.PI * v.f0 * vib) / SAMPLE_RATE;
+        // Glottal-ish buzz: harmonics rolling off ~1/h, softened further when the lips close for "m".
+        let src = 0;
+        const roll = 1 + vowel.closed * 1.5;
+        for (let h = 1; h <= HARMONICS; h++) src += Math.sin(h * ph) / Math.pow(h, roll);
+        let y = 0;
+        for (let k = 0; k < 3; k++) y += tick(filters[k] as Biquad, src) * (vowel.g[k] as number);
+        // The hum keeps a little of the raw fundamental so "m" stays warm rather than thin.
+        y = y * 3.2 + Math.sin(ph) * 0.35 * vowel.closed;
+        out[i] = (out[i] as number) + y * env * v.amp * (1 - vowel.closed * 0.35);
+      }
+    }
+    // Breath noise at the start of the loop, then a soft clip.
+    const breath = this.noise(n);
+    let lp = 0;
+    for (let i = 0; i < n; i++) {
+      const t = i / SAMPLE_RATE;
+      const bEnv = t > tEnd + 0.6 && t < dur ? Math.sin(((t - tEnd - 0.6) / (dur - tEnd - 0.6)) * Math.PI) * 0.05 : 0;
+      lp += ((breath[i] as number) - lp) * 0.08;
+      out[i] = Math.tanh(((out[i] as number) + lp * bEnv) * 0.9);
+    }
+    return normalize(loopCrossfade(out, 0.8), 0.6);
   }
 
   private droneLoop(dur: number, freqs: number[], amp: number): Float32Array {

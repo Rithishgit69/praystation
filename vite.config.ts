@@ -51,6 +51,14 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,png,woff2,json,wasm}'],
         maximumFileSizeToCacheInBytes: 12 * 1024 * 1024,
         navigateFallback: 'index.html',
+        // Narration clips are fetched on demand and kept for offline replays.
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }) => url.pathname.includes('/voice/') && url.pathname.endsWith('.mp3'),
+            handler: 'CacheFirst',
+            options: { cacheName: 'eka-voice', expiration: { maxEntries: 120, maxAgeSeconds: 60 * 60 * 24 * 30 } },
+          },
+        ],
       },
     }),
   ],

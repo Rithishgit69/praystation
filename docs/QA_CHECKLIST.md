@@ -8,8 +8,10 @@ and `node tools/play-missions.mjs`; manual items need a person.
 - [x] Zero console errors/warnings in the production build (asserted by tests).
 
 ## Mission flow
-- [x] New game → "You are entering into Task 1." card → villain name, epithet, threat stars.
-- [x] Narration reveals lines one by one; any key/tap advances; deep voice speaks (browsers with TTS voices).
+- [x] New game → "How to play" card (objective, hearts/villain bar/magazine legend, all controls) → Begin.
+- [x] "You are entering into Task 1." card → villain name, epithet, threat stars.
+- [x] Narration reveals lines one by one, paced to the narrator's voice clip; any key/tap advances;
+      Backspace or the Skip button skips the introduction.
 - [x] After the narration the Astra appears in the hands; crosshair, ammo and villain bar appear; BEGIN.
 - [x] Shooting damages the villain; its bar falls; shield phases absorb shots and show SHIELDED.
 - [x] Villain attacks: bolts, volleys, charges, slams (rings), summons, illusions, teleports, pulls.
@@ -21,10 +23,14 @@ and `node tools/play-missions.mjs`; manual items need a person.
 - [x] Task 8 victory shows the final card and the ending menu.
 - [x] Difficulty escalates: health 220 → 1200, faster attacks, more patterns, enrage thresholds.
 - [x] Save/continue resumes the current task, hearts and the villain's remaining health.
-- [ ] Manual: TTS voice quality on Chrome/Safari/Android WebView; mute works via Options.
+- [x] Narrator clips load and play (asserted); Om chant loops under play at −10 dB and dips under narration.
+- [ ] Manual: narrator choice (Neerja / Ava) and narration volume in the pause menu on Chrome, Safari, Firefox.
 
 ## Controls
-- [x] Keyboard/mouse: WASD, Shift sprint, Space jump, Q dodge, LMB fire, RMB aim, R reload, Esc pause.
+- [x] Keyboard/mouse with real browser events: mouse look follows the pointer before capture, a click on the
+      view captures it (hint shown until then), LMB fires, RMB aims, Shift runs (hold or toggle option),
+      Space jump, Q dodge, R reload, Esc pause. Right-click does not open the context menu.
+- [ ] Manual: pointer lock in Chrome, Safari and Firefox; Esc releases, click recaptures.
 - [ ] Manual: gamepad (standard mapping) RT fire / LT aim / X reload / B dodge / Start pause.
 - [ ] Manual: touch on a 6.1" phone — floating stick, swipe look, FIRE, reload, ◇ dodge, pause, tap compass for map.
 

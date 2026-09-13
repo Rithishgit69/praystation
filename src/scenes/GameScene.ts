@@ -10,6 +10,7 @@ import { Journal } from '@/ui/Journal';
 import { Subtitles } from '@/ui/Subtitles';
 import { PauseMenu } from '@/ui/PauseMenu';
 import { MapScreen } from '@/ui/MapScreen';
+import { HowToPlay } from '@/ui/HowToPlay';
 import { MaterialLibrary } from '@/world/Materials';
 import { MoonLight } from '@/world/fx/Atmosphere';
 import { patchIvyMaterial } from '@/world/props/Foliage';
@@ -110,6 +111,7 @@ export class GameScene implements SceneModule {
   private streamer: WorldStreamer | null = null;
   private started = false;
   private missions: MissionDirector | null = null;
+  private howto: HowToPlay | null = null;
   private mode: 'missions' | 'story' = 'missions';
 
   async init(engine: Engine): Promise<void> {
@@ -192,15 +194,19 @@ export class GameScene implements SceneModule {
     };
     lighting.onMoonChange((state) => streamer.setMoonState(state));
 
+    const howto = new HowToPlay(engine, this.mode);
+    this.howto = howto;
+    const showControls = (): void => howto.show({ mode: 'reference', onClose: () => undefined });
     if (this.mode === 'missions') {
       // Mission mode: eight tasks, eight asuras, the Astra. The exploration story systems stay dormant.
       const gun = new Gun(engine, lib, controller, visual, cam, audio);
       const mhud = new MissionHUD(engine, gun);
+      hud.setSlotsVisible(false);
       const missions = new MissionDirector(engine, lib, streamer, controller, visual, cam, audio, gun, mhud, lighting, save);
       missions.setVeil = (v) => gsap.to(atmosphere, { veil: v, duration: v > 0 ? 0.9 : 1.4, ease: v > 0 ? 'power2.in' : 'power2.out' });
       missions.onDawn = (t) => (atmosphere.dawn = t);
       this.missions = missions;
-      const pause = new PauseMenu(engine, save, () => location.reload(), () => journal.toggle(), () => missions.openTaskSelect());
+      const pause = new PauseMenu(engine, save, () => location.reload(), () => journal.toggle(), () => missions.openTaskSelect(), showControls);
       for (const s of [controller, streamer, lighting, missions, gun, visual, atmosphere, audio, save, subtitles, journal, map, pause, trail, distant, cam, hud, mhud]) engine.addSystem(s);
       if (window.__eka) {
         window.__eka.mission = () => missions.debugState();
@@ -208,6 +214,7 @@ export class GameScene implements SceneModule {
         window.__eka.missionDamageBoss = (n) => missions.debugDamageBoss(n);
         window.__eka.missionHurtPlayer = (n) => missions.debugHurtPlayer(n);
         window.__eka.missionMenuChoose = (i) => missions.debugMenuChoose(i);
+        window.__eka.missionVoice = () => missions.debugVoice();
       }
     } else {
       const interaction = new InteractionSystem(engine, streamer, controller, hud);
@@ -222,7 +229,7 @@ export class GameScene implements SceneModule {
       const runner = new EncounterRunner();
       const illusions = new IllusionSystem(engine, streamer, controller, audio, subtitles);
       const storyChapters = new StoryChapters(engine, streamer, interaction, chapters, audio, visual, subtitles, lighting, doors, puzzles, runner, encounterContext, lib, moon, (t) => (atmosphere.dawn = t));
-      const pause = new PauseMenu(engine, save, () => location.reload(), () => journal.toggle(), null);
+      const pause = new PauseMenu(engine, save, () => location.reload(), () => journal.toggle(), null, showControls);
       for (const s of [controller, streamer, lighting, story, storyChapters, interaction, puzzles, doors, portal, runner, illusions, chapters, visual, atmosphere, audio, save, subtitles, journal, map, pause, trail, distant, cam, hud]) engine.addSystem(s);
       if (window.__eka) {
         window.__eka.interact = () => {
@@ -271,7 +278,11 @@ export class GameScene implements SceneModule {
         this.streamer.reset(1);
       }
     } else SaveSystem.clear();
-    this.missions?.begin(mode);
+    // The instructions card gates the first task; `?autostart` / `?help=0` skip it (automation).
+    const params = new URLSearchParams(location.search);
+    const skipHelp = params.has('autostart') || params.get('help') === '0';
+    if (this.howto && !skipHelp) this.howto.show({ mode: 'start', onClose: () => this.missions?.begin(mode) });
+    else this.missions?.begin(mode);
   }
 
   private zoneSpawn(zone: ZoneId): { position: THREE.Vector3; yaw: number } {

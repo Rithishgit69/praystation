@@ -22,6 +22,7 @@ export class MissionHUD implements System {
   private readonly crosshair: HTMLElement;
   private readonly banner: HTMLElement;
   private readonly vignette: HTMLElement;
+  private readonly lockHint: HTMLElement;
   private bannerTimer = 0;
   private vignetteTimer = 0;
   private lowHealthPulse = 0;
@@ -38,6 +39,7 @@ export class MissionHUD implements System {
       <div class="mhud-ammo" hidden><span class="mhud-ammo-text">14 / 14</span><span class="mhud-ammo-hint">R to reload</span></div>
       <div class="mhud-crosshair" hidden><div class="ch-dot"></div><div class="ch-ring"></div></div>
       <div class="mhud-banner" hidden></div>
+      <div class="mhud-lock-hint" hidden></div>
       <div class="mhud-vignette"></div>`;
     engine.uiRoot.appendChild(this.root);
     const q = <T extends HTMLElement>(sel: string): T => this.root.querySelector(sel) as T;
@@ -59,6 +61,7 @@ export class MissionHUD implements System {
     this.crosshair = q('.mhud-crosshair');
     this.banner = q('.mhud-banner');
     this.vignette = q('.mhud-vignette');
+    this.lockHint = q('.mhud-lock-hint');
     this.setHearts(3);
     this.setHealth(100);
   }
@@ -105,6 +108,13 @@ export class MissionHUD implements System {
       const d = this.engine.input.device;
       (this.root.querySelector('.mhud-ammo-hint') as HTMLElement).textContent = d === 'gamepad' ? 'X to reload' : d === 'touch' ? '' : 'R to reload';
       this.crosshair.classList.toggle('aim', g.aiming);
+    }
+    // Keyboard+mouse: until the pointer is captured the camera still follows the mouse, but say how to capture it.
+    const input = this.engine.input;
+    const wantHint = input.device === 'kbm' && !input.mouse.locked && !input.gameplayBlocked && !this.ammoEl.hidden;
+    if (wantHint !== !this.lockHint.hidden) {
+      this.lockHint.hidden = !wantHint;
+      if (wantHint) this.lockHint.textContent = input.mouse.lockAvailable ? 'Click the view to capture the mouse  ·  Esc releases it' : 'Mouse look follows the pointer over the view';
     }
     if (this.bannerTimer > 0) {
       this.bannerTimer -= dt;

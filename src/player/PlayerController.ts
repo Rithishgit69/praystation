@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Engine } from '@/engine/Engine';
 import { RAPIER, type SurfaceMaterial } from '@/engine/Physics';
 import type { System } from '@/engine/types';
+import { gameStore } from '@/state/store';
 import { clamp, damp, dampAngle, degToRad } from '@/util/math';
 import type { CameraFollowTarget } from './CameraRig';
 
@@ -80,6 +81,7 @@ export class PlayerController implements System, CameraFollowTarget {
   private timeSinceGrounded = 0;
   private staminaTimer = 0;
   private sprintLockout = false;
+  private sprintLatch = false;
   private lastVerticalSpeed = 0;
   private strideAccumulator = 0;
   private landTimer = 0;
@@ -191,8 +193,12 @@ export class PlayerController implements System, CameraFollowTarget {
       if (input.pressed('crouch')) this.setCrouch(!this.crouching);
     }
 
-    // Stamina.
-    const wantsSprint = input.sprintRequested && mag > 0.5 && !this.crouching && !this.movementLocked;
+    // Stamina. Shift is hold-to-run by default; the "toggle" setting latches it until the player stops.
+    if (gameStore.getState().settings.sprintToggle) {
+      if (!this.movementLocked && !input.gameplayBlocked && input.pressed('sprint')) this.sprintLatch = !this.sprintLatch;
+      if (mag < 0.1 || this.movementLocked) this.sprintLatch = false;
+    } else this.sprintLatch = false;
+    const wantsSprint = (input.sprintRequested || this.sprintLatch) && mag > 0.5 && !this.crouching && !this.movementLocked;
     if (this.stamina <= 3) this.sprintLockout = true;
     if (this.stamina >= 25) this.sprintLockout = false;
     const sprinting = wantsSprint && !this.sprintLockout && this.grounded;

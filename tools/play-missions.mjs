@@ -26,6 +26,9 @@ await page.waitForFunction(() => window.__eka?.ready === true, null, { timeout: 
 await wait(800);
 await shot('00-title');
 await page.click('#boot-continue');
+await page.waitForSelector('.howto:not([hidden])', { timeout: 10000 });
+await shot('00b-how-to-play');
+await page.click('.howto-begin');
 await wait(2600);
 await shot('01-task1-card');
 log('after enter', JSON.stringify(await mission()));
@@ -65,23 +68,24 @@ async function fight(label, maxMs = 240000) {
     await key('ShiftLeft', false);
     await ev(() => { window.__eka.key('Space', true); setTimeout(() => window.__eka.key('Space', false), 60); });
     if (d < 3.5) await ev(() => { window.__eka.key('KeyQ', true); setTimeout(() => window.__eka.key('KeyQ', false), 60); });
-    await ev(() => { const e = window.__eka.engine; e.input.mouse.locked = true; });
     await ev(() => window.__eka.key('KeyE', false));
-    // Fire: LMB via a synthetic mousedown on the canvas.
-    await ev(() => { const c = document.getElementById('game'); c.dispatchEvent(new MouseEvent('mousedown', { button: 0, bubbles: true })); });
+    // Fire: hold the real left mouse button on the game view (the same path a player uses).
+    if (!mouseDown) { await page.mouse.move(640, 360); await page.mouse.down(); mouseDown = true; }
     await wait(180);
     if (Date.now() - lastLog > 5000) { lastLog = Date.now(); log(`  ${label} boss ${Math.ceil(m.bossHp)}/${m.bossMax} ${m.bossState} · hp ${m.health} hearts ${m.hearts} · dist ${d.toFixed(1)}`); }
   }
-  await ev(() => { const c = document.getElementById('game'); c.dispatchEvent(new MouseEvent('mouseup', { button: 0, bubbles: true })); });
+  if (mouseDown) { await page.mouse.up(); mouseDown = false; }
   return mission();
 }
+let mouseDown = false;
 
 for (let t = 1; t <= tasksToWin; t++) {
   await page.waitForFunction(() => { const m = window.__eka.mission(); return m.phase === 'battle'; }, null, { timeout: 30000 });
   await wait(600);
   await shot(`10-task${t}-battle`);
   const r = await fight(`task ${t}`);
-  await ev(() => { const c = document.getElementById('game'); c.dispatchEvent(new MouseEvent('mouseup', { button: 0, bubbles: true })); window.__eka.key('KeyS', false); window.__eka.key('KeyA', false); });
+  if (mouseDown) { await page.mouse.up(); mouseDown = false; }
+  await ev(() => { window.__eka.key('KeyS', false); window.__eka.key('KeyA', false); });
   log(`task ${t} result`, JSON.stringify(r));
   await wait(1500);
   await shot(`11-task${t}-result`);
@@ -89,7 +93,8 @@ for (let t = 1; t <= tasksToWin; t++) {
     await shot(`12-task${t}-failed-menu`);
     log('failed menu shown; choosing "continue from the same stage"');
     await ev(() => window.__eka.missionMenuChoose(0));
-    await wait(3000);
+    await page.waitForFunction(() => window.__eka.mission().narrating === true, null, { timeout: 30000 });
+    await wait(800);
     await ev(() => window.__eka.missionSkipNarration());
     await wait(1500);
     t--; // retry
@@ -107,6 +112,7 @@ log('testing hearts & failure on the current task');
 await page.waitForFunction(() => window.__eka.mission().narrating === true, null, { timeout: 30000 }).catch(() => {});
 await wait(1500);
 await ev(() => window.__eka.missionSkipNarration());
+await page.waitForFunction(() => window.__eka.mission().phase === 'battle', null, { timeout: 30000 }).catch(() => {});
 await page.waitForFunction(() => window.__eka.mission().phase === 'battle', null, { timeout: 30000 }).catch(() => {});
 await wait(500);
 for (let i = 0; i < 3; i++) {

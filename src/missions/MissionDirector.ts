@@ -17,6 +17,8 @@ import { MISSIONS, missionByTask, type MissionDef } from './MissionData';
 import type { MissionHUD } from './MissionHUD';
 import { Narration } from './Narration';
 import { TaskMenu } from './TaskMenu';
+import { Voice } from '@/audio/Voice';
+import { missionLineId } from './VoiceLines';
 
 type Phase = 'idle' | 'travel' | 'narration' | 'arming' | 'battle' | 'respawn' | 'victory' | 'failed' | 'ended';
 
@@ -41,6 +43,7 @@ export class MissionDirector implements System {
   private def: MissionDef | null = null;
   private readonly narration: Narration;
   private readonly menu: TaskMenu;
+  private readonly voice: Voice;
   private invuln = 0;
   /** Extra fill so arenas read clearly during battle (interiors are lit for exploration, not aiming). */
   private readonly battleFill = new THREE.HemisphereLight(0x8a9ab8, 0x2a2430, 1.4);
@@ -61,7 +64,12 @@ export class MissionDirector implements System {
     private readonly lighting: LightingStates,
     private readonly save: SaveSystem,
   ) {
-    this.narration = new Narration(engine, audio);
+    this.voice = new Voice();
+    this.narration = new Narration(engine, audio, this.voice);
+    // A key or click that closes the card is a user gesture: capture the mouse for the battle.
+    this.narration.onGestureDismiss = () => {
+      if (engine.input.device === 'kbm') engine.input.mouse.requestLock();
+    };
     this.menu = new TaskMenu(engine);
     this.battleFill.visible = false;
     engine.scene.add(this.battleFill);
@@ -75,6 +83,7 @@ export class MissionDirector implements System {
   /** Begin (new game: task 1; continue: the saved task from its saved stage). */
   begin(mode: 'new' | 'continue'): void {
     const s = gameStore.getState();
+    this.audio.setChant(true);
     if (mode === 'continue') {
       const cur = s.flags[FLAG_CURRENT];
       this.task = typeof cur === 'number' ? cur : 1;
@@ -159,6 +168,7 @@ export class MissionDirector implements System {
           subtitle: `${def.epithet} — asura of ${def.vice}`,
           threat: def.threat,
           lines: def.intro,
+          voiceIds: def.intro.map((_, i) => missionLineId(def.id, i)),
           onDone: () => this.arm(),
         });
       });
@@ -176,6 +186,7 @@ export class MissionDirector implements System {
     this.hud.setBossHealth(this.asura?.hp ?? 0, this.asura?.maxHp ?? 1, false);
     this.hud.showBanner(`TASK ${this.def.task}`, 2.2, 'The Astra is yours. Defeat ' + this.def.villain + '.');
     this.audio.play('diya-light', { volume: 0.8, rate: 0.8 });
+    this.voice.speak('astra-granted');
     this.player.movementLocked = false;
     gsap.delayedCall(2.4, () => {
       if (this.phase !== 'arming') return;
@@ -212,6 +223,7 @@ export class MissionDirector implements System {
     this.phase = 'respawn';
     this.player.movementLocked = true;
     this.hud.showBanner('HEART LOST', 1.8, `${this.hearts} ${this.hearts === 1 ? 'heart' : 'hearts'} remain`);
+    this.voice.speak(this.hearts === 1 ? 'last-heart' : 'heart-lost');
     this.setVeil?.(1);
     gsap.delayedCall(1.2, () => {
       if (!this.def) return;
@@ -255,6 +267,7 @@ export class MissionDirector implements System {
     buttons.push({ label: `Restart Task ${def.task}`, detail: 'from the beginning', onSelect: () => this.restartTask(def.task, true) });
     buttons.push({ label: 'Choose a task', onSelect: () => this.openTaskSelect() });
     this.menu.show(`Task ${def.task} failed`, `${def.villain} has defeated you.`, buttons);
+    this.voice.speak('task-failed');
   }
 
   private onVictory(): void {
@@ -269,6 +282,7 @@ export class MissionDirector implements System {
     this.hud.hideBoss();
     this.hud.showBanner('TASK COMPLETE', 3.2, `${def.villain}, ${def.epithet}, is broken.`);
     this.audio.play('task-complete', { volume: 0.9 });
+    this.voice.speak('task-complete');
     void this.lighting.transition('present', 3);
     this.player.movementLocked = true;
     this.save.save();
@@ -287,6 +301,7 @@ export class MissionDirector implements System {
     this.gun.setEquipped(false);
     this.hud.setWeaponVisible(false);
     this.hud.showBanner('ALL EIGHT ARE BROKEN', 6, 'The temple remembers. Envy, pride, delusion, greed, anger, desire, attachment and ego — none of them holds it now.');
+    this.voice.speak('all-broken');
     void this.lighting.transition('present', 4);
     const dawn = { t: 0 };
     gsap.to(dawn, { t: 1, duration: 14, delay: 3, onUpdate: () => this.onDawn?.(dawn.t) });
@@ -325,6 +340,10 @@ export class MissionDirector implements System {
   debugState(): Record<string, unknown> {
     return { phase: this.phase, task: this.task, hearts: this.hearts, health: this.health, bossHp: this.asura?.hp ?? null, bossMax: this.asura?.maxHp ?? null, bossState: this.asura?.state ?? null, bossPos: this.asura?.position.toArray() ?? null, narrating: this.narration.isActive, menu: this.menu.isVisible };
   }
+  /** Test hook: narration voice state. */
+  debugVoice(): Record<string, unknown> {
+    return this.narration.debugVoice();
+  }
   /** Test hook: skip the narration. */
   debugSkipNarration(): void {
     while (this.narration.isActive) this.narration.advance();
@@ -346,6 +365,8 @@ export class MissionDirector implements System {
   dispose(): void {
     this.teardownAsura();
     this.narration.dispose();
+    this.voice.dispose();
+    this.audio.setChant(false);
     this.menu.dispose();
     this.engine.scene.remove(this.battleFill);
   }

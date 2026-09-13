@@ -57,6 +57,11 @@ const ROOM_AMBIENCE: Record<RoomType, AmbienceLayer[]> = {
   memory: [{ sound: 'tanpura-loop', volume: 0.3 }],
 };
 
+/** The Om chant sits 10 dB under the effects while playing; it dips further while the narrator speaks. */
+const CHANT_DB = -10;
+const CHANT_DUCK_DB = -18;
+const dbToGain = (db: number): number => Math.pow(10, db / 20);
+
 /** Reverb wet level and decay per room type. */
 const ROOM_REVERB: Record<RoomType, { wet: number; decay: number }> = {
   exterior: { wet: 0.05, decay: 0.8 },
@@ -92,6 +97,9 @@ export class AudioSystem implements System {
   private lastStepVariant = 0;
   private duckTween: gsap.core.Tween | null = null;
   private listenerProvider: (() => THREE.Vector3) | null = null;
+  private chant: { howl: Howl; id: number; current: number } | null = null;
+  private chantOn = false;
+  private chantDucked = false;
 
   constructor(engine: Engine) {
     this.engine = engine;
@@ -226,6 +234,23 @@ export class AudioSystem implements System {
     gsap.to(this.occlusionFilter.frequency, { value: indoors ? 3200 : 20000, duration: 1.2 });
   }
 
+  /** Start or stop the looping Om chant that underlies play (−10 dB; ducked to −18 dB under narration). */
+  setChant(on: boolean): void {
+    this.chantOn = on;
+    if (on && !this.chant) {
+      const howl = this.howl('om-chant-loop', true);
+      const id = howl.play();
+      howl.volume(0, id);
+      this.chant = { howl, id, current: 0 };
+    }
+  }
+  setChantDuck(ducked: boolean): void {
+    this.chantDucked = ducked;
+  }
+  get chantLevelDb(): number {
+    return this.chantDucked ? CHANT_DUCK_DB : CHANT_DB;
+  }
+
   /** Duck everything to silence (the tusk break) and release later. */
   duckToSilence(seconds: number): void {
     this.duckTween?.kill();
@@ -248,6 +273,16 @@ export class AudioSystem implements System {
         this.ambience.delete(id);
       }
     }
+    if (this.chant) {
+      const target = this.chantOn ? dbToGain(this.chantLevelDb) * s.musicVolume : 0;
+      const k = 1 - Math.exp(-dt * (target < this.chant.current ? 2.5 : 0.8));
+      this.chant.current += (target - this.chant.current) * k;
+      this.chant.howl.volume(this.chant.current, this.chant.id);
+      if (!this.chantOn && this.chant.current < 0.002) {
+        this.chant.howl.stop(this.chant.id);
+        this.chant = null;
+      }
+    }
     if (this.listenerProvider) {
       const p = this.listenerProvider();
       this.engine.camera.getWorldDirection(this.tmpDir);
@@ -258,6 +293,8 @@ export class AudioSystem implements System {
   }
 
   dispose(): void {
+    if (this.chant) this.chant.howl.stop(this.chant.id);
+    this.chant = null;
     for (const a of this.ambience.values()) a.howl.stop(a.id);
     this.ambience.clear();
     for (const h of this.howls.values()) h.unload();

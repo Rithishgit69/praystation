@@ -41,6 +41,8 @@ export class TaskMenu {
       btn.addEventListener('click', () => {
         this.hide();
         b.onSelect();
+        // The click is a user gesture: capture the mouse for whatever the choice starts.
+        if (this.engine.input.device === 'kbm' && this.engine.input.mouse.lockOnClick) this.engine.input.mouse.requestLock();
       });
       inner.appendChild(btn);
     }

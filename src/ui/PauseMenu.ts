@@ -17,6 +17,7 @@ export class PauseMenu implements System {
     private readonly onQuitToTitle: () => void,
     private readonly onJournal: () => void,
     private readonly onTaskSelect: (() => void) | null,
+    private readonly onControls: (() => void) | null = null,
   ) {
     this.root = document.createElement('div');
     this.root.className = 'pause menu';
@@ -57,7 +58,10 @@ export class PauseMenu implements System {
     h.textContent = 'Paused';
     const resume = document.createElement('button');
     resume.textContent = 'Resume';
-    resume.addEventListener('click', () => this.setVisible(false));
+    resume.addEventListener('click', () => {
+      this.setVisible(false);
+      if (this.engine.input.device === 'kbm') this.engine.input.mouse.requestLock();
+    });
     const saveBtn = document.createElement('button');
     saveBtn.textContent = 'Save';
     saveBtn.addEventListener('click', () => {
@@ -76,6 +80,18 @@ export class PauseMenu implements System {
       gameStore.getState().setSettings({ quality: v });
       if (v !== 'auto') this.engine.setQualityTier(v);
     });
+    const narrator = document.createElement('select');
+    for (const [value, label] of [
+      ['neerja', 'Neerja (Indian English)'],
+      ['ava', 'Ava (American English)'],
+    ] as const) {
+      const o = document.createElement('option');
+      o.value = value;
+      o.textContent = label;
+      narrator.appendChild(o);
+    }
+    narrator.value = s.narrator;
+    narrator.addEventListener('change', () => gameStore.getState().setSettings({ narrator: narrator.value as Settings['narrator'] }));
     const opts = document.createElement('div');
     opts.className = 'devmenu-section';
     opts.append(
@@ -84,9 +100,12 @@ export class PauseMenu implements System {
       toggle('hudAutoFade', 'HUD auto-fade'),
       toggle('invertY', 'Invert camera Y'),
       slider('lookSensitivity', 'Look sensitivity', 0.3, 2.5, 0.05),
+      toggle('sprintToggle', 'Shift toggles running (instead of holding it)'),
       slider('masterVolume', 'Master volume', 0, 1, 0.01),
-      slider('musicVolume', 'Music volume', 0, 1, 0.01),
+      slider('musicVolume', 'Music & chant volume', 0, 1, 0.01),
       slider('sfxVolume', 'Effects volume', 0, 1, 0.01),
+      slider('voiceVolume', 'Narration volume', 0, 1, 0.01),
+      row('Narrator', narrator),
       toggle('analyticsOptIn', 'Share anonymous crash reports (off by default)'),
     );
     const journalBtn = document.createElement('button');
@@ -95,6 +114,16 @@ export class PauseMenu implements System {
       this.setVisible(false);
       this.onJournal();
     });
+    const extras: HTMLElement[] = [];
+    if (this.onControls) {
+      const controls = document.createElement('button');
+      controls.textContent = 'Controls / how to play';
+      controls.addEventListener('click', () => {
+        this.setVisible(false);
+        this.onControls?.();
+      });
+      extras.push(controls);
+    }
     if (this.onTaskSelect) {
       const tasks = document.createElement('button');
       tasks.textContent = 'Choose a task';
@@ -102,7 +131,7 @@ export class PauseMenu implements System {
         this.setVisible(false);
         this.onTaskSelect?.();
       });
-      this.root.appendChild(tasks);
+      extras.push(tasks);
     }
     const quit = document.createElement('button');
     quit.textContent = 'Save & return to title';
@@ -114,7 +143,7 @@ export class PauseMenu implements System {
     const note = document.createElement('p');
     note.className = 'hint';
     note.textContent = 'Inspired by traditional stories; all events, characters and the temple in this game are fictional.';
-    this.root.append(h, resume, saveBtn, journalBtn, opts, quit, note);
+    this.root.append(h, resume, ...extras, saveBtn, journalBtn, opts, quit, note);
   }
 
   setVisible(v: boolean): void {

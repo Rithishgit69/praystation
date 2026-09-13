@@ -1,6 +1,13 @@
 import type { InputDevice, InputFrame } from './types';
 
-/** Pointer-lock orbit look + mouse buttons. Look deltas are in pixels; the camera rig applies sensitivity. */
+/**
+ * Mouse look + buttons. Look deltas are in pixels; the camera rig applies sensitivity.
+ *
+ * Pointer lock is requested from user gestures (a click on the game view, the "Begin" button, the
+ * click that dismisses a narration card). Until the lock is granted — or when the browser refuses it,
+ * as embedded webviews sometimes do — the camera still follows mouse movement over the game view
+ * ("unlocked look"), so looking around always works; the lock only removes the screen-edge limit.
+ */
 export class Mouse implements InputDevice {
   readonly kind = 'kbm' as const;
   private dx = 0;
@@ -8,38 +15,109 @@ export class Mouse implements InputDevice {
   private readonly buttons = new Set<number>();
   private activity = false;
   private readonly canvas: HTMLCanvasElement;
+  private lastX: number | null = null;
+  private lastY: number | null = null;
   locked = false;
-  /** When false (menus open), clicks do not request pointer lock. */
+  /** False after the browser reported a pointer-lock error; unlocked look carries the game. */
+  lockAvailable = true;
+  /** When false (menus open), clicks do not request pointer lock and unlocked look is suspended. */
   lockOnClick = true;
+  /** Set when a lock request was refused or dropped; the HUD shows a "click to capture" hint. */
+  lockRequests = 0;
 
-  private readonly onMove = (e: MouseEvent): void => {
-    if (!this.locked) return;
-    // Browsers occasionally emit huge spurious deltas right after lock; clamp them.
-    this.dx += Math.max(-200, Math.min(200, e.movementX));
-    this.dy += Math.max(-200, Math.min(200, e.movementY));
+  /** True when a pointer event landed on the game view rather than on a UI control. */
+  private isGameSurface(target: EventTarget | null): boolean {
+    if (target === this.canvas) return true;
+    const el = target as HTMLElement | null;
+    if (!el || typeof el.closest !== 'function') return false;
+    if (el.closest('button, input, select, textarea, a, label, .menu, .narration, .taskmenu, .mapscreen, .ending, .howto, .touch-btn, .boot')) return false;
+    return true;
+  }
+
+  /** Mouse events synthesised from touches are ignored: touch has its own device. */
+  private isMouse(e: PointerEvent): boolean {
+    return e.pointerType === 'mouse' || e.pointerType === 'pen';
+  }
+
+  private readonly onMove = (e: PointerEvent): void => {
+    if (!this.isMouse(e)) return;
+    if (this.locked) {
+      // Browsers occasionally emit huge spurious deltas right after lock; clamp them.
+      this.dx += Math.max(-200, Math.min(200, e.movementX));
+      this.dy += Math.max(-200, Math.min(200, e.movementY));
+      this.activity = true;
+      return;
+    }
+    // Unlocked look: follow the pointer while it moves over the game view during gameplay.
+    if (!this.lockOnClick || !this.isGameSurface(e.target)) {
+      this.lastX = null;
+      this.lastY = null;
+      return;
+    }
+    let mx = e.movementX;
+    let my = e.movementY;
+    if (typeof mx !== 'number' || typeof my !== 'number' || (mx === 0 && my === 0)) {
+      mx = this.lastX === null ? 0 : e.clientX - this.lastX;
+      my = this.lastY === null ? 0 : e.clientY - this.lastY;
+    }
+    this.lastX = e.clientX;
+    this.lastY = e.clientY;
+    if (mx === 0 && my === 0) return;
+    this.dx += Math.max(-200, Math.min(200, mx));
+    this.dy += Math.max(-200, Math.min(200, my));
     this.activity = true;
   };
-  private readonly onDown = (e: MouseEvent): void => {
-    if (e.target !== this.canvas) return;
+  private readonly onDown = (e: PointerEvent): void => {
+    if (!this.isMouse(e) || !this.isGameSurface(e.target)) return;
     this.buttons.add(e.button);
     this.activity = true;
-    if (!this.locked && this.lockOnClick && document.pointerLockElement !== this.canvas) {
-      this.canvas.requestPointerLock();
-    }
+    if (!this.locked && this.lockOnClick) this.requestLock();
   };
-  private readonly onUp = (e: MouseEvent): void => {
+  private readonly onUp = (e: PointerEvent): void => {
+    if (!this.isMouse(e)) return;
     this.buttons.delete(e.button);
   };
   private readonly onLockChange = (): void => {
     this.locked = document.pointerLockElement === this.canvas;
+    if (this.locked) this.lockAvailable = true;
+    this.lastX = null;
+    this.lastY = null;
+  };
+  private readonly onLockError = (): void => {
+    this.locked = false;
+    this.lockAvailable = false;
+  };
+  private readonly onBlur = (): void => this.buttons.clear();
+  private readonly onContextMenu = (e: MouseEvent): void => {
+    if (this.isGameSurface(e.target)) e.preventDefault();
   };
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
-    window.addEventListener('mousemove', this.onMove);
-    window.addEventListener('mousedown', this.onDown);
-    window.addEventListener('mouseup', this.onUp);
+    window.addEventListener('pointermove', this.onMove);
+    window.addEventListener('pointerdown', this.onDown);
+    window.addEventListener('pointerup', this.onUp);
+    window.addEventListener('pointercancel', this.onUp);
+    window.addEventListener('blur', this.onBlur);
+    window.addEventListener('contextmenu', this.onContextMenu);
     document.addEventListener('pointerlockchange', this.onLockChange);
+    document.addEventListener('pointerlockerror', this.onLockError);
+  }
+
+  /** Ask for pointer lock. Only succeeds from a user gesture; failures fall back to unlocked look. */
+  requestLock(): void {
+    if (this.locked || document.pointerLockElement === this.canvas) return;
+    if (typeof this.canvas.requestPointerLock !== 'function') {
+      this.lockAvailable = false;
+      return;
+    }
+    this.lockRequests++;
+    try {
+      const r = this.canvas.requestPointerLock() as unknown as Promise<void> | undefined;
+      if (r && typeof r.catch === 'function') r.catch(() => this.onLockError());
+    } catch {
+      this.onLockError();
+    }
   }
 
   unlock(): void {
@@ -65,9 +143,13 @@ export class Mouse implements InputDevice {
   }
 
   dispose(): void {
-    window.removeEventListener('mousemove', this.onMove);
-    window.removeEventListener('mousedown', this.onDown);
-    window.removeEventListener('mouseup', this.onUp);
+    window.removeEventListener('pointermove', this.onMove);
+    window.removeEventListener('pointerdown', this.onDown);
+    window.removeEventListener('pointerup', this.onUp);
+    window.removeEventListener('pointercancel', this.onUp);
+    window.removeEventListener('blur', this.onBlur);
+    window.removeEventListener('contextmenu', this.onContextMenu);
     document.removeEventListener('pointerlockchange', this.onLockChange);
+    document.removeEventListener('pointerlockerror', this.onLockError);
   }
 }

@@ -9,32 +9,58 @@ escalating difficulty, and a choice to replay or continue from the same stage wh
 *Inspired by traditional stories; all events, characters and the temple in this game are fictional.
 Sacred figures are portrayed with respect and are never fought.*
 
-## Run, build, deploy — three commands
+## Run, build, deploy
 
 ```bash
 npm install && npm run dev        # http://127.0.0.1:5173  (F1 dev menu · F3 profiler)
 ```
 
 ```bash
-npm run build && npm run preview  # production build + preview at http://127.0.0.1:4173
+npm run build && npm run preview  # production build in dist/ + preview at http://127.0.0.1:4173
 ```
 
+The game is a static web app: `dist/` is everything. It is configured for **Vercel** out of the box
+(`vercel.json`: framework Vite, `npm run build`, output `dist/`, cache headers):
+
 ```bash
-npm run mobile:android            # build → cap sync → signed AAB in dist/ (see docs/PUBLISHING.md)
+npx vercel --prod                 # (= npm run deploy) or import the repo at vercel.com/new — no settings needed
 ```
+
+Any static host works the same way (Netlify: build `npm run build`, publish `dist`; GitHub Pages / Cloudflare
+Pages: upload `dist/`). The build uses relative asset paths, so it also runs from a sub-folder.
+The Capacitor Android/iOS projects remain in the repository (`npm run mobile:android`, see
+`docs/PUBLISHING.md`) but the web build is the primary target.
+
+### Narration voices
+
+The villain cards and mission messages are spoken by pre-rendered neural voice lines in `public/voice/`
+(Neerja, Indian English, by default; Ava, American English, selectable in the pause menu). They are
+generated once with the free `edge-tts` tool through `uvx` (Python `uv` must be installed); no key or
+network is needed at run time:
+
+```bash
+node tools/gen-voice.mjs          # renders only lines whose text or voice changed; --force redoes all
+```
+
+Edit the lines in `src/missions/MissionData.ts` / `src/missions/VoiceLines.ts` and rerun the tool.
 
 ## Controls
 
+The game opens on a **How to play** card (also in the pause menu under *Controls / how to play*).
+
 | Action | Keyboard / mouse | Gamepad | Touch |
 |---|---|---|---|
-| Move / sprint | WASD, Shift | Left stick, push past the rim | Left floating stick, push past the rim |
-| Look | Mouse (click to capture) | Right stick | Swipe right half |
-| Fire / aim | Left mouse / right mouse | RT / LT | FIRE button / — |
+| Move / run | WASD, hold Shift (or toggle, see options) | Left stick, LB / L3 or push past the rim | Left floating stick, push past the rim |
+| Look | Mouse — follows the pointer at once; click the view to capture it, Esc releases | Right stick | Swipe right half |
+| Fire / aim | Left mouse / right mouse (hold) | RT / LT | FIRE button / — |
 | Reload | R | X | ↻ button |
-| Dodge / jump | Q / Space | B / — | ◇ button |
+| Dodge / jump | Q / Space | B / Y | ◇ / ▲ buttons |
 | Interact | E | A | contextual button |
-| Map / journal / pause | M / J / Esc | Back / Y / Start | tap compass / pause menu / ❚❚ |
+| Map / journal / pause | M / J / Esc | Back / D-pad up / Start | tap compass / pause menu / ❚❚ |
 | Recentre camera | V | R3 | — |
+
+An Om chant loops under play at −10 dB (music & chant volume in the pause menu); it dips while the
+narrator speaks.
 
 ## Modes and URLs
 

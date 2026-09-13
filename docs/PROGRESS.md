@@ -3,6 +3,19 @@
 Status legend: **DONE** · **PARTIAL** · **BLOCKED** · **TODO**. Nothing is marked DONE that has not been
 run and seen working (headless Playwright playthroughs + screenshots; see `tools/`).
 
+## Web-first update (2026-09-13)
+
+| Item | Status | Notes |
+|---|---|---|
+| Mouse look / firing in a real browser | DONE | Root cause fixed: `#ui > * { pointer-events: auto }` made every HUD overlay swallow clicks, so pointer lock was never requested and LMB never reached the gun (and touch sticks never reached the canvas). Verified with real Playwright mouse events (`tests/e2e/missions.spec.ts`, `tools/play-missions.mjs`). |
+| Mouse look without pointer lock | DONE | Camera follows the pointer over the view immediately; a click captures the pointer; HUD hint when the browser refuses the lock (embedded webviews). |
+| Run control | DONE | Hold Shift (stamina) or toggle mode (pause menu); LB/L3 on gamepad; stick past the rim on touch. |
+| Instructions before play | DONE | "How to play" card: objective, hearts / villain bar / magazine legend, all controls per device; also in the pause menu. |
+| Humanised narration voice | DONE | Pre-rendered neural voice lines (Neerja en-IN default, Ava en-US optional) via `tools/gen-voice.mjs` (free `edge-tts`); Web Speech removed. |
+| Om chant under play | DONE | Synthesised chant loop at −10 dB (−18 dB under narration), music/chant volume slider. |
+| Vercel deployment | DONE | `vercel.json`, `.vercelignore`, relative asset paths, service-worker runtime cache for voice clips. |
+| Android / iOS | PARKED | Projects untouched and still buildable; the web build is the delivery target for now. |
+
 ## Direction change (2026-09-12)
 
 After the exploration build reached a playable Prologue → Finale, the client redirected the design to a
@@ -112,8 +125,9 @@ GTAO/SMAA, cap the DPR and let the dynamic scaler drop to 0.6.
 
 1. **iOS not built**: no Xcode on this machine. The project is complete; archive + TestFlight need you.
 2. **Mobile performance unmeasured** on real hardware; tiers and the thermal step-down are implemented but untested on a phone.
-3. **Narration voice** depends on the platform's speech voices; headless/no-voice environments fall back to text only.
+3. **Narration voice** is pre-rendered (no run-time speech API); changing a line means rerunning `tools/gen-voice.mjs`, which needs `uv` and network access at build time only. Sanskrit names are pronounced by an Indian-English neural voice but were not reviewed by a native speaker.
 4. **Reference frame** is a faithful layout at the specified camera numbers rather than a pixel match; no carved reliefs or rain.
 5. **Bell / rangoli / water-flow puzzles** are implemented in the framework but have no placed instance in the world.
-6. **Gamepad and touch** paths are implemented but only keyboard/mouse was exercised by automation.
+6. **Gamepad and touch** paths are implemented but only keyboard/mouse was exercised by automation (the pointer-events fix also unblocked the touch sticks, verified only by inspection).
+8. **Pointer lock** is refused by some embedded browsers (the desktop app's preview pane, for one); the game then runs on unlocked mouse look, which stops at the window edge.
 7. **Character/villain art** is procedural (code-built meshes), not sculpted models; readable and stylised, not AAA.

@@ -94,8 +94,6 @@ export class CameraRig implements System {
     const f = input.frame;
     const s = gameStore.getState().settings;
     const invert = s.invertY ? -1 : 1;
-    const isMouse = f.device === 'kbm' && !input.mouse.locked;
-    if (isMouse) return;
     const lx = f.lookX * MOUSE_RAD_PER_PX * s.lookSensitivity;
     const ly = f.lookY * MOUSE_RAD_PER_PX * s.lookSensitivity * invert;
     if (lx !== 0 || ly !== 0) {

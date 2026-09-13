@@ -3,8 +3,8 @@ import type { Action, InputDevice, InputFrame } from './types';
 const DEADZONE = 0.15;
 const STICK_LOOK_SPEED = 900; // pixels-equivalent per second at full deflection
 
-/** Standard-mapping gamepad: A interact, B dodge, X reload/block, Y journal, LB/L3 sprint, RB crouch, LT aim, RT fire, Start pause, Back map. */
-const BUTTONS: Record<number, Action> = { 0: 'interact', 1: 'dodge', 2: 'block', 3: 'journal', 4: 'sprint', 5: 'crouch', 6: 'aim', 7: 'fire', 8: 'map', 9: 'pause', 10: 'sprint', 11: 'cameraReset' };
+/** Standard-mapping gamepad: A interact, B dodge, X reload/block, Y jump, LB/L3 sprint, RB crouch, LT aim, RT fire, Start pause, Back map, D-pad up journal, R3 camera reset. */
+const BUTTONS: Record<number, Action> = { 0: 'interact', 1: 'dodge', 2: 'block', 3: 'jump', 4: 'sprint', 5: 'crouch', 6: 'aim', 7: 'fire', 8: 'map', 9: 'pause', 10: 'sprint', 11: 'cameraReset', 12: 'journal' };
 
 const radialDeadzone = (x: number, y: number): [number, number] => {
   const m = Math.hypot(x, y);

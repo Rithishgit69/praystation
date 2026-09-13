@@ -10,6 +10,8 @@ await page.goto(`${base}/?scene=game`, { waitUntil: 'load' });
 await page.waitForFunction(() => window.__eka?.ready === true, null, { timeout: 90000 });
 await page.waitForTimeout(1500);
 await page.click('#boot-continue');
+await page.waitForSelector('.howto:not([hidden])', { timeout: 10000 });
+await page.click('.howto-begin');
 await page.waitForFunction(() => window.__eka.mission().narrating === true, null, { timeout: 30000 });
 await page.waitForFunction(() => (document.querySelector('.narration-text')?.textContent ?? '').endsWith('Task 1.'), null, { timeout: 15000 });
 await page.waitForTimeout(400);

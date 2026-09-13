@@ -18,7 +18,9 @@ export class Touch implements InputDevice {
   readonly pauseButton: HTMLButtonElement;
   readonly fireButton: HTMLButtonElement;
   readonly reloadButton: HTMLButtonElement;
+  readonly jumpButton: HTMLButtonElement;
   private fireHeld = false;
+  private jumpHeld = false;
   private reloadPressed = false;
   private stickId: number | null = null;
   private stickOrigin = { x: 0, y: 0 };
@@ -126,6 +128,10 @@ export class Touch implements InputDevice {
     this.reloadButton.setAttribute('aria-label', 'Reload');
     this.reloadButton.textContent = '↻';
     this.reloadButton.hidden = true;
+    this.jumpButton = document.createElement('button');
+    this.jumpButton.className = 'touch-btn touch-jump';
+    this.jumpButton.setAttribute('aria-label', 'Jump');
+    this.jumpButton.textContent = '▲';
     const hold = (btn: HTMLButtonElement, set: (v: boolean) => void): void => {
       btn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
@@ -140,6 +146,7 @@ export class Touch implements InputDevice {
     hold(this.actionButton, (v) => (this.actionHeld = v));
     hold(this.secondaryButton, (v) => (this.secondaryHeld = v));
     hold(this.fireButton, (v) => (this.fireHeld = v));
+    hold(this.jumpButton, (v) => (this.jumpHeld = v));
     this.reloadButton.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       this.reloadPressed = true;
@@ -148,7 +155,7 @@ export class Touch implements InputDevice {
       e.preventDefault();
       this.pausePressed = true;
     });
-    this.root.append(this.stickBase, this.actionButton, this.secondaryButton, this.pauseButton, this.fireButton, this.reloadButton);
+    this.root.append(this.stickBase, this.actionButton, this.secondaryButton, this.pauseButton, this.fireButton, this.reloadButton, this.jumpButton);
     uiRoot.appendChild(this.root);
     canvas.addEventListener('pointerdown', this.onStart);
     window.addEventListener('pointermove', this.onMove);
@@ -182,6 +189,7 @@ export class Touch implements InputDevice {
     if (this.actionHeld) frame.held.add('interact');
     if (this.secondaryHeld) frame.held.add('dodge');
     if (this.fireHeld) frame.held.add('fire');
+    if (this.jumpHeld) frame.held.add('jump');
     if (this.reloadPressed) {
       frame.held.add('reload');
       this.reloadPressed = false;
