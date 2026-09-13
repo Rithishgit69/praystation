@@ -41,6 +41,8 @@ export interface EkaDebugApi {
   missionHurtPlayer: ((n: number) => void) | null;
   missionMenuChoose: ((i: number) => void) | null;
   missionVoice: (() => Record<string, unknown>) | null;
+  missionAttack: ((kind: string) => void) | null;
+  heroVariant: (() => string) | null;
 }
 
 declare global {
@@ -82,6 +84,8 @@ export const installDebugApi = (engine: Engine): EkaDebugApi => {
     missionHurtPlayer: null,
     missionMenuChoose: null,
     missionVoice: null,
+    missionAttack: null,
+    heroVariant: null,
   };
   window.__eka = api;
   engine.events.on('sceneloaded', (id) => {

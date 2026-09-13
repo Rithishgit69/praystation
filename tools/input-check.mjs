@@ -11,6 +11,8 @@ await page.goto(`${base}/?scene=game`, { waitUntil: 'load' });
 await page.waitForFunction(() => window.__eka?.ready === true, null, { timeout: 90000 });
 await wait(500);
 await page.click('#boot-continue');
+await page.waitForSelector('.traveller:not([hidden])', { timeout: 10000 });
+await page.click('.traveller-go');
 await page.waitForSelector('.howto:not([hidden])', { timeout: 10000 });
 await page.screenshot({ path: 'test-results/input/01-howto.png' });
 await page.click('.howto-begin');

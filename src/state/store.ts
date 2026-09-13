@@ -34,6 +34,14 @@ export interface Quest {
   objective: string;
 }
 
+/** Who is playing: the name they gave their traveller and which traveller they chose. */
+export interface Profile {
+  name: string;
+  hero: 'male' | 'female';
+}
+
+export const DEFAULT_PROFILE: Profile = { name: 'Traveller', hero: 'male' };
+
 /** Everything that must survive a save/load lives here (plus world placements in the SaveSystem). */
 export interface GameState {
   chapter: ChapterId;
@@ -47,6 +55,8 @@ export interface GameState {
   activatedShrines: string[];
   settings: Settings;
   playTimeSec: number;
+  profile: Profile;
+  setProfile(patch: Partial<Profile>): void;
   setChapter(c: ChapterId): void;
   setQuest(q: Quest): void;
   setFlag(key: string, value: FlagValue): void;
@@ -59,7 +69,7 @@ export interface GameState {
   hydrate(snapshot: GameSnapshot): void;
 }
 
-export type GameSnapshot = Pick<GameState, 'chapter' | 'quest' | 'inventory' | 'flags' | 'completedMemories' | 'journal' | 'activatedShrines' | 'settings' | 'playTimeSec'>;
+export type GameSnapshot = Pick<GameState, 'chapter' | 'quest' | 'inventory' | 'flags' | 'completedMemories' | 'journal' | 'activatedShrines' | 'settings' | 'playTimeSec' | 'profile'>;
 
 export const DEFAULT_SETTINGS: Settings = {
   quality: 'auto',
@@ -87,6 +97,7 @@ export const initialSnapshot = (): GameSnapshot => ({
   activatedShrines: [],
   settings: { ...DEFAULT_SETTINGS },
   playTimeSec: 0,
+  profile: { ...DEFAULT_PROFILE },
 });
 
 export const gameStore = createStore<GameState>((set) => ({
@@ -99,8 +110,9 @@ export const gameStore = createStore<GameState>((set) => ({
   activateShrine: (id) => set((s) => (s.activatedShrines.includes(id) ? s : { activatedShrines: [...s.activatedShrines, id] })),
   setInventory: (patch) => set((s) => ({ inventory: { ...s.inventory, ...patch } })),
   setSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
+  setProfile: (patch) => set((s) => ({ profile: { ...s.profile, ...patch } })),
   addPlayTime: (sec) => set((s) => ({ playTimeSec: s.playTimeSec + sec })),
-  hydrate: (snap) => set({ ...snap, settings: { ...DEFAULT_SETTINGS, ...snap.settings } }),
+  hydrate: (snap) => set({ ...snap, settings: { ...DEFAULT_SETTINGS, ...snap.settings }, profile: { ...DEFAULT_PROFILE, ...(snap.profile ?? {}) } }),
 }));
 
 export const snapshotOf = (s: GameState): GameSnapshot => ({
@@ -113,4 +125,5 @@ export const snapshotOf = (s: GameState): GameSnapshot => ({
   activatedShrines: [...s.activatedShrines],
   settings: { ...s.settings },
   playTimeSec: s.playTimeSec,
+  profile: { ...s.profile },
 });

@@ -1,6 +1,7 @@
 import type { Engine } from '@/engine/Engine';
 import type { System } from '@/engine/types';
-import { gameStore, type Settings } from '@/state/store';
+import { gameStore, type Profile, type Settings } from '@/state/store';
+import { saveProfile } from './TravellerCard';
 import type { SaveSystem } from '@/systems/SaveSystem';
 import type { QualityTier } from '@/engine/types';
 
@@ -92,9 +93,37 @@ export class PauseMenu implements System {
     }
     narrator.value = s.narrator;
     narrator.addEventListener('change', () => gameStore.getState().setSettings({ narrator: narrator.value as Settings['narrator'] }));
+    // The traveller: name and body can be changed mid-game (saved with the profile).
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.maxLength = 16;
+    nameInput.value = gameStore.getState().profile.name;
+    nameInput.addEventListener('change', () => {
+      const name = nameInput.value.trim().slice(0, 16) || 'Traveller';
+      nameInput.value = name;
+      gameStore.getState().setProfile({ name });
+      saveProfile(gameStore.getState().profile);
+    });
+    const hero = document.createElement('select');
+    for (const [value, label] of [
+      ['male', 'Male traveller'],
+      ['female', 'Female traveller'],
+    ] as const) {
+      const o = document.createElement('option');
+      o.value = value;
+      o.textContent = label;
+      hero.appendChild(o);
+    }
+    hero.value = gameStore.getState().profile.hero;
+    hero.addEventListener('change', () => {
+      gameStore.getState().setProfile({ hero: hero.value as Profile['hero'] });
+      saveProfile(gameStore.getState().profile);
+    });
     const opts = document.createElement('div');
     opts.className = 'devmenu-section';
     opts.append(
+      row('Name', nameInput),
+      row('Traveller', hero),
       row('Quality', quality),
       toggle('cinematicMode', 'Cinematic mode (hide HUD)'),
       toggle('hudAutoFade', 'HUD auto-fade'),

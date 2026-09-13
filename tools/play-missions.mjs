@@ -1,6 +1,6 @@
 // Plays the mission mode headlessly: title → Task 1 card → narration → Astra → battle (real aiming and
 // firing) → victory → Task 2 … Also exercises hearts, failure and the task menu. Screenshots each beat.
-// usage: node tools/play-missions.mjs <outDir> [baseUrl] [tasksToWin]
+// usage: node tools/play-missions.mjs <outDir> [baseUrl] [tasksToWin] [startTask]
 import { chromium } from '@playwright/test';
 import path from 'node:path';
 import fs from 'node:fs';
@@ -8,6 +8,7 @@ import fs from 'node:fs';
 const outDir = process.argv[2] ?? 'test-results/missions';
 const base = process.argv[3] ?? 'http://127.0.0.1:5173';
 const tasksToWin = Number(process.argv[4] ?? 2);
+const startTask = Number(process.argv[5] ?? 1);
 fs.mkdirSync(outDir, { recursive: true });
 const browser = await chromium.launch({ headless: true, args: ['--use-gl=angle', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
 const page = await browser.newPage({ viewport: { width: 1280, height: 720 } });
@@ -21,11 +22,17 @@ const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 const mission = () => ev(() => window.__eka.mission());
 const key = (code, down) => ev(([c, d]) => window.__eka.key(c, d), [code, down]);
 
-await page.goto(`${base}/?scene=game&profiler=1`, { waitUntil: 'load' });
+await page.goto(`${base}/?scene=game&profiler=1&task=${startTask}`, { waitUntil: 'load' });
 await page.waitForFunction(() => window.__eka?.ready === true, null, { timeout: 90000 });
 await wait(800);
 await shot('00-title');
 await page.click('#boot-continue');
+await page.waitForSelector('.traveller:not([hidden])', { timeout: 10000 });
+await page.fill('.traveller-name input', 'Arjun');
+await page.click('.traveller-hero[data-hero="female"]');
+await wait(900);
+await shot('00a-traveller');
+await page.click('.traveller-go');
 await page.waitForSelector('.howto:not([hidden])', { timeout: 10000 });
 await shot('00b-how-to-play');
 await page.click('.howto-begin');

@@ -93,7 +93,7 @@ export class Gun implements System {
     this.model.position.set(0.02, -0.28, 0.16);
     this.model.rotation.set(0.95, 0, 0);
     this.model.visible = false;
-    this.visual.mesh.rightHand.add(this.model);
+    this.visual.attachToRightHand(this.model);
     this.tracerGeo = new THREE.CylinderGeometry(0.012, 0.012, 1, 6, 1);
     this.tracerGeo.rotateX(Math.PI / 2);
     this.tracerMat = new THREE.MeshBasicMaterial({ color: 0xffe2a8, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending, fog: false });
@@ -249,6 +249,6 @@ export class Gun implements System {
       const m = o as THREE.Mesh;
       if (m.isMesh) m.geometry.dispose();
     });
-    this.visual.mesh.rightHand.remove(this.model);
+    this.model.removeFromParent();
   }
 }

@@ -4,13 +4,15 @@ import type { Engine } from '@/engine/Engine';
 import { gameStore } from '@/state/store';
 import { glowSprite } from '@/world/TextureGen';
 import type { System } from '@/engine/types';
-import { CharacterMesh } from './CharacterMesh';
+import { CharacterMesh, type HeroVariant } from './CharacterMesh';
 import type { PlayerController } from './PlayerController';
 
 /** Binds the physics controller to the animated character mesh. */
 export class PlayerVisual implements System {
   readonly name = 'player-visual';
-  readonly mesh: CharacterMesh;
+  mesh: CharacterMesh;
+  /** Objects carried in the right hand (the Astra); re-attached when the traveller is rebuilt. */
+  private readonly handHeld: THREE.Object3D[] = [];
   /** Hand lantern: the traveller's own warm light through the forest; goes out at the first mural. */
   readonly lantern = new THREE.Group();
   readonly lanternLight: THREE.PointLight;
@@ -23,7 +25,7 @@ export class PlayerVisual implements System {
     private readonly engine: Engine,
     private readonly controller: PlayerController,
   ) {
-    this.mesh = new CharacterMesh();
+    this.mesh = new CharacterMesh(gameStore.getState().profile.hero);
     engine.scene.add(this.mesh.root);
     const cage = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.09, 0.2, 8, 1, true), new THREE.MeshStandardMaterial({ color: 0x3e2d22, roughness: 0.6, metalness: 0.5, side: THREE.DoubleSide }));
     const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.16, 8), new THREE.MeshStandardMaterial({ color: 0xffe6b0, emissive: 0xffb15a, emissiveIntensity: 1.4, transparent: true, opacity: 0.7, roughness: 0.2 }));
@@ -34,6 +36,33 @@ export class PlayerVisual implements System {
     this.lantern.position.set(-0.36, 0.72, 0.22);
     this.mesh.root.add(this.lantern);
     this.setLantern(gameStore.getState().flags['lantern:lit'] !== false, true);
+  }
+
+  /** Carry something in the right hand; survives a rebuild of the traveller. */
+  attachToRightHand(obj: THREE.Object3D): void {
+    this.handHeld.push(obj);
+    this.mesh.rightHand.add(obj);
+  }
+
+  /** Swap the traveller (male / female); keeps the lantern, the weapon and the pose. */
+  setVariant(variant: HeroVariant): void {
+    if (variant === this.mesh.variant) return;
+    const old = this.mesh;
+    const hold = old.holdWeapon;
+    this.engine.scene.remove(old.root);
+    old.root.remove(this.lantern);
+    for (const h of this.handHeld) old.rightHand.remove(h);
+    old.dispose();
+    this.originalMaterials.clear();
+    this.mesh = new CharacterMesh(variant);
+    this.mesh.holdWeapon = hold;
+    this.mesh.root.add(this.lantern);
+    for (const h of this.handHeld) this.mesh.rightHand.add(h);
+    this.engine.scene.add(this.mesh.root);
+    if (this.memoryForm) {
+      this.memoryForm = false;
+      this.setMemoryForm(true);
+    }
   }
 
   setLantern(lit: boolean, immediate = false): void {

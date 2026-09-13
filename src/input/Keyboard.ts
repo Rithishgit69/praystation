@@ -25,6 +25,9 @@ export class Keyboard implements InputDevice {
   readonly kind = 'kbm' as const;
   private readonly down = new Set<string>();
   private readonly onDown = (e: KeyboardEvent): void => {
+    // Typing in a text field (the traveller's name) is not game input.
+    const tag = (e.target as HTMLElement | null)?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
     if (e.code === 'Tab' || e.code === 'F1' || e.code === 'F3' || e.code === 'Space') e.preventDefault();
     if (this.down.has(e.code)) return;
     this.down.add(e.code);

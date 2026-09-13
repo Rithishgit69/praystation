@@ -8,7 +8,9 @@ and `node tools/play-missions.mjs`; manual items need a person.
 - [x] Zero console errors/warnings in the production build (asserted by tests).
 
 ## Mission flow
-- [x] New game → "How to play" card (objective, hearts/villain bar/magazine legend, all controls) → Begin.
+- [x] New game → "Your traveller" (name, male/female) → "How to play" card → Begin; the name shows in the HUD.
+- [x] Every projectile flies straight and can be sidestepped; floor effects are marked before they hurt; the
+      adjacent melee blow winds up first. Asuras climb stairs and walk around block stacks (no clipping).
 - [x] "You are entering into Task 1." card → villain name, epithet, threat stars.
 - [x] Narration reveals lines one by one, paced to the narrator's voice clip; any key/tap advances;
       Backspace or the Skip button skips the introduction.

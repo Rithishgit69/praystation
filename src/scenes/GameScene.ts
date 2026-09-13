@@ -11,6 +11,7 @@ import { Subtitles } from '@/ui/Subtitles';
 import { PauseMenu } from '@/ui/PauseMenu';
 import { MapScreen } from '@/ui/MapScreen';
 import { HowToPlay } from '@/ui/HowToPlay';
+import { TravellerCard, loadProfile } from '@/ui/TravellerCard';
 import { MaterialLibrary } from '@/world/Materials';
 import { MoonLight } from '@/world/fx/Atmosphere';
 import { patchIvyMaterial } from '@/world/props/Foliage';
@@ -112,6 +113,9 @@ export class GameScene implements SceneModule {
   private started = false;
   private missions: MissionDirector | null = null;
   private howto: HowToPlay | null = null;
+  private traveller: TravellerCard | null = null;
+  private visual: PlayerVisual | null = null;
+  private readonly disposers: Array<() => void> = [];
   private mode: 'missions' | 'story' = 'missions';
 
   async init(engine: Engine): Promise<void> {
@@ -158,7 +162,15 @@ export class GameScene implements SceneModule {
     const y = world.terrain.heightAt(spawn.position.x, spawn.position.z);
     if (!startZone || startZone === 'forest') controller.teleport(new THREE.Vector3(spawn.position.x, y + 0.3, spawn.position.z), spawn.yaw);
 
+    // The last chosen traveller and name are the defaults for a new game; a save carries its own.
+    gameStore.getState().setProfile(loadProfile());
     const visual = new PlayerVisual(engine, controller);
+    this.visual = visual;
+    // Changing the traveller in the pause menu rebuilds the character in place.
+    const unsubProfile = gameStore.subscribe((s, prev) => {
+      if (s.profile.hero !== prev.profile.hero) visual.setVariant(s.profile.hero);
+    });
+    this.disposers.push(unsubProfile);
     const hud = new HUD(engine);
     hud.setMapGeometry(streamer.mapRects);
     hud.bindPlayer(() => ({ x: controller.position.x, z: controller.position.z, yaw: cam.yaw, stamina: controller.stamina, sprinting: controller.state === 'sprint' }));
@@ -196,6 +208,7 @@ export class GameScene implements SceneModule {
 
     const howto = new HowToPlay(engine, this.mode);
     this.howto = howto;
+    this.traveller = new TravellerCard(engine);
     const showControls = (): void => howto.show({ mode: 'reference', onClose: () => undefined });
     if (this.mode === 'missions') {
       // Mission mode: eight tasks, eight asuras, the Astra. The exploration story systems stay dormant.
@@ -215,6 +228,7 @@ export class GameScene implements SceneModule {
         window.__eka.missionHurtPlayer = (n) => missions.debugHurtPlayer(n);
         window.__eka.missionMenuChoose = (i) => missions.debugMenuChoose(i);
         window.__eka.missionVoice = () => missions.debugVoice();
+        window.__eka.missionAttack = (kind) => missions.debugAttack(kind);
       }
     } else {
       const interaction = new InteractionSystem(engine, streamer, controller, hud);
@@ -246,6 +260,7 @@ export class GameScene implements SceneModule {
 
     if (window.__eka) {
       window.__eka.playerProvider = () => ({ x: controller.position.x, y: controller.position.y, z: controller.position.z });
+      window.__eka.heroVariant = () => visual.mesh.variant;
       window.__eka.cameraControl = { setYawPitch: (yaw, pitch) => cam.setYawPitch(yaw, pitch) };
       window.__eka.teleport = (x, yy, z) => {
         controller.teleport(new THREE.Vector3(x, yy, z));
@@ -278,11 +293,26 @@ export class GameScene implements SceneModule {
         this.streamer.reset(1);
       }
     } else SaveSystem.clear();
-    // The instructions card gates the first task; `?autostart` / `?help=0` skip it (automation).
+    // New game: name + traveller, then the instructions card, then the first task. `?autostart` /
+    // `?help=0` skip both (automation); `?hero=female&name=…` preset the profile.
     const params = new URLSearchParams(location.search);
-    const skipHelp = params.has('autostart') || params.get('help') === '0';
-    if (this.howto && !skipHelp) this.howto.show({ mode: 'start', onClose: () => this.missions?.begin(mode) });
-    else this.missions?.begin(mode);
+    const skipCards = params.has('autostart') || params.get('help') === '0';
+    const presetHero = params.get('hero');
+    if (presetHero === 'male' || presetHero === 'female') gameStore.getState().setProfile({ hero: presetHero });
+    const presetName = params.get('name');
+    if (presetName) gameStore.getState().setProfile({ name: presetName.slice(0, 16) });
+    this.visual?.setVariant(gameStore.getState().profile.hero);
+    const begin = (): void => this.missions?.begin(mode);
+    const help = (): void => {
+      if (this.howto && !skipCards) this.howto.show({ mode: 'start', onClose: begin });
+      else begin();
+    };
+    if (mode === 'new' && this.traveller && !skipCards) {
+      this.traveller.show((profile) => {
+        this.visual?.setVariant(profile.hero);
+        help();
+      });
+    } else help();
   }
 
   private zoneSpawn(zone: ZoneId): { position: THREE.Vector3; yaw: number } {
@@ -306,5 +336,7 @@ export class GameScene implements SceneModule {
 
   dispose(): void {
     // Systems are disposed by the engine when the scene unloads.
+    for (const d of this.disposers) d();
+    this.disposers.length = 0;
   }
 }

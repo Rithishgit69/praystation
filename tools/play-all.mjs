@@ -22,7 +22,7 @@ const flag = (k) => ev((k) => window.__eka.flags()[k], k);
 const tap = (code, ms = 80) => ev(([code, ms]) => { window.__eka.key(code, true); setTimeout(() => window.__eka.key(code, false), ms); }, [code, ms]);
 const encounter = () => ev(() => window.__eka.encounter?.() ?? null);
 
-await page.goto(`${base}/?scene=game&autostart=1&start=hall&profiler=1`, { waitUntil: 'load' });
+await page.goto(`${base}/?scene=game&mode=story&autostart=1&start=hall&profiler=1`, { waitUntil: 'load' });
 await page.waitForFunction(() => window.__eka?.ready === true, null, { timeout: 90000 });
 await page.waitForFunction(() => document.getElementById('boot') === null, null, { timeout: 20000 });
 await wait(1500);
@@ -37,10 +37,10 @@ await interact();
 log('  lantern:relit', await flag('lantern:relit'));
 await tp(36.2, 2.0, -100, -Math.PI / 2);
 await shot('20-passage-door');
-await tp(62, 2.0, -100, -Math.PI / 2);
+await tp(58, 2.0, -100, -Math.PI / 2);
 await wait(2500);
 await shot('21-passage-illusion');
-await tp(84, 2.0, -100, -Math.PI / 2);
+await tp(86.5, 2.0, -98.5, -Math.PI / 2);
 await wait(2500);
 await tp(60, 2.0, -89, 0, 0.3);
 await wait(2500);
@@ -142,12 +142,13 @@ await wait(2500);
 await shot('50-library');
 await tp(-110 + 24 + 1.2, -9.9, -100 + 24 + 1.2, 0, 0.3);
 await interact();
-await tp(-102, -9.2, -121.5, Math.PI, 0.3);
+// The scribe's dais sits east of the north door: plinths at x = -96 - 8 + i*4.
+await tp(-88, -9.2, -121.5, Math.PI, 0.3);
 await interact(); // place
 await wait(500);
 const fragTurns = [3, 1, 2, 3, 1];
 for (let i = 0; i < 5; i++) {
-  await tp(-110 - 8 + i * 4, -9.2, -121.5, Math.PI, 0.3);
+  await tp(-96 - 8 + i * 4, -9.2, -121.5, Math.PI, 0.3);
   for (let k = 0; k < fragTurns[i]; k++) { await interact(); await wait(950); }
 }
 log('  scribe', await flag('puzzle:scribe-fragments'), 'door', await flag('door:library-shrine'));

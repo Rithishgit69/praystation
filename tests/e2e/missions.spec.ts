@@ -11,6 +11,7 @@ declare global {
       missionMenuChoose: ((i: number) => void) | null;
       playerState: (() => Record<string, unknown>) | null;
       missionVoice: (() => Record<string, unknown>) | null;
+      heroVariant: (() => string) | null;
       engine: { camera: { rotation: { y: number }; fov: number } };
     };
   }
@@ -30,16 +31,32 @@ const boot = async (page: Page): Promise<string[]> => {
 
 const mission = (page: Page): Promise<Record<string, unknown>> => page.evaluate(() => window.__eka?.mission?.() ?? {});
 
-/** Title → how-to-play card → Begin. */
-const enter = async (page: Page): Promise<void> => {
+/** Title → your traveller (name + hero) → how-to-play card → Begin. */
+const enter = async (page: Page, name = 'Arjun', hero: 'male' | 'female' = 'male'): Promise<void> => {
   await page.click('#boot-continue');
+  await page.waitForSelector('.traveller:not([hidden])', { timeout: 10_000 });
+  await page.fill('.traveller-name input', name);
+  await page.click(`.traveller-hero[data-hero="${hero}"]`);
+  await page.click('.traveller-go');
   await page.waitForSelector('.howto:not([hidden])', { timeout: 10_000 });
   await page.click('.howto-begin');
 };
 
+test('the traveller card names the hero and picks the female traveller; the name reaches the HUD', async ({ page }) => {
+  const problems = await boot(page);
+  await enter(page, 'Meera', 'female');
+  await page.waitForFunction(() => window.__eka?.mission?.()?.narrating === true, null, { timeout: 30_000 });
+  expect(await page.locator('.mhud-name').textContent()).toBe('Meera');
+  expect(await page.evaluate(() => window.__eka?.heroVariant?.())).toBe('female');
+  expect(await page.evaluate(() => JSON.parse(localStorage.getItem('eka:profile') ?? '{}'))).toMatchObject({ name: 'Meera', hero: 'female' });
+  expect(problems).toEqual([]);
+});
+
 test('the how-to-play card explains every control before the first task', async ({ page }) => {
   const problems = await boot(page);
   await page.click('#boot-continue');
+  await page.waitForSelector('.traveller:not([hidden])', { timeout: 10_000 });
+  await page.click('.traveller-go');
   await page.waitForSelector('.howto:not([hidden])', { timeout: 10_000 });
   const text = (await page.locator('.howto').textContent()) ?? '';
   for (const needle of ['W A S D', 'Shift (hold)', 'Run', 'Left mouse', 'Fire the Astra', 'Right mouse (hold)', 'Reload', 'three hearts', 'Left stick', 'FIRE']) expect(text).toContain(needle);

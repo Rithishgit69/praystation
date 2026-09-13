@@ -12,8 +12,9 @@ import type { LightingStates } from '@/systems/LightingStates';
 import type { SaveSystem } from '@/systems/SaveSystem';
 import { gameStore } from '@/state/store';
 import { Asura } from './Asura';
+import { GltfAsura } from './AsuraModel';
 import type { Gun } from './Gun';
-import { MISSIONS, missionByTask, type MissionDef } from './MissionData';
+import { MISSIONS, missionByTask, type AttackKind, type MissionDef } from './MissionData';
 import type { MissionHUD } from './MissionHUD';
 import { Narration } from './Narration';
 import { TaskMenu } from './TaskMenu';
@@ -48,6 +49,8 @@ export class MissionDirector implements System {
   /** Extra fill so arenas read clearly during battle (interiors are lit for exploration, not aiming). */
   private readonly battleFill = new THREE.HemisphereLight(0x8a9ab8, 0x2a2430, 1.4);
   private lastTaskBanner = 0;
+  /** Bumped per task start so a slow model load cannot spawn an asura for a task already left. */
+  private generation = 0;
   onDawn: ((t: number) => void) | null = null;
   setVeil: ((v: number) => void) | null = null;
 
@@ -92,10 +95,12 @@ export class MissionDirector implements System {
       const bossHp = s.flags[FLAG_BOSS_HP];
       this.startTask(this.task, typeof bossHp === 'number' ? bossHp : undefined);
     } else {
-      this.task = 1;
+      // `?task=N` starts a new game at a given task (testing / screenshots).
+      const forced = Number(new URLSearchParams(location.search).get('task') ?? '1');
+      this.task = missionByTask(forced) ? forced : 1;
       this.hearts = MAX_HEARTS;
-      s.setFlag(FLAG_UNLOCKED, 1);
-      this.startTask(1);
+      s.setFlag(FLAG_UNLOCKED, this.task);
+      this.startTask(this.task);
     }
   }
 
@@ -140,6 +145,9 @@ export class MissionDirector implements System {
     this.phase = 'travel';
     this.player.movementLocked = true;
     this.audio.play('task-begin', { volume: 0.7 });
+    // A modelled avatar (public/models/asuras/<id>.glb) replaces the procedural stand-in when present.
+    const model = GltfAsura.load(def);
+    const generation = ++this.generation;
     // Travel veil, then the arena.
     this.setVeil?.(1);
     gsap.delayedCall(1.0, () => {
@@ -151,14 +159,20 @@ export class MissionDirector implements System {
       this.audio.setZone(this.streamer.zone);
       void this.lighting.transition('present', 2.5);
       this.battleFill.visible = true;
-      this.asura = new Asura(this.engine, this.lib, this.player, this.rig, this.audio, this.gun, def, {
-        onPlayerHit: (dmg, src) => this.onPlayerHit(dmg, src),
-        onDefeated: () => this.onVictory(),
-        onHealth: (hp, max, shielded) => {
-          this.hud.setBossHealth(hp, max, shielded);
-          gameStore.getState().setFlag(FLAG_BOSS_HP, hp);
-        },
-      }, bossHp);
+      void model.then((avatar) => {
+        if (generation !== this.generation || this.def !== def) return;
+        this.asura = new Asura(this.engine, this.lib, this.player, this.rig, this.audio, this.gun, def, {
+          onPlayerHit: (dmg, src) => this.onPlayerHit(dmg, src),
+          onDefeated: () => this.onVictory(),
+          onHealth: (hp, max, shielded) => {
+            this.hud.setBossHealth(hp, max, shielded);
+            gameStore.getState().setFlag(FLAG_BOSS_HP, hp);
+          },
+        }, bossHp, avatar ?? undefined);
+        // The model may arrive after the card or even the battle has begun.
+        if (this.phase === 'narration' || this.phase === 'arming' || this.phase === 'battle') this.asura.appear();
+        if (this.phase === 'battle') this.asura.wake();
+      });
       gsap.delayedCall(0.8, () => {
         this.setVeil?.(0);
         this.phase = 'narration';
@@ -184,7 +198,7 @@ export class MissionDirector implements System {
     this.hud.setWeaponVisible(true);
     this.hud.showBoss(this.def.villain, this.def.epithet);
     this.hud.setBossHealth(this.asura?.hp ?? 0, this.asura?.maxHp ?? 1, false);
-    this.hud.showBanner(`TASK ${this.def.task}`, 2.2, 'The Astra is yours. Defeat ' + this.def.villain + '.');
+    this.hud.showBanner(`TASK ${this.def.task}`, 3.4, `The Astra is yours. ${this.def.hint}`);
     this.audio.play('diya-light', { volume: 0.8, rate: 0.8 });
     this.voice.speak('astra-granted');
     this.player.movementLocked = false;
@@ -199,7 +213,7 @@ export class MissionDirector implements System {
 
   private onPlayerHit(damage: number, source: string): void {
     if (this.phase !== 'battle' || this.invuln > 0) return;
-    this.health = Math.max(0, this.health - damage);
+    this.health = Math.min(100, Math.max(0, this.health - damage));
     this.hud.setHealth(this.health);
     this.hud.damageFlash();
     this.rig.shake(0.7);
@@ -266,7 +280,7 @@ export class MissionDirector implements System {
     if (prev) buttons.push({ label: `Play Task ${prev.task} again`, detail: `${prev.villain}, ${prev.epithet}`, onSelect: () => this.restartTask(prev.task, true) });
     buttons.push({ label: `Restart Task ${def.task}`, detail: 'from the beginning', onSelect: () => this.restartTask(def.task, true) });
     buttons.push({ label: 'Choose a task', onSelect: () => this.openTaskSelect() });
-    this.menu.show(`Task ${def.task} failed`, `${def.villain} has defeated you.`, buttons);
+    this.menu.show(`Task ${def.task} failed`, `${def.villain} has defeated you, ${gameStore.getState().profile.name}.`, buttons);
     this.voice.speak('task-failed');
   }
 
@@ -280,7 +294,7 @@ export class MissionDirector implements System {
     s.setFlag(FLAG_BOSS_HP, 0);
     s.unlockJournal(`asura-${def.id}`);
     this.hud.hideBoss();
-    this.hud.showBanner('TASK COMPLETE', 3.2, `${def.villain}, ${def.epithet}, is broken.`);
+    this.hud.showBanner('TASK COMPLETE', 3.2, `${def.villain}, ${def.epithet}, is broken. Well fought, ${gameStore.getState().profile.name}.`);
     this.audio.play('task-complete', { volume: 0.9 });
     this.voice.speak('task-complete');
     void this.lighting.transition('present', 3);
@@ -338,7 +352,7 @@ export class MissionDirector implements System {
 
   /** Test hook. */
   debugState(): Record<string, unknown> {
-    return { phase: this.phase, task: this.task, hearts: this.hearts, health: this.health, bossHp: this.asura?.hp ?? null, bossMax: this.asura?.maxHp ?? null, bossState: this.asura?.state ?? null, bossPos: this.asura?.position.toArray() ?? null, narrating: this.narration.isActive, menu: this.menu.isVisible };
+    return { phase: this.phase, task: this.task, hearts: this.hearts, health: this.health, bossHp: this.asura?.hp ?? null, bossMax: this.asura?.maxHp ?? null, bossState: this.asura?.state ?? null, bossPos: this.asura?.position.toArray() ?? null, narrating: this.narration.isActive, menu: this.menu.isVisible, ...(this.asura?.debugState() ?? {}) };
   }
   /** Test hook: narration voice state. */
   debugVoice(): Record<string, unknown> {
@@ -347,6 +361,10 @@ export class MissionDirector implements System {
   /** Test hook: skip the narration. */
   debugSkipNarration(): void {
     while (this.narration.isActive) this.narration.advance();
+  }
+  /** Test hook: make the boss perform an attack. */
+  debugAttack(kind: string): void {
+    this.asura?.debugAttack(kind as AttackKind);
   }
   /** Test hook: hit the boss directly. */
   debugDamageBoss(amount: number): void {

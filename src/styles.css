@@ -18,7 +18,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 #game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; outline: none; touch-action: none; }
 #ui { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
 /* Overlays are click-through by default so the canvas gets every click (pointer lock, firing); only real UI opts in. */
-.menu, .narration, .taskmenu, .mapscreen, .ending, .profiler, .touch-btn, .howto { pointer-events: auto; }
+.menu, .narration, .taskmenu, .mapscreen, .ending, .profiler, .touch-btn, .howto, .traveller { pointer-events: auto; }
 
 /* Boot / title card */
 .boot { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 60%, #14213a 0%, #0b1220 65%, #05080f 100%); z-index: 50; transition: opacity 1.2s ease; }
@@ -98,6 +98,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .pause .opt input[type=range] { width: 150px; accent-color: var(--gold); }
 .pause .opt input[type=checkbox] { accent-color: var(--gold); }
 .pause select { background: #0b1220; color: var(--cream); border: 1px solid rgba(217,179,112,0.4); font-family: var(--serif); }
+.pause .opt input[type=text] { width: 150px; background: #0b1220; color: var(--cream); border: 1px solid rgba(217,179,112,0.4); font-family: var(--serif); font-size: 14px; padding: 2px 6px; }
 .subtitles { position: absolute; left: 50%; bottom: 9%; transform: translateX(-50%); max-width: 70%; text-align: center; font-family: var(--serif); font-size: clamp(15px, 1.6vw, 22px); color: var(--cream); text-shadow: 0 1px 4px #000, 0 0 12px rgba(0,0,0,0.8); line-height: 1.4; pointer-events: none; }
 .subtitles.temple { color: #d9b370; font-style: italic; letter-spacing: 0.03em; }
 .subtitle-speaker[hidden] { display: none; }
@@ -147,6 +148,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 @keyframes banner-in { from { opacity: 0; transform: translate(-50%, -50%) scale(1.15); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
 @keyframes banner-out { from { opacity: 1; } to { opacity: 0; } }
 .mhud-lock-hint { position: absolute; left: 50%; bottom: calc(5.2 * var(--u) + env(safe-area-inset-bottom)); transform: translateX(-50%); font-family: var(--serif); font-size: calc(1.2 * var(--u)); color: #c9bfa6; text-shadow: 0 1px 3px #000; letter-spacing: 0.03em; white-space: nowrap; opacity: 0.85; }
+.mhud-name { font-family: var(--display); font-size: calc(1.15 * var(--u)); letter-spacing: 0.16em; text-transform: uppercase; color: var(--gold); text-shadow: 0 1px 3px #000; margin-bottom: calc(0.4 * var(--u)); }
 .mhud-vignette { position: absolute; inset: 0; background: radial-gradient(ellipse at 50% 50%, rgba(200,30,30,0) 45%, rgba(200,30,30,0.55) 100%); opacity: 0; pointer-events: none; }
 
 /* Narration card */
@@ -191,3 +193,20 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .howto-actions .boot-continue { padding: 8px 40px; }
 .howto-hint { color: var(--muted); font-size: 13px; margin: 0; text-align: center; }
 @media (max-width: 900px) { .howto-cols { grid-template-columns: 1fr; } .howto-col:not(.active) { display: none; } .howto-inner { padding: 18px 16px 28px; } }
+
+/* Your traveller: name + hero choice */
+.traveller { position: absolute; inset: 0; z-index: 47; overflow: auto; background: radial-gradient(ellipse at 50% 40%, rgba(24,26,44,0.96) 0%, rgba(6,9,18,0.98) 70%); animation: ending-in 0.5s ease both; }
+.traveller-inner { max-width: 860px; margin: 0 auto; padding: 26px 24px 30px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.traveller-inner .boot-title { margin: 0; }
+.traveller-sub { color: var(--muted); font-size: 16px; margin: 0; text-align: center; }
+.traveller-name { display: flex; align-items: center; gap: 12px; font-family: var(--display); font-size: 13px; letter-spacing: 0.12em; color: var(--gold); text-transform: uppercase; }
+.traveller-name input { font-family: var(--serif); font-size: 22px; color: var(--cream); background: rgba(11,18,32,0.7); border: 1px solid rgba(217,179,112,0.5); padding: 8px 14px; width: 280px; text-align: center; letter-spacing: 0.04em; outline: none; }
+.traveller-name input:focus { border-color: var(--gold); box-shadow: 0 0 16px rgba(217,179,112,0.25); }
+.traveller-heroes { display: flex; gap: 22px; justify-content: center; flex-wrap: wrap; }
+.traveller-hero { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 300px; padding: 10px 10px 14px; background: rgba(11,18,32,0.6); border: 1px solid rgba(217,179,112,0.3); color: var(--cream); cursor: pointer; transition: border-color 0.25s, box-shadow 0.25s, transform 0.25s; }
+.traveller-hero canvas { width: 240px; height: 336px; display: block; }
+.traveller-hero strong { font-family: var(--display); font-weight: 500; font-size: 15px; letter-spacing: 0.08em; }
+.traveller-hero small { color: var(--muted); font-size: 13px; }
+.traveller-hero:hover { border-color: rgba(217,179,112,0.7); }
+.traveller-hero.selected { border-color: var(--gold); box-shadow: 0 0 26px rgba(217,179,112,0.28); transform: translateY(-3px); }
+@media (max-height: 760px) { .traveller-hero canvas { width: 180px; height: 252px; } .traveller-inner { gap: 10px; padding-top: 16px; } }

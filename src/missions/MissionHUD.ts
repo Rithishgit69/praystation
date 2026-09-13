@@ -1,6 +1,7 @@
 import type { Engine } from '@/engine/Engine';
 import type { System } from '@/engine/types';
 import type { Gun } from './Gun';
+import { gameStore } from '@/state/store';
 
 const HEART = '<svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.1C1 8.5 3 5 6.6 5c2 0 3.4 1.1 5.4 3 2-1.9 3.4-3 5.4-3C21 5 23 8.5 21.6 11.9 19.5 16.4 12 21 12 21z"/></svg>';
 
@@ -26,6 +27,7 @@ export class MissionHUD implements System {
   private bannerTimer = 0;
   private vignetteTimer = 0;
   private lowHealthPulse = 0;
+  private readonly unsubscribe: () => void;
 
   constructor(
     private readonly engine: Engine,
@@ -34,7 +36,7 @@ export class MissionHUD implements System {
     this.root = document.createElement('div');
     this.root.className = 'mhud';
     this.root.innerHTML = `
-      <div class="mhud-lives"><div class="mhud-hearts"></div><div class="mhud-health"><div class="mhud-health-fill"></div></div></div>
+      <div class="mhud-lives"><div class="mhud-name"></div><div class="mhud-hearts"></div><div class="mhud-health"><div class="mhud-health-fill"></div></div></div>
       <div class="mhud-boss" hidden><div class="mhud-boss-name"></div><div class="mhud-boss-bar"><div class="mhud-boss-fill"></div></div><div class="mhud-boss-text"></div></div>
       <div class="mhud-ammo" hidden><span class="mhud-ammo-text">14 / 14</span><span class="mhud-ammo-hint">R to reload</span></div>
       <div class="mhud-crosshair" hidden><div class="ch-dot"></div><div class="ch-ring"></div></div>
@@ -62,6 +64,12 @@ export class MissionHUD implements System {
     this.banner = q('.mhud-banner');
     this.vignette = q('.mhud-vignette');
     this.lockHint = q('.mhud-lock-hint');
+    const nameEl = q('.mhud-name');
+    const applyName = (): void => {
+      nameEl.textContent = gameStore.getState().profile.name;
+    };
+    applyName();
+    this.unsubscribe = gameStore.subscribe(applyName);
     this.setHearts(3);
     this.setHealth(100);
   }
@@ -132,6 +140,7 @@ export class MissionHUD implements System {
   }
 
   dispose(): void {
+    this.unsubscribe();
     this.root.remove();
   }
 }

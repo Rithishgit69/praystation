@@ -109,9 +109,10 @@ export function* buildTunnels(ctx: ZoneBuildContext): Generator<void, UnitBuild,
   acc.landing(-112, -10, -239, 5.6, 8);
   yield* buildRoom(acc, { cx: -112, cz: -200, floorY: -10, width: 5, depth: 72, height: 5, doors: [{ side: 's', offset: 0, width: 4.2, height: 4.6 }, { side: 'n', offset: 0, width: 4.2, height: 4.6 }], ceiling: true, dark: true, wallThickness: 1.6 });
   yield* buildRoom(acc, { cx: -112, cz: -156, floorY: -10, width: 16, depth: 16, height: 7, doors: [{ side: 's', offset: 0, width: 4.2, height: 4.6 }, { side: 'n', offset: 2, width: 4.2, height: 4.6 }], pillars: { cols: 2, rows: 2, inset: 4 }, ceiling: true, dark: true });
-  yield* buildRoom(acc, { cx: -110, cz: -108, floorY: -10, width: 5, depth: 80, height: 5, doors: [{ side: 's', offset: 0, width: 4.2, height: 4.6 }, { side: 'n', offset: 0, width: 4.2, height: 4.6 }], ceiling: true, dark: true, wallThickness: 1.6 });
+  // A short corridor south from the mid-hall to the library's north door (the library lies south, at +z).
+  yield* buildRoom(acc, { cx: -112, cz: -140, floorY: -10, width: 5, depth: 16, height: 5, doors: [{ side: 'n', offset: 0, width: 4.2, height: 4.6 }, { side: 's', offset: 0, width: 4.2, height: 4.6 }], ceiling: true, dark: true, wallThickness: 1.6 });
   acc.mark('tunnels:torches');
-  for (const [x, z, yy] of [[110, -236, y], [110, -252, y], [60, -256, y], [24, -256, y], [-10, -256, y], [-46, -272, y], [-60, -300, y - 1.2], [-96, -300, y - 1.2], [-112, -212, -10], [-112, -180, -10], [-110, -130, -10], [-110, -90, -10]] as const) {
+  for (const [x, z, yy] of [[110, -236, y], [110, -252, y], [60, -256, y], [24, -256, y], [-10, -256, y], [-46, -272, y], [-60, -300, y - 1.2], [-96, -300, y - 1.2], [-112, -212, -10], [-112, -180, -10], [-112, -140, -10]] as const) {
     acc.fire(x, yy + 3.0, z, { scale: 0.45, light: false, intensity: 0, distance: 0 });
     acc.cookie(x, yy + 0.03, z, 4.5);
     yield;

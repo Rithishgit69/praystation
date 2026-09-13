@@ -46,7 +46,9 @@ Edit the lines in `src/missions/MissionData.ts` / `src/missions/VoiceLines.ts` a
 
 ## Controls
 
-The game opens on a **How to play** card (also in the pause menu under *Controls / how to play*).
+A new game opens on **Your traveller** (name the hero, choose the male or female traveller) and then a
+**How to play** card (also in the pause menu under *Controls / how to play*). Both the name and the
+traveller can be changed later from the pause menu.
 
 | Action | Keyboard / mouse | Gamepad | Touch |
 |---|---|---|---|
@@ -62,9 +64,16 @@ The game opens on a **How to play** card (also in the pause menu under *Controls
 An Om chant loops under play at −10 dB (music & chant volume in the pause menu); it dips while the
 narrator speaks.
 
+## The villains
+
+Eight asuras, eight signature kits — every projectile flies straight and every floor effect is marked
+before it hurts, so sidestepping, jumping and dodging always work. `docs/VILLAINS.md` lists them with
+their looks, and explains how to drop in modelled avatars (`public/models/asuras/*.glb`).
+
 ## Modes and URLs
 
 - Default: **mission mode** (`/`): Task 1 begins after the title card.
+- `?task=N`: start a new game at task N (testing). `?hero=female&name=Meera` presets the traveller.
 - `?mode=story`: the exploration story mode (memories, puzzles, Memory Portal) built alongside it.
 - `?scene=greybox` / `?scene=courtyard`: traversal and reference-frame test scenes. `?profiler=1` shows
   the frame-time overlay; `?quality=low|medium|high|ultra` forces a tier; `?start=<zone>` spawns in a zone.

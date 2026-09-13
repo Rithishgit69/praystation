@@ -1,0 +1,4 @@
+{
+  "_readme": "Map an asura id to a .glb in this folder to replace its procedural stand-in. See docs/VILLAINS.md. Ids: matsarasura, madasura, mohasura, lobhasura, krodhasura, kamasura, mamasura, ahamkarasura.",
+  "models": {}
+}

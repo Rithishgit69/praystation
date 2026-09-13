@@ -3,6 +3,17 @@
 Status legend: **DONE** · **PARTIAL** · **BLOCKED** · **TODO**. Nothing is marked DONE that has not been
 run and seen working (headless Playwright playthroughs + screenshots; see `tools/`).
 
+## Combat & review update (2026-09-14)
+
+| Item | Status | Notes |
+|---|---|---|
+| Homing projectiles ("magnet") | DONE | Straight flight from the throw toward the player's position at the throw (30 % lead from Task 5); continuous world collision; telegraphed. |
+| Unique attack style per villain | DONE | Eight kits (see `docs/VILLAINS.md`): shards/orb, fire, sword, chain/coins, mace/fissures, bow/petals, roots/vine, shard rings/mirror. Verified by `tools/attack-gallery.mjs` and full bot playthroughs. |
+| Villain avatars | READY FOR ASSETS | Procedural stand-ins carry their weapons; `.glb` drop-in with auto-fit and clip matching; villain list + looks briefs + spec in `docs/VILLAINS.md`. Waiting on the user's models or reference images. |
+| Glitches around blocks and floor | DONE | Root causes: asuras had no ground-following or collision (buried in the Task 1 colonnade, walking through stacks) and the tunnels corridor ran through the library. Both fixed; arenas 1–8 re-audited. |
+| Male / female traveller | DONE | Two full outfits on the same rig; live previews on the traveller card; switchable in the pause menu. |
+| Username | DONE | Traveller card and pause menu; shown in the HUD, victory and failure messages; persisted. |
+
 ## Web-first update (2026-09-13)
 
 | Item | Status | Notes |
@@ -130,4 +141,5 @@ GTAO/SMAA, cap the DPR and let the dynamic scaler drop to 0.6.
 5. **Bell / rangoli / water-flow puzzles** are implemented in the framework but have no placed instance in the world.
 6. **Gamepad and touch** paths are implemented but only keyboard/mouse was exercised by automation (the pointer-events fix also unblocked the touch sticks, verified only by inspection).
 8. **Pointer lock** is refused by some embedded browsers (the desktop app's preview pane, for one); the game then runs on unlocked mouse look, which stops at the window edge.
-7. **Character/villain art** is procedural (code-built meshes), not sculpted models; readable and stylised, not AAA.
+7. **Character/villain art** is procedural (code-built meshes), not sculpted models; the villains are ready to be replaced by modelled `.glb` avatars (`docs/VILLAINS.md`).
+9. **Asura navigation** has no pathfinding: obstacle sidesteps plus a "step through the air" fallback after 5 s of no progress keep fights moving, but an asura can still be briefly blocked by a pillar.
