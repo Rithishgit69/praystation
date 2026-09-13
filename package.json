@@ -1,8 +1,24 @@
 {
   "name": "temple-of-eka-danta",
   "version": "1.2.0",
-  "description": "The Temple of Eka-Danta — a cinematic mythological adventure",
-  "main": "index.js",
+  "description": "The Temple of Eka-Danta — a mission-based mythological adventure in the browser: eight tasks against the asuras of the Vinayaka Purana. TypeScript, Three.js, Rapier.",
+  "keywords": [
+    "game",
+    "three.js",
+    "rapier",
+    "typescript",
+    "vite",
+    "pwa",
+    "mythology",
+    "ganesha"
+  ],
+  "author": "Rithish <shathwik@icloud.com>",
+  "license": "ISC",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
   "scripts": {
     "test": "vitest run",
     "dev": "vite",
@@ -19,12 +35,6 @@
     "voice": "node tools/gen-voice.mjs",
     "deploy": "vercel --prod"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "module",
-  "engines": { "node": ">=22.12" },
-  "private": "true",
   "dependencies": {
     "@capacitor-community/keep-awake": "^8.0.1",
     "@capacitor/app": "^8.1.1",
