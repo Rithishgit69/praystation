@@ -9,6 +9,9 @@ escalating difficulty, and a choice to replay or continue from the same stage wh
 *Inspired by traditional stories; all events, characters and the temple in this game are fictional.
 Sacred figures are portrayed with respect and are never fought.*
 
+Repository: **github.com/Rithishgit69/praystation** · web build deploys to Vercel from `main`
+(`vercel.json`) · CI runs typecheck, lint, unit tests and the build on every push.
+
 ## Run, build, deploy
 
 ```bash
