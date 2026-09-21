@@ -39,7 +39,11 @@ and `node tools/play-missions.mjs`; manual items need a person.
 ## Controls
 - [x] Keyboard/mouse with real browser events: mouse look follows the pointer before capture, a click on the
       view captures it (hint shown until then), LMB fires, RMB aims, Shift runs (hold or toggle option),
-      Space jump, Q dodge, R reload, Esc pause. Right-click does not open the context menu.
+      Space jump, Q dodge (a roll: moves > 1.8 m, i-frames), R reload, Esc pause, B shows the controls
+      card and sets timeScale 0 until it closes. C / F / M / J / V / E do nothing in mission mode.
+      Right-click does not open the context menu.
+- [x] Every arena floor is clear: the bot's five-task run crosses each with no clipping, and
+      `tools/arena-gallery.mjs` shows the rim dressing only.
 - [ ] Manual: pointer lock in Chrome, Safari and Firefox; Esc releases, click recaptures.
 - [ ] Manual: gamepad (standard mapping) RT fire / LT aim / X reload / B dodge / Start pause.
 - [ ] Manual: touch on a 6.1" phone — floating stick, swipe look, FIRE, reload, ◇ dodge, pause, tap compass for map.

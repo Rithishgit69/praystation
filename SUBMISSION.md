@@ -22,10 +22,11 @@ return to the edge of the arena; lose all three and you can continue from the sa
 previous task.
 
 **Controls (keyboard + mouse).** Move `W A S D` · look with the mouse (click the view to capture it,
-`Esc` releases) · run `Shift` · jump `Space` · dodge `Q` · fire `left mouse` · aim `right mouse` ·
-switch weapon `1 2 3 4` or the mouse wheel · reload `R` · pause / options / leaderboard / choose a task
-`Esc`. Gamepad and touch are supported (right stick / swipe to look, `RT` / FIRE button to fire, D-pad /
-weapon button to switch).
+`Esc` releases) · run `Shift` · jump `Space` · dodge `Q` (a quick roll the way you are moving) · fire
+`left mouse` · aim `right mouse` · switch weapon `1 2 3 4` or the mouse wheel · reload `R` · **`B` shows
+the controls at any time and pauses the game** · pause / options / leaderboard / choose a task `Esc`.
+Nothing else — there is no crouch or stance to get stuck in. Gamepad and touch are supported (right
+stick / swipe to look, `RT` / FIRE to fire, D-pad / ⟳ to switch, Back / ? for the controls).
 
 **Tips.** Every projectile flies straight — step sideways, never straight back. Every floor effect is
 marked before it hurts — leave the circle. Each villain has its own style (the duelling blade, the

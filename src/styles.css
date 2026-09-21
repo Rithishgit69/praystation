@@ -65,6 +65,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 .touch-jump { right: calc(40px + env(safe-area-inset-right)); bottom: calc(240px + env(safe-area-inset-bottom)); width: 56px; height: 56px; opacity: 0.6; font-size: 16px; }
 .touch-weapon { right: calc(150px + env(safe-area-inset-right)); bottom: calc(130px + env(safe-area-inset-bottom)); width: 52px; height: 52px; font-family: var(--display); font-size: 13px; letter-spacing: 0.04em; }
 .touch-pause { top: calc(10px + env(safe-area-inset-top)); right: calc(50% - 22px); width: 44px; height: 30px; border-radius: 6px; font-size: 11px; opacity: 0.6; }
+.touch-help { top: calc(10px + env(safe-area-inset-top)); right: calc(50% - 74px); width: 30px; height: 30px; border-radius: 6px; font-size: 14px; opacity: 0.6; }
 
 /* HUD (locked layout, 1280x720 baseline, fluid scale) */
 .hud { position: absolute; inset: 0; pointer-events: none; transition: opacity 0.35s ease; --u: min(1vw, 1.78vh); }

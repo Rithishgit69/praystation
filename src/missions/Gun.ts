@@ -381,6 +381,7 @@ export class Gun implements System {
   private recoil(): void {
     const k = this.def.recoil * (this.aiming ? 0.65 : 1) * DEG;
     this.rig.kick(k, (Math.random() - 0.5) * k * 0.6);
+    this.visual.kick(Math.min(1.2, this.def.recoil * 0.9));
     this.bloom = Math.min(this.def.spreadHip * 3, this.bloom + this.def.bloom);
   }
 

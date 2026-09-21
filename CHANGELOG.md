@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.4.0 — 2026-09-22
+
+- **Room to fight.** Every task now takes place on its own purpose-built arena — a clear floor 60–70 m
+  across with everything that could block a sidestep (pillars, braziers, shelves, mirror stands) at
+  the rim — dressed after the temple room the villain belongs to: the Courtyard of the Arrogant under
+  the moon, the Hall of the Wrathful with its roof open to the sky, the Library of the Grasping, the
+  Moon Chamber of the Deluder; the last fight keeps the mountain gateway. The temple itself is
+  untouched (story mode still walks it).
+- **A real dodge.** Q (gamepad B, touch ◇) is a quick roll in the direction you are moving — straight
+  back when standing still — with invulnerability while it lasts and a short cooldown. It was
+  advertised before but did nothing in the fights.
+- **Fewer controls, and a key that shows them.** Mission mode keeps eleven things: move, look, run,
+  jump, dodge, fire, aim, reload, switch weapon, pause, and **B** (Back on a gamepad, ? on touch), which
+  opens the controls card at any time and pauses the fight until it closes. Crouch, block, map,
+  journal, interact and camera-reset keys are gone from mission mode — nothing to get stuck in. (Story
+  mode keeps them.)
+- **Animation.** The traveller walks and runs with knees that flex through the swing and land
+  straight, hips that sway and roll, a torso that counter-twists and leans into acceleration and
+  turns, a level head, arms that pump at a sprint; the legs turn toward the direction of travel while
+  the body faces the aim; jumps tuck; the dodge is a full roll around the body; shots kick the arms and
+  hits flinch; standing still, the weight shifts and the head glances around. The villains' walk gained
+  hip yaw, torso counter-twist, arm swing and a weight shift while idle.
+- Shared leaderboard: the Pages deploy reads `SUPABASE_URL` / `SUPABASE_ANON_KEY` repository variables
+  and writes `public/leaderboard.json` itself, so the shared board can be switched on from GitHub's
+  settings without editing a file (`docs/LEADERBOARD.md`).
+- Tools: `tools/arena-gallery.mjs` screenshots every arena.
+
 ## 1.3.0 — 2026-09-22
 
 - **Five-task campaign.** The eight tasks are now five fights that climb steadily to a last one that

@@ -10,9 +10,10 @@ declare global {
       missionHurtPlayer: ((n: number) => void) | null;
       missionMenuChoose: ((i: number) => void) | null;
       playerState: (() => Record<string, unknown>) | null;
+      playerPosition: (() => { x: number; y: number; z: number }) | null;
       missionVoice: (() => Record<string, unknown>) | null;
       heroVariant: (() => string) | null;
-      engine: { camera: { rotation: { y: number }; fov: number } };
+      engine: { camera: { rotation: { y: number }; fov: number }; timeScale: number };
     };
   }
 }
@@ -99,6 +100,28 @@ test('real mouse input looks around and fires the Astra; Shift runs', async ({ p
   await page.keyboard.up('ShiftLeft');
   await page.keyboard.up('KeyW');
   expect(st.state).toBe('sprint');
+  await page.waitForTimeout(600);
+  // The lean control set: C no longer crouches (nothing to get stuck in), Q is a real dodge burst.
+  await page.keyboard.press('KeyC');
+  await page.waitForTimeout(250);
+  expect((await page.evaluate(() => window.__eka?.playerState?.() ?? {})).state).not.toMatch(/crouch/);
+  const before = await page.evaluate(() => window.__eka?.playerPosition?.() ?? { x: 0, z: 0 });
+  await page.keyboard.press('KeyQ');
+  await page.waitForTimeout(120);
+  const mid = await page.evaluate(() => window.__eka?.playerState?.() ?? {});
+  expect(mid.dodge as number).toBeGreaterThan(0);
+  await page.waitForTimeout(500);
+  const after = await page.evaluate(() => window.__eka?.playerPosition?.() ?? { x: 0, z: 0 });
+  expect(Math.hypot(after.x - before.x, after.z - before.z)).toBeGreaterThan(1.8);
+  // B shows the controls card and freezes the fight; B again returns to it.
+  await page.keyboard.press('KeyB');
+  await page.waitForTimeout(250);
+  expect(await page.locator('.howto').isVisible()).toBe(true);
+  expect(await page.evaluate(() => window.__eka?.engine.timeScale)).toBe(0);
+  await page.keyboard.press('KeyB');
+  await page.waitForTimeout(250);
+  expect(await page.locator('.howto').isHidden()).toBe(true);
+  expect(await page.evaluate(() => window.__eka?.engine.timeScale)).toBe(1);
   expect(problems).toEqual([]);
 });
 

@@ -141,7 +141,7 @@ export class MapScreen implements System {
     c.font = '13px "EB Garamond", serif';
     c.textAlign = 'center';
     for (const z of this.world.zones) {
-      if (z.id === 'memory-tusk') continue;
+      if (z.id === 'memory-tusk' || z.id.startsWith('arena-')) continue;
       const [x0, y0] = this.toScreen(z.min.x, z.min.z);
       const [x1, y1] = this.toScreen(z.max.x, z.max.z);
       const under = z.max.y < 0;

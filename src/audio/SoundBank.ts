@@ -53,7 +53,8 @@ export type SoundId =
   | 'bow-release'
   | 'chakra-throw'
   | 'vajra-burst'
-  | 'weapon-granted';
+  | 'weapon-granted'
+  | 'dodge';
 
 /** All game audio is synthesised here at startup; no audio files ship with the game. */
 export class SoundBank {
@@ -81,6 +82,7 @@ export class SoundBank {
     this.buffers.set('shimmer', this.shimmer(1.4, 1));
     this.buffers.set('tusk-break', this.crack());
     this.buffers.set('axe-swing', this.whoosh(0.35, 400, 2600, 0.8));
+    this.buffers.set('dodge', this.whoosh(0.3, 900, 260, 0.55));
     this.buffers.set('block-impact', this.impact(0.25, 180));
     this.buffers.set('barrier-raise', this.grind(1.2));
     this.buffers.set('ui-tick', this.tick());

@@ -56,6 +56,7 @@ export class PlayerVisual implements System {
     this.originalMaterials.clear();
     this.mesh = new CharacterMesh(variant);
     this.mesh.holdWeapon = hold;
+    this.mesh.aim = old.aim;
     this.mesh.root.add(this.lantern);
     for (const h of this.handHeld) this.mesh.rightHand.add(h);
     this.engine.scene.add(this.mesh.root);
@@ -96,10 +97,31 @@ export class PlayerVisual implements System {
       }
     });
   }
+  private prevYaw = 0;
+  private yawRate = 0;
+
+  /** Weapon recoil / a hit: forwarded to the character's animation. */
+  kick(amount = 1): void {
+    this.mesh.kick(amount);
+  }
+  flinch(): void {
+    this.mesh.flinch();
+  }
+
   update(dt: number, elapsed: number): void {
     const c = this.controller;
     this.mesh.root.position.copy(c.renderPosition);
     this.mesh.root.rotation.y = c.facingYaw;
+    if (dt > 0) {
+      const d = Math.atan2(Math.sin(c.facingYaw - this.prevYaw), Math.cos(c.facingYaw - this.prevYaw));
+      this.yawRate += ((d / dt) - this.yawRate) * Math.min(1, dt * 10);
+    }
+    this.prevYaw = c.facingYaw;
+    const mo = this.mesh.motion;
+    mo.dodge = c.dodgeProgress;
+    mo.dodgeAngle = c.dodgeAngle;
+    mo.moveAngle = c.moveAngle;
+    mo.yawRate = this.yawRate;
     this.mesh.animate(dt, c.state, c.horizontalSpeed, c.tuning.sprintSpeed, elapsed);
   }
   dispose(): void {

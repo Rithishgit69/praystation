@@ -15,10 +15,14 @@ needs (`src/scenes/GameScene.ts`).
 ## 2. Moving the hero
 
 `src/player/PlayerController.ts` is a kinematic capsule driven by Rapier's character controller:
-walk/jog/sprint speeds, acceleration and friction, jump with coyote time and an input buffer, crouch,
-dodge with invulnerability frames, stamina. It reads the merged input frame and writes a position;
+walk/jog/sprint speeds, acceleration and friction, jump with coyote time and an input buffer, a dodge
+burst with invulnerability frames and a cooldown, stamina (crouch exists but is unbound in mission
+mode). Input bindings come in two profiles (`src/input/Keyboard.ts`, `GamepadDevice.ts`): the lean
+mission set and the story set with the exploration verbs. It reads the merged input frame and writes a position;
 `src/player/PlayerVisual.ts` + `CharacterMesh.ts` draw and animate the procedural traveller (male or
-female outfit on the same rig) at that position. `src/player/CameraRig.ts` is the third-person spring
+female outfit on the same rig) at that position: a distance-driven gait with knee flex, hip sway and
+torso counter-twist, legs that turn toward the direction of travel while the body faces the aim, lean
+into acceleration and turns, jump tuck, a roll around a mid-body pivot for the dodge, recoil and flinch. `src/player/CameraRig.ts` is the third-person spring
 arm: yaw/pitch from the mouse, a collision probe so walls never hide the hero, and auto-realign.
 
 ## 3. The world
@@ -26,7 +30,9 @@ arm: yaw/pitch from the mouse, a collision probe so walls never hide the hero, a
 `src/world/WorldStreamer.ts` streams the 1.2 km temple in 64 m cells around the player; each zone is a
 generator (`src/world/zones/*.ts`) that yields between build steps so streaming never stalls a frame.
 All geometry, textures, murals and glyphs are generated in code (`src/world/props`, `MuralArt.ts`,
-`TextureGen.ts`) — there are no art files in the repository.
+`TextureGen.ts`) — there are no art files in the repository. The five battle arenas
+(`src/world/zones/Arenas.ts`) are zones like any other, placed far outside the terrain at x ≈ 2000 so
+nothing streams under them: one clear floor each, with the room's dressing pushed to the rim.
 
 ## 4. A task, start to finish
 

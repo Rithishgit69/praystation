@@ -3,6 +3,17 @@
 Status legend: **DONE** · **PARTIAL** · **BLOCKED** · **TODO**. Nothing is marked DONE that has not been
 run and seen working (headless Playwright playthroughs + screenshots; see `tools/`).
 
+## Review round 3 — space, controls, animation (2026-09-22)
+
+| Item | Status | Notes |
+|---|---|---|
+| "The map is too small, I can't move aside" (Tasks 1–3) | DONE | Every task fights on a purpose-built arena 60–70 m across with a clear floor (`src/world/zones/Arenas.ts`); rim dressing only; the opening distance is ~40 m and fog is thinned so the villain reads across it. |
+| Stuck in crouch; too many controls | DONE | Mission mode binds only move / look / run / jump / dodge / fire / aim / reload / switch / pause / help; crouch, block, map, journal, interact, camera reset removed from that profile (`src/input/Keyboard.ts`, `GamepadDevice.ts`). |
+| A key that shows the controls mid-game and pauses | DONE | B or H (Back on a gamepad, ? on touch) toggles the how-to card; `timeScale` 0 while open. HUD hint under the ammo. |
+| Dodge did nothing in fights | DONE | Q is now a burst with a roll animation, 0.45 s i-frames, 0.7 s cooldown; the asuras' `hurtPlayer` already honours the i-frames. |
+| Animations toward an industry look | PARTIAL | Procedural upgrade of the traveller (gait, knees, hip sway, counter-twist, lean, strafing legs, jump tuck, roll, recoil, flinch, idle life) and the villains' walk. A modelled, motion-captured hero would need an animated GLB — the asura loader shows the pattern. |
+| Shared leaderboard for deployed players | BLOCKED (needs one credential) | Client and docs complete; the deploy injects `SUPABASE_URL` / `SUPABASE_ANON_KEY` repository variables. Needs the team's Supabase project (free, ~5 min, `docs/LEADERBOARD.md`) — a static site cannot store other players' scores on its own. |
+
 ## Five-villain campaign, weapons and leaderboard (2026-09-22)
 
 | Item | Status | Notes |

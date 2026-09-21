@@ -26,6 +26,15 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Shared leaderboard: set the repository variables SUPABASE_URL and SUPABASE_ANON_KEY
+      # (Settings → Secrets and variables → Actions → Variables) and every deploy points the game at
+      # that board — no file edits needed. See docs/LEADERBOARD.md for the table to create.
+      - name: Configure the shared leaderboard
+        if: ${{ vars.SUPABASE_URL != '' && vars.SUPABASE_ANON_KEY != '' }}
+        env:
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
+        run: node -e "require('fs').writeFileSync('public/leaderboard.json', JSON.stringify({ provider: 'supabase', url: process.env.SUPABASE_URL, anonKey: process.env.SUPABASE_ANON_KEY }, null, 2))"
       - run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

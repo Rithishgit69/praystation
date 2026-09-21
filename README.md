@@ -16,13 +16,14 @@ typecheck, lint, unit tests and the build on every push.
 
 ## How to play (in one breath)
 
-Move `WASD`, look with the mouse (click the view to capture it), run `Shift`, jump `Space`, dodge `Q`,
-fire `left mouse`, aim `right mouse`, reload `R`, switch weapon `1–4` / mouse wheel, pause `Esc`. Five
-tasks, five asuras: each card tells you how the villain fights, the tip on the weapon tells you how to
-beat it, the bar at the top is its health, the three hearts are yours. Everything flies straight and
-every floor effect is marked first — sidestep, jump, dodge. Finish all five and your run goes on the
-leaderboard. `SUBMISSION.md` has the contest sheet and `docs/CODE_WALKTHROUGH.md` the five-minute tour
-of the code.
+Move `WASD`, look with the mouse (click the view to capture it), run `Shift`, jump `Space`, dodge `Q`
+(a quick roll the way you are moving), fire `left mouse`, aim `right mouse`, reload `R`, switch weapon
+`1–4` / mouse wheel, `B` shows the controls (and pauses), `Esc` pauses. That is the whole set. Five
+tasks, five asuras, each in a wide open arena: each card tells you how the villain fights, the tip on
+the weapon tells you how to beat it, the bar at the top is its health, the three hearts are yours.
+Everything flies straight and every floor effect is marked first — sidestep, jump, dodge. Finish all
+five and your run goes on the leaderboard. `SUBMISSION.md` has the contest sheet and
+`docs/CODE_WALKTHROUGH.md` the five-minute tour of the code.
 
 ## Run, build, deploy
 
@@ -69,13 +70,16 @@ traveller can be changed later from the pause menu.
 |---|---|---|---|
 | Move / run | WASD, hold Shift (or toggle, see options) | Left stick, LB / L3 or push past the rim | Left floating stick, push past the rim |
 | Look | Mouse — follows the pointer at once; click the view to capture it, Esc releases | Right stick | Swipe right half |
+| Jump / dodge | Space / Q | A or Y / B | ▲ / ◇ |
 | Fire / aim | Left mouse / right mouse (hold) | RT / LT | FIRE button / — |
-| Switch weapon | 1 2 3 4, or the mouse wheel | D-pad left / right | weapon button |
+| Switch weapon | 1 2 3 4, or the mouse wheel (X / Z cycle) | D-pad left / right | ⟳ button |
 | Reload | R | X | ↻ button |
-| Dodge / jump | Q / Space | B / Y | ◇ / ▲ buttons |
-| Interact | E | A | contextual button |
-| Map / journal / pause | M / J / Esc | Back / D-pad up / Start | tap compass / pause menu / ❚❚ |
-| Recentre camera | V | R3 | — |
+| Controls card | B (or H) — pauses the game while it is open | Back | ? button |
+| Pause | Esc | Start | ❚❚ |
+
+Mission mode deliberately has no other keys: nothing crouches, blocks or opens a map, so there is no
+stance to get stuck in. (Story mode, `?mode=story`, keeps E interact, C crouch, M map, J journal, V
+camera reset.)
 
 An Om chant loops under play at −10 dB (music & chant volume in the pause menu); it dips while the
 narrator speaks.
@@ -93,6 +97,14 @@ The temple grants one weapon per task; all of them stay with you and switch with
 
 Hip fire blooms, aiming (`right mouse`) tightens it and pulls the camera over the shoulder, and every
 projectile leaves the muzzle toward the crosshair.
+
+## The arenas
+
+Every task is fought on a purpose-built floor sixty to seventy metres across with nothing on it — the
+pillars, braziers, shelves and mirror stands stand at the rim — dressed after the temple room the
+villain belongs to: the Courtyard of the Arrogant under the moon, the Hall of the Wrathful with its
+roof open in five places, the Library of the Grasping with the shelf stacks at its walls, the Moon
+Chamber of the Deluder, and the mountain gateway for the last fight (`src/world/zones/Arenas.ts`).
 
 ## The villains
 
@@ -143,5 +155,6 @@ npm run test:e2e         # Playwright: boot, traversal budget, save/continue, in
 node tools/play-missions.mjs out/ http://127.0.0.1:5173 5   # plays all five tasks headlessly (= npm run play:missions)
 node tools/attack-gallery.mjs out/ http://127.0.0.1:4173     # screenshots every villain attack
 node tools/villain-gallery.mjs out/ http://127.0.0.1:4173    # portrait sheet of the five villains
+node tools/arena-gallery.mjs out/ http://127.0.0.1:4173      # every arena from the spawn and the side
 node tools/demo-video.mjs http://127.0.0.1:4173 demo/demo.mp4 # records the demo video (needs ffmpeg)
 ```

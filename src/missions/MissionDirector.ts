@@ -309,6 +309,7 @@ export class MissionDirector implements System {
     this.hud.setHealth(this.health);
     this.hud.damageFlash();
     this.rig.shake(0.7);
+    this.visual.flinch();
     this.audio.play('block-impact', { volume: 0.8, rate: 0.75 });
     this.invuln = 0.35;
     void source;

@@ -31,14 +31,20 @@ is enough. Ten minutes to set up:
    create policy "anyone can add a score" on public.scores for insert with check (true);
    ```
 
-2. Put the project URL and anon key into `public/leaderboard.json`:
+2. Give the game the project URL and anon key (Supabase → Project settings → API), either way:
 
-   ```json
-   { "provider": "supabase", "url": "https://YOUR-PROJECT.supabase.co", "anonKey": "YOUR-ANON-KEY" }
-   ```
+   - **On GitHub, no file edits:** repository *Settings → Secrets and variables → Actions → Variables*,
+     add `SUPABASE_URL` and `SUPABASE_ANON_KEY`, then re-run *Deploy to GitHub Pages* (Actions tab →
+     the workflow → *Run workflow*). The deploy writes `public/leaderboard.json` itself.
+   - **Or in the repository:** edit `public/leaderboard.json`:
+
+     ```json
+     { "provider": "supabase", "url": "https://YOUR-PROJECT.supabase.co", "anonKey": "YOUR-ANON-KEY" }
+     ```
 
    The anon key is designed to be public; the policies above only allow reading scores and adding new
-   ones (no updates or deletes). Rebuild/redeploy and the *Everyone* tab appears.
+   ones (no updates or deletes). After the deploy the *Everyone* tab appears on the leaderboard and
+   every finished run is posted there.
 
 3. Optional hardening in Supabase: rate limiting on the REST API, and a trigger that rejects rows
    whose `score` does not match the formula in `src/systems/Leaderboard.ts` (`scoreOf`).

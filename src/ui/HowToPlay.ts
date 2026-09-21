@@ -15,39 +15,32 @@ const OBJECTIVES: Record<'missions' | 'story', string[]> = {
   ],
 };
 
+/** Mission mode: eleven things to know, nothing that can trap a player in a stance. */
 const KBM: Row[] = [
   ['W A S D / arrows', 'Move'],
   ['Mouse', 'Look around · click the view to capture the mouse, Esc releases it'],
   ['Shift (hold)', 'Run (uses stamina)'],
   ['Space', 'Jump'],
-  ['Q', 'Dodge (brief invulnerability)'],
-  ['C / Ctrl', 'Crouch'],
+  ['Q', 'Dodge — a quick roll the way you are moving (brief invulnerability)'],
   ['Left mouse', 'Fire · hold to draw the bow'],
   ['Right mouse (hold)', 'Aim down the sights (closer camera, tighter spread, slower walk)'],
   ['R', 'Reload'],
   ['1 2 3 4 / wheel', 'Switch weapon (X / Z also cycle)'],
-  ['E', 'Interact'],
-  ['V', 'Reset the camera behind you'],
-  ['M / Tab', 'Map'],
-  ['J', 'Journal'],
-  ['Esc', 'Pause: options, controls, choose a task'],
+  ['B', 'Show these controls (pauses the game)'],
+  ['Esc', 'Pause: options, controls, leaderboard, choose a task'],
 ];
 
 const PAD: Row[] = [
   ['Left stick', 'Move (push fully to run)'],
   ['Right stick', 'Look around'],
   ['LB / L3', 'Run'],
-  ['Y', 'Jump'],
+  ['A / Y', 'Jump'],
   ['B', 'Dodge'],
-  ['RB', 'Crouch'],
   ['RT', 'Fire · hold to draw the bow'],
   ['LT (hold)', 'Aim'],
   ['X', 'Reload'],
   ['D-pad ◀ ▶', 'Switch weapon'],
-  ['A', 'Interact'],
-  ['R3', 'Reset the camera'],
-  ['Back', 'Map'],
-  ['D-pad up', 'Journal'],
+  ['Back', 'Show these controls'],
   ['Start', 'Pause'],
 ];
 
@@ -56,7 +49,46 @@ const TOUCH: Row[] = [
   ['Right half: swipe', 'Look around'],
   ['FIRE', 'Fire · hold to draw the bow'],
   ['↻', 'Reload'],
-  ['Weapon button', 'Switch weapon'],
+  ['⟳', 'Switch weapon'],
+  ['▲', 'Jump'],
+  ['◇', 'Dodge'],
+  ['?', 'Show these controls'],
+  ['❚❚', 'Pause'],
+];
+
+/** Story mode keeps the exploration verbs. */
+const KBM_STORY: Row[] = [
+  ['W A S D / arrows', 'Move'],
+  ['Mouse', 'Look around · click the view to capture the mouse, Esc releases it'],
+  ['Shift (hold)', 'Run (uses stamina)'],
+  ['Space', 'Jump'],
+  ['Q', 'Dodge (brief invulnerability)'],
+  ['C / Ctrl', 'Crouch (press again to stand)'],
+  ['E', 'Interact'],
+  ['V', 'Reset the camera behind you'],
+  ['M / Tab', 'Map'],
+  ['J', 'Journal'],
+  ['B', 'Show these controls'],
+  ['Esc', 'Pause: options, controls'],
+];
+
+const PAD_STORY: Row[] = [
+  ['Left stick', 'Move (push fully to run)'],
+  ['Right stick', 'Look around'],
+  ['LB / L3', 'Run'],
+  ['Y', 'Jump'],
+  ['B', 'Dodge'],
+  ['RB', 'Crouch'],
+  ['A', 'Interact'],
+  ['R3', 'Reset the camera'],
+  ['Back', 'Map'],
+  ['D-pad up', 'Journal'],
+  ['Start', 'Pause'],
+];
+
+const TOUCH_STORY: Row[] = [
+  ['Left half: drag', 'Move (push to the rim to run)'],
+  ['Right half: swipe', 'Look around'],
   ['▲', 'Jump'],
   ['◇', 'Dodge'],
   ['Action button', 'Interact'],
@@ -78,12 +110,13 @@ export interface HowToPlayOptions {
 export class HowToPlay {
   private readonly root: HTMLDivElement;
   private active: HowToPlayOptions | null = null;
+  private prevTimeScale = 1;
   private readonly onKey = (e: KeyboardEvent): void => {
     if (e.repeat) return;
     if (e.code === 'Enter' || e.code === 'Space' || e.code === 'NumpadEnter') {
       e.preventDefault();
       this.close(true);
-    } else if (e.code === 'Escape' && this.active?.mode === 'reference') this.close(false);
+    } else if (e.code === 'Escape' && this.active?.mode === 'reference') this.close(true);
   };
   private readonly onDevice = (kind: InputDeviceKind): void => this.highlight(kind);
 
@@ -109,10 +142,10 @@ export class HowToPlay {
         </div>`
             : ''
         }
-        <div class="howto-cols">${col('kbm', 'Keyboard & mouse', KBM)}${col('gamepad', 'Gamepad', PAD)}${col('touch', 'Touch', TOUCH)}</div>
+        <div class="howto-cols">${col('kbm', 'Keyboard & mouse', objective === 'missions' ? KBM : KBM_STORY)}${col('gamepad', 'Gamepad', objective === 'missions' ? PAD : PAD_STORY)}${col('touch', 'Touch', objective === 'missions' ? TOUCH : TOUCH_STORY)}</div>
         <div class="howto-actions">
           <button class="boot-continue howto-begin">Begin</button>
-          <p class="howto-hint">Press Enter to begin · Esc in the game opens the pause menu, where these controls can be read again.</p>
+          <p class="howto-hint">Press Enter to begin · in the game, B shows these controls again and Esc opens the pause menu.</p>
         </div>
       </div>`;
     engine.uiRoot.appendChild(this.root);
@@ -129,10 +162,13 @@ export class HowToPlay {
     const btn = this.root.querySelector('.howto-begin') as HTMLButtonElement;
     btn.textContent = opts.mode === 'start' ? 'Begin' : 'Back to the game';
     (this.root.querySelector('.howto-hint') as HTMLElement).textContent =
-      opts.mode === 'start' ? 'Press Enter to begin · Esc in the game opens the pause menu, where these controls can be read again.' : 'Press Enter or Esc to return.';
+      opts.mode === 'start' ? 'Press Enter to begin · in the game, B shows these controls again and Esc opens the pause menu.' : 'Press Enter, B or Esc to return.';
     this.highlight(this.engine.input.device);
     this.root.hidden = false;
     this.root.scrollTop = 0;
+    // Opened mid-fight (B key): the game stands still until the card closes.
+    this.prevTimeScale = this.engine.timeScale;
+    this.engine.timeScale = 0;
     this.engine.uiBlocking = true;
     this.engine.input.gameplayBlocked = true;
     this.engine.input.mouse.lockOnClick = false;
@@ -151,6 +187,7 @@ export class HowToPlay {
     this.active = null;
     this.root.hidden = true;
     window.removeEventListener('keydown', this.onKey);
+    this.engine.timeScale = this.prevTimeScale;
     this.engine.uiBlocking = false;
     this.engine.input.gameplayBlocked = this.engine.devMenu.isVisible;
     this.engine.input.mouse.lockOnClick = true;

@@ -206,6 +206,7 @@ export class GameScene implements SceneModule {
     controller.events = {
       onFootstep: (surface, position, intensity) => audio.footstep(surface, position, intensity),
       onLand: (_surface, position, hard) => audio.land(hard, position),
+      onDodge: () => audio.play('dodge', { volume: 0.55, rate: 0.95 + Math.random() * 0.1 }),
     };
     lighting.onMoonChange((state) => streamer.setMoonState(state));
 
@@ -217,6 +218,18 @@ export class GameScene implements SceneModule {
     this.leaderboardCard = leaderboardCard;
     const showControls = (): void => howto.show({ mode: 'reference', onClose: () => undefined });
     const showBoard = (): void => void leaderboardCard.show();
+    // Lean shooter bindings for the missions; the exploration verbs only in story mode.
+    engine.input.keyboard.setProfile(this.mode);
+    engine.input.gamepad.setProfile(this.mode);
+    // B / H (Back on a gamepad, ? on touch) opens the controls card mid-game and pauses the fight.
+    const helpKey: System = {
+      name: 'help-key',
+      update: () => {
+        if (!engine.input.pressed('help') || !this.started) return;
+        if (howto.isVisible) howto.close(true);
+        else if (!engine.uiBlocking) showControls();
+      },
+    };
     if (this.mode === 'missions') {
       // Mission mode: five tasks, five asuras, four weapons. The exploration story systems stay dormant.
       const gun = new Gun(engine, lib, controller, visual, cam, audio);
@@ -227,7 +240,7 @@ export class GameScene implements SceneModule {
       missions.onDawn = (t) => (atmosphere.dawn = t);
       this.missions = missions;
       const pause = new PauseMenu(engine, save, () => location.reload(), () => journal.toggle(), () => missions.openTaskSelect(), showControls, showBoard);
-      for (const s of [controller, streamer, lighting, missions, gun, visual, atmosphere, audio, save, subtitles, journal, map, pause, trail, distant, cam, hud, mhud]) engine.addSystem(s);
+      for (const s of [controller, streamer, lighting, missions, gun, visual, atmosphere, audio, save, subtitles, journal, map, pause, helpKey, trail, distant, cam, hud, mhud]) engine.addSystem(s);
       if (window.__eka) {
         window.__eka.mission = () => missions.debugState();
         window.__eka.missionSkipNarration = () => missions.debugSkipNarration();
@@ -253,7 +266,7 @@ export class GameScene implements SceneModule {
       const illusions = new IllusionSystem(engine, streamer, controller, audio, subtitles);
       const storyChapters = new StoryChapters(engine, streamer, interaction, chapters, audio, visual, subtitles, lighting, doors, puzzles, runner, encounterContext, lib, moon, (t) => (atmosphere.dawn = t));
       const pause = new PauseMenu(engine, save, () => location.reload(), () => journal.toggle(), null, showControls, showBoard);
-      for (const s of [controller, streamer, lighting, story, storyChapters, interaction, puzzles, doors, portal, runner, illusions, chapters, visual, atmosphere, audio, save, subtitles, journal, map, pause, trail, distant, cam, hud]) engine.addSystem(s);
+      for (const s of [controller, streamer, lighting, story, storyChapters, interaction, puzzles, doors, portal, runner, illusions, chapters, visual, atmosphere, audio, save, subtitles, journal, map, pause, helpKey, trail, distant, cam, hud]) engine.addSystem(s);
       if (window.__eka) {
         window.__eka.interact = () => {
           const f = interaction.focused;
@@ -344,6 +357,10 @@ export class GameScene implements SceneModule {
       'side-west': [-48, 0.1, -16, Math.PI / 2],
       'side-east': [48, 0.1, -16, -Math.PI / 2],
       'memory-tusk': [2000, 0.2, 22, 0],
+      'arena-courtyard': [2000, 0.2, -380, 0],
+      'arena-hall': [2000, 0.2, -778, 0],
+      'arena-library': [2000, 0.2, -1178, 0],
+      'arena-moon': [2000, 0.2, -1578, 0],
     };
     const s = spawns[zone] ?? [0, 0, 470, 0];
     return { position: new THREE.Vector3(s[0], s[1], s[2]), yaw: s[3] };

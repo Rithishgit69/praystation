@@ -52,7 +52,13 @@ export interface PlayerEvents {
   onFootstep?(surface: SurfaceMaterial, position: THREE.Vector3, intensity: number): void;
   onLand?(surface: SurfaceMaterial, position: THREE.Vector3, hard: boolean): void;
   onJump?(): void;
+  onDodge?(): void;
 }
+
+/** The dodge: a short burst with invulnerability, then a moment before the next one. */
+const DODGE_SPEED = 11;
+const DODGE_TIME = 0.34;
+const DODGE_COOLDOWN = 0.7;
 
 /** Kinematic capsule character (Rapier KCC) with the §5 feel numbers. Feet-origin positions. */
 export class PlayerController implements System, CameraFollowTarget {
@@ -100,8 +106,17 @@ export class PlayerController implements System, CameraFollowTarget {
   /** Diagnostics: how often the KCC returned less horizontal movement than requested. */
   clipCount = 0;
   lastClip = { want: 0, got: 0, y: 0 };
-  /** Seconds of invulnerability left after a dodge (encounters read this). */
+  /** Seconds of invulnerability left after a dodge (the asuras and encounters read this). */
   dodgeTimer = 0;
+  /** 0 → 1 through the current dodge burst (0 when not dodging); drives the roll animation. */
+  dodgeProgress = 0;
+  /** Direction of the current dodge relative to where the hero faces (radians, positive = right). */
+  dodgeAngle = 0;
+  /** Direction of travel relative to where the hero faces (radians, positive = right), 0 when still. */
+  moveAngle = 0;
+  private dodgeActive = 0;
+  private dodgeCooldown = 0;
+  private readonly dodgeDir = new THREE.Vector3();
   /** External horizontal push (m/s) applied this fixed step on top of input movement; cleared each step. */
   readonly externalPush = new THREE.Vector3();
 
@@ -143,12 +158,25 @@ export class PlayerController implements System, CameraFollowTarget {
     return this.crouching ? this.tuning.height * 0.72 : this.tuning.height;
   }
 
-  /** Quick sidestep/backstep used by encounters: sets horizontal velocity and grants 0.45 s of i-frames. */
-  dodge(dirX: number, dirZ: number, speed = 9): void {
+  /** Quick sidestep/backstep: a burst along (dirX, dirZ) with 0.45 s of i-frames and a roll animation. */
+  dodge(dirX: number, dirZ: number, speed = DODGE_SPEED): void {
     const m = Math.hypot(dirX, dirZ) || 1;
-    this.velocity.x = (dirX / m) * speed;
-    this.velocity.z = (dirZ / m) * speed;
+    this.dodgeDir.set(dirX / m, 0, dirZ / m);
+    this.velocity.x = this.dodgeDir.x * speed;
+    this.velocity.z = this.dodgeDir.z * speed;
     this.dodgeTimer = 0.45;
+    this.dodgeActive = DODGE_TIME;
+    this.dodgeCooldown = DODGE_COOLDOWN;
+    this.dodgeProgress = 0;
+    this.dodgeAngle = this.angleFromFacing(this.dodgeDir.x, this.dodgeDir.z);
+    this.events.onDodge?.();
+  }
+
+  /** Signed angle (radians) from the hero's facing direction to a horizontal direction; positive = to the right. */
+  private angleFromFacing(dx: number, dz: number): number {
+    const fx = -Math.sin(this.facingYaw);
+    const fz = -Math.cos(this.facingYaw);
+    return Math.atan2(fx * dz - fz * dx, fx * dx + fz * dz);
   }
 
   teleport(position: THREE.Vector3, yaw?: number): void {
@@ -199,6 +227,12 @@ export class PlayerController implements System, CameraFollowTarget {
     if (!this.movementLocked && !input.gameplayBlocked) {
       if (input.pressed('crouch')) this.setCrouch(!this.crouching);
     }
+    // Dodge (Q / B / ◇): in the direction you are moving, or straight back when standing still.
+    if (this.dodgeCooldown > 0) this.dodgeCooldown -= step;
+    if (!this.movementLocked && !input.gameplayBlocked && this.grounded && this.dodgeActive <= 0 && this.dodgeCooldown <= 0 && !this.crouching && input.pressed('dodge')) {
+      if (mag > 0.05) this.dodge(this.tmpWish.x, this.tmpWish.z);
+      else this.dodge(-this.tmpForward.x, -this.tmpForward.z);
+    }
 
     // Stamina. Shift is hold-to-run by default; the "toggle" setting latches it until the player stops.
     if (gameStore.getState().settings.sprintToggle) {
@@ -228,11 +262,19 @@ export class PlayerController implements System, CameraFollowTarget {
       if (!sprinting && !this.crouching && mag < 0.55) targetSpeed *= clamp(mag / 0.55, 0.35, 1);
     }
 
-    // Horizontal acceleration / friction.
+    // Horizontal acceleration / friction. A dodge burst overrides both: it eases from full speed to
+    // half over its length and ignores the stick until it is done.
     const control = this.grounded ? 1 : t.airControl;
     const vx = this.velocity.x;
     const vz = this.velocity.z;
-    if (targetSpeed > 0) {
+    if (this.dodgeActive > 0) {
+      this.dodgeActive -= step;
+      this.dodgeProgress = clamp(1 - this.dodgeActive / DODGE_TIME, 0, 1);
+      const k = DODGE_SPEED * (1 - 0.5 * this.dodgeProgress);
+      this.velocity.x = this.dodgeDir.x * k;
+      this.velocity.z = this.dodgeDir.z * k;
+      if (this.dodgeActive <= 0) this.dodgeProgress = 0;
+    } else if (targetSpeed > 0) {
       const tx = this.tmpWish.x * targetSpeed;
       const tz = this.tmpWish.z * targetSpeed;
       const dx = tx - vx;
@@ -336,6 +378,7 @@ export class PlayerController implements System, CameraFollowTarget {
     else if (sprinting && hs > t.jogSpeed + 0.3) this.state = 'sprint';
     else if (hs < t.walkSpeed + 0.6) this.state = 'walk';
     else this.state = 'jog';
+    this.moveAngle = hs > 0.3 ? this.angleFromFacing(this.velocity.x / hs, this.velocity.z / hs) : 0;
   }
 
   /** True if any KCC contact this step has a steep (wall-like) normal. */

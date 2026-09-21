@@ -1,23 +1,12 @@
-import type { Action, InputDevice, InputFrame } from './types';
+import type { Action, ControlProfile, InputDevice, InputFrame } from './types';
 
-const KEYMAP: Record<string, Action> = {
-  KeyE: 'interact',
-  Enter: 'interact',
+/** The lean mission set: nothing here can strand a player in a mode they did not choose. */
+const MISSION_KEYS: Record<string, Action> = {
   ShiftLeft: 'sprint',
   ShiftRight: 'sprint',
   Space: 'jump',
-  ControlLeft: 'crouch',
-  KeyC: 'crouch',
   KeyQ: 'dodge',
-  KeyF: 'block',
   Escape: 'pause',
-  KeyJ: 'journal',
-  KeyM: 'map',
-  Tab: 'map',
-  F1: 'devmenu',
-  Backquote: 'devmenu',
-  F3: 'profiler',
-  KeyV: 'cameraReset',
   KeyR: 'reload',
   Digit1: 'weapon1',
   Digit2: 'weapon2',
@@ -25,10 +14,35 @@ const KEYMAP: Record<string, Action> = {
   Digit4: 'weapon4',
   KeyX: 'weaponNext',
   KeyZ: 'weaponPrev',
+  KeyB: 'help',
+  KeyH: 'help',
+  F1: 'devmenu',
+  Backquote: 'devmenu',
+  F3: 'profiler',
 };
+
+/** Story mode keeps the exploration verbs. */
+const STORY_KEYS: Record<string, Action> = {
+  ...MISSION_KEYS,
+  KeyE: 'interact',
+  Enter: 'interact',
+  ControlLeft: 'crouch',
+  KeyC: 'crouch',
+  KeyF: 'block',
+  KeyJ: 'journal',
+  KeyM: 'map',
+  Tab: 'map',
+  KeyV: 'cameraReset',
+};
+
+const PROFILES: Record<ControlProfile, Record<string, Action>> = { missions: MISSION_KEYS, story: STORY_KEYS };
 
 export class Keyboard implements InputDevice {
   readonly kind = 'kbm' as const;
+  private keymap: Record<string, Action> = PROFILES.missions;
+  setProfile(profile: ControlProfile): void {
+    this.keymap = PROFILES[profile];
+  }
   private readonly down = new Set<string>();
   /** Keys pressed since the last poll: a tap shorter than a frame still counts for one frame. */
   private readonly tapped = new Set<string>();
@@ -64,11 +78,11 @@ export class Keyboard implements InputDevice {
     frame.moveX += x;
     frame.moveY += y;
     for (const code of this.down) {
-      const a = KEYMAP[code];
+      const a = this.keymap[code];
       if (a) frame.held.add(a);
     }
     for (const code of this.tapped) {
-      const a = KEYMAP[code];
+      const a = this.keymap[code];
       if (a) frame.held.add(a);
     }
     this.tapped.clear();

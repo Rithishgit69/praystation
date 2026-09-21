@@ -12,16 +12,18 @@ Tasks 1–2 without losing a heart, drops hearts in Tasks 3–4 and is pushed to
 
 | Task | Id | Villain | Vice | Subdued by (tradition) | Arena | Design | Health · speed · interval | Kit |
 |---|---|---|---|---|---|---|---|---|
-| 1 | `madasura` | Madasura, the Arrogant | pride | Ekadanta | Courtyard | `blade-warrior` | 260 · 3.4 m/s · 2.6 s | **Curved blade.** A straight lunge the length of the stones followed by two sweeps; a thrown blade that flies out, turns and returns to his hand (passes you twice); a charge. Enrages at 30 %. |
-| 2 | `krodhasura` | Krodhasura, the Wrathful | anger | Lambodara | Hall of Memories | `wrestler` | 440 · 3.3 m/s · 2.3 s | **Bare hands.** The *leap-slam*: a circle is drawn where he will land, he jumps the arc and the floor cracks in shock rings; charges; a three-palm flurry up close; floor slams. Never throws. Enrages at 35 %. |
-| 3 | `lobhasura` | Lobhasura, the Grasping | greed | Gajanana | Ancient Library, east hall | `buffalo` | 680 · 4.2 m/s · 2.0 s | **Horns.** Long charges; every horn strike tears **two** fissures of fire that run in straight lines; the *bellow* — a wall of air that shoves you back (damage only within 6 m); shock-ring stamps; summons hungry shades. Enrages at 45 %. |
-| 4 | `mohasura` | Mohasura, the Deluder | delusion | Mahodara | Moon Chamber | `three-faced` | 900 · 4.0 m/s · 1.8 s · 8-hit shield | **Six arms.** Floats at 9 m; fans of shards; two illusion copies (only the true one bleeds — shoot the copies to burst them); rings of shards bursting outward; a three-second spiral; teleports and follows up with a fan; a shield of wanting. Enrages at 45 %. |
+| 1 | `madasura` | Madasura, the Arrogant | pride | Ekadanta | Courtyard of the Arrogant (arena, 68 m) | `blade-warrior` | 260 · 3.4 m/s · 2.6 s | **Curved blade.** A straight lunge the length of the stones followed by two sweeps; a thrown blade that flies out, turns and returns to his hand (passes you twice); a charge. Enrages at 30 %. |
+| 2 | `krodhasura` | Krodhasura, the Wrathful | anger | Lambodara | Hall of the Wrathful (arena, 72 m) | `wrestler` | 440 · 3.3 m/s · 2.3 s | **Bare hands.** The *leap-slam*: a circle is drawn where he will land, he jumps the arc and the floor cracks in shock rings; charges; a three-palm flurry up close; floor slams. Never throws. Enrages at 35 %. |
+| 3 | `lobhasura` | Lobhasura, the Grasping | greed | Gajanana | Library of the Grasping (arena, 74 m) | `buffalo` | 680 · 4.2 m/s · 2.0 s | **Horns.** Long charges; every horn strike tears **two** fissures of fire that run in straight lines; the *bellow* — a wall of air that shoves you back (damage only within 6 m); shock-ring stamps; summons hungry shades. Enrages at 45 %. |
+| 4 | `mohasura` | Mohasura, the Deluder | delusion | Mahodara | Moon Chamber of the Deluder (arena, 82 m) | `three-faced` | 900 · 4.0 m/s · 1.8 s · 8-hit shield | **Six arms.** Floats at 9 m; fans of shards; two illusion copies (only the true one bleeds — shoot the copies to burst them); rings of shards bursting outward; a three-second spiral; teleports and follows up with a fan; a shield of wanting. Enrages at 45 %. |
 | 5 | `ahamkarasura` | Ahamkarasura, the Ego | ego | Dhumravarna | Mountain gateway (memory arena) | `fire-king` | 1350 · 4.4 m/s · 1.6 s · 10-hit shield | **Fire and claws.** A flame-breath cone that sweeps as he turns (slower than you); charges that leave a burning road; a fire orb lobbed onto marked ground; rings of embers; shades; a mirror that throws frontal shots back (shoot him from behind); slams. Enrages at 50 % and burns twice as hot. |
 
 Every projectile flies straight from where it is thrown toward where the player stood at the throw
 (Tasks 3–5 lead the aim by 30 % of the flight); every area effect is drawn on the floor before it hurts.
-The asuras walk (or, for Mohasura, float) with a character controller: stairs, ledges, around pillars
-and block stacks.
+Since 1.4 every fight takes place on its own wide, flat arena (`src/world/zones/Arenas.ts`): a clear
+floor 60–70 m across with the pillars, braziers, shelves and mirror stands at the rim, so there is
+always room to sidestep, and the dodge (Q) is a real roll with invulnerability. The asuras walk (or,
+for Mohasura, float) with a character controller.
 
 ## Looks — how each avatar follows its reference painting
 

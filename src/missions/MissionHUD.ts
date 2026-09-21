@@ -167,7 +167,7 @@ export class MissionHUD implements System {
       }
       this.ammoText.textContent = text;
       this.ammoEl.classList.toggle('empty', g.ammo === 0 && g.reloading === 0 && w.mode !== 'charge');
-      const switchHint = d === 'gamepad' ? ' · d-pad ◀ ▶ switch' : d === 'touch' ? '' : ' · 1–4 / wheel switch';
+      const switchHint = d === 'gamepad' ? ' · d-pad ◀ ▶ switch · Back controls' : d === 'touch' ? '' : ' · 1–4 / wheel switch · Q dodge · B controls';
       (this.root.querySelector('.mhud-ammo-hint') as HTMLElement).textContent = hint + switchHint;
       this.crosshair.classList.toggle('aim', g.aiming);
       // The ring opens with the spread and the chevrons close as the bow draws.

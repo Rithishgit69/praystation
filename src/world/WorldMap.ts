@@ -13,6 +13,7 @@ import { buildShrine } from './zones/Shrine';
 import { buildSanctum } from './zones/Sanctum';
 import { buildSideChamber } from './zones/SideChamber';
 import { buildMemoryTusk } from './zones/MemoryTusk';
+import { buildArenaCourtyard, buildArenaHall, buildArenaLibrary, buildArenaMoon } from './zones/Arenas';
 
 export interface ShrinePoint {
   id: string;
@@ -83,6 +84,11 @@ export class WorldMap {
       { id: 'library', title: 'Ancient Library', min: v(-165, -18, -134), max: v(-58, -3, -46), interior: true, visibleFrom: ['tunnels', 'shrine'], fog: { color: 0x0c0e12, density: 0.035 }, ambient: { color: 0x6a5a44, intensity: 2.2 }, priority: 2, build: buildLibrary },
       { id: 'shrine', title: 'Underground Shrine', min: v(-70, -28, -356), max: v(50, -16.5, -150), interior: true, visibleFrom: ['library', 'sanctum'], fog: { color: 0x0a0812, density: 0.03 }, ambient: { color: 0x584a68, intensity: 2.2 }, extra: [{ min: v(-52, -22, -312), max: v(-36, -16.6, -142) }, { min: v(-52, -22, -142), max: v(-36, -7, -84) }, { min: v(-44, -22, -312), max: v(-28, -16.6, -304) }, { min: v(-74, -12, -94), max: v(-42, -4, -82) }], priority: 1, build: buildShrine },
       { id: 'memory-tusk', title: 'Memory: The Broken Tusk', min: v(1950, -10, -60), max: v(2050, 60, 60), interior: true, visibleFrom: [], fog: { color: 0x5a3c18, density: 0.008 }, ambient: { color: 0xb08a50, intensity: 1.4 }, build: buildMemoryTusk },
+      // Battle arenas (mission mode): one wide open floor per task, far outside the terrain.
+      { id: 'arena-courtyard', title: 'Courtyard of the Arrogant', min: v(1930, -10, -470), max: v(2070, 60, -330), interior: false, visibleFrom: [], fog: { color: 0x0f2038, density: 0.011 }, ambient: { color: 0x3a5680, intensity: 0.9 }, build: buildArenaCourtyard },
+      { id: 'arena-hall', title: 'Hall of the Wrathful', min: v(1940, -10, -860), max: v(2060, 60, -740), interior: true, visibleFrom: [], fog: { color: 0x0b1424, density: 0.012 }, ambient: { color: 0x506a90, intensity: 2.2 }, build: buildArenaHall },
+      { id: 'arena-library', title: 'Library of the Grasping', min: v(1940, -10, -1260), max: v(2060, 60, -1140), interior: true, visibleFrom: [], fog: { color: 0x0c0e12, density: 0.012 }, ambient: { color: 0x6a5a44, intensity: 2.4 }, build: buildArenaLibrary },
+      { id: 'arena-moon', title: 'Moon Chamber of the Deluder', min: v(1930, -10, -1670), max: v(2070, 60, -1530), interior: true, visibleFrom: [], fog: { color: 0x0f2038, density: 0.010 }, ambient: { color: 0x506a90, intensity: 1.6 }, build: buildArenaMoon },
       { id: 'sanctum', title: 'Sealed Sanctum', min: v(-58, -34, -456), max: v(58, -10, -352), interior: true, visibleFrom: ['shrine'], fog: { color: 0x0b1020, density: 0.028 }, ambient: { color: 0x506a90, intensity: 2.0 }, build: buildSanctum },
     ];
   }

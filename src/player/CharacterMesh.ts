@@ -44,10 +44,20 @@ const mat = (color: number, roughness = 0.85, metalness = 0): THREE.MeshStandard
  * hair and outfit. Fully animated in code (walk/jog/sprint cycle, idle breathing, landing squash,
  * crouch, scarf and braid flutter). Origin is at the feet; +Z is forward for the rig.
  */
+/** Height of the dodge-roll pivot above the feet. */
+const ROLL_PIVOT_Y = 0.62;
+const TWO_PI = Math.PI * 2;
+const wrapAngle = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
+const smoothstep = (t: number): number => t * t * (3 - 2 * t);
+
 export class CharacterMesh {
   readonly root = new THREE.Group();
   readonly variant: HeroVariant;
+  /** Roll pivot at mid-body: the whole figure turns around it during a dodge. */
+  private readonly roll = new THREE.Group();
   private readonly hips = new THREE.Group();
+  /** The legs' parent: turned toward the direction of travel while the torso keeps facing the aim. */
+  private readonly legs = new THREE.Group();
   private readonly torso = new THREE.Group();
   private readonly head = new THREE.Group();
   private readonly lThigh = new THREE.Group();
@@ -62,8 +72,17 @@ export class CharacterMesh {
   private readonly scarfTails: THREE.Mesh[] = [];
   private readonly scarfTailBase: Float32Array[] = [];
   private phase = 0;
-  private blend = { walk: 0, jog: 0, sprint: 0, crouch: 0, air: 0, land: 0 };
+  private blend = { walk: 0, jog: 0, sprint: 0, crouch: 0, air: 0, land: 0, dodge: 0 };
   private breathe = 0;
+  private legYaw = 0;
+  private lean = 0;
+  private turnLean = 0;
+  private speedSmooth = 0;
+  private recoil = 0;
+  private flinchAmount = 0;
+  private readonly rollAxis = new THREE.Vector3(1, 0, 0);
+  /** Motion cues from the controller (all optional; zero when absent). */
+  motion: { dodge: number; dodgeAngle: number; moveAngle: number; yawRate: number } = { dodge: 0, dodgeAngle: 0, moveAngle: 0, yawRate: 0 };
   /** When true the arms hold a weapon in front of the chest. */
   holdWeapon = false;
   /** Aim state while a weapon is held: camera pitch to follow, which weapon, bow draw and ADS blend. */
@@ -106,9 +125,12 @@ export class CharacterMesh {
       return mesh;
     };
 
-    // Hips / pelvis.
-    this.hips.position.y = female ? 0.93 : 0.95;
-    this.root.add(this.hips);
+    // Hips / pelvis (under the roll pivot, which sits at mid-body).
+    this.roll.position.y = ROLL_PIVOT_Y;
+    this.root.add(this.roll);
+    this.hips.position.y = (female ? 0.93 : 0.95) - ROLL_PIVOT_Y;
+    this.roll.add(this.hips);
+    this.hips.add(this.legs);
     add(this.hips, new THREE.CapsuleGeometry(female ? 0.175 : 0.17, 0.1, 6, 12), trouserMat, 0, 0.02, 0).scale.set(1, 0.7, 0.85);
 
     // Legs (thigh pivot at hip, shin pivot at knee).
@@ -118,7 +140,7 @@ export class CharacterMesh {
     ];
     for (const [thigh, shin, x] of legs) {
       thigh.position.set(x, -0.02, 0);
-      this.hips.add(thigh);
+      this.legs.add(thigh);
       add(thigh, new THREE.CapsuleGeometry(female ? 0.08 : 0.085, 0.3, 6, 10), trouserMat, 0, -0.22, 0);
       shin.position.set(0, -0.45, 0);
       thigh.add(shin);
@@ -313,86 +335,137 @@ export class CharacterMesh {
   }
 
   /** Apply the locomotion state; called every rendered frame. */
+  /** A shot was fired: the arms and shoulders kick back for a moment. */
+  kick(amount = 1): void {
+    this.recoil = Math.min(1.5, this.recoil + amount);
+  }
+
+  /** The hero was hit: a short flinch. */
+  flinch(): void {
+    this.flinchAmount = 1;
+  }
+
   animate(dt: number, state: LocomotionState, horizontalSpeed: number, sprintSpeed: number, elapsed: number): void {
+    const mo = this.motion;
+    const dodging = mo.dodge > 0;
     const tgt = {
       walk: state === 'walk' ? 1 : 0,
       jog: state === 'jog' ? 1 : 0,
       sprint: state === 'sprint' ? 1 : 0,
       crouch: state === 'crouch' || state === 'crouch-move' ? 1 : 0,
-      air: state === 'air' ? 1 : 0,
+      air: state === 'air' && !dodging ? 1 : 0,
       land: state === 'land-hard' ? 1 : state === 'land-soft' ? 0.4 : 0,
+      dodge: dodging ? 1 : 0,
     };
     const b = this.blend;
-    for (const k of Object.keys(b) as Array<keyof typeof b>) b[k] = damp(b[k], tgt[k], k === 'land' ? 18 : 10, dt);
-    const moving = clamp(horizontalSpeed / 1.2, 0, 1);
+    for (const k of Object.keys(b) as Array<keyof typeof b>) b[k] = damp(b[k], tgt[k], k === 'land' ? 18 : k === 'dodge' ? 22 : 10, dt);
+    this.recoil = Math.max(0, this.recoil - dt * 11);
+    this.flinchAmount = Math.max(0, this.flinchAmount - dt * 4);
+    this.speedSmooth = damp(this.speedSmooth, horizontalSpeed, 6, dt);
+    // Lean forward with acceleration, back when braking; lean into turns.
+    const accel = (horizontalSpeed - this.speedSmooth) * 0.6;
+    this.lean = damp(this.lean, clamp(accel * 0.08, -0.12, 0.16), 8, dt);
+    this.turnLean = damp(this.turnLean, clamp(-mo.yawRate * 0.05, -0.14, 0.14) * clamp(horizontalSpeed / 3, 0, 1), 8, dt);
+
+    // Gait phase: driven by distance so steps never slide. Moving backwards runs the cycle in reverse;
+    // the legs turn (up to ~70°) toward the direction of travel while the torso keeps facing forward.
+    const moving = clamp(horizontalSpeed / 1.2, 0, 1) * (1 - b.dodge);
+    const backward = Math.abs(mo.moveAngle) > Math.PI * 0.6;
+    const legTarget = horizontalSpeed > 0.3 ? clamp(backward ? wrapAngle(mo.moveAngle + Math.PI) : mo.moveAngle, -1.2, 1.2) : 0;
+    this.legYaw = damp(this.legYaw, legTarget, 10, dt);
+    this.legs.rotation.y = this.legYaw;
     const stride = lerp(1.1, 1.9, clamp(horizontalSpeed / sprintSpeed, 0, 1));
-    if (horizontalSpeed > 0.05) this.phase += (horizontalSpeed / stride) * Math.PI * 2 * dt;
+    if (horizontalSpeed > 0.05 && !dodging) this.phase += (horizontalSpeed / stride) * TWO_PI * dt * (backward ? -1 : 1);
     else this.phase = damp(this.phase, Math.round(this.phase / Math.PI) * Math.PI, 8, dt);
     const p = this.phase;
     const s = Math.sin(p);
     const c = Math.cos(p);
-    const swing = lerp(0.42, 0.95, b.sprint) * moving * (1 - b.crouch * 0.5);
-    const legL = s * swing;
-    const legR = -s * swing;
-    this.lThigh.rotation.x = legL;
-    this.rThigh.rotation.x = legR;
-    // Knees bend when the leg swings back.
-    this.lShin.rotation.x = Math.max(0, -c * swing * 1.2) + 0.08 + b.crouch * 0.9 + b.air * 0.6;
-    this.rShin.rotation.x = Math.max(0, c * swing * 1.2) + 0.08 + b.crouch * 0.9 + b.air * 0.6;
-    const armSwing = swing * 0.7;
+    const swing = lerp(0.44, 0.98, b.sprint) * moving * (1 - b.crouch * 0.5);
+    // Thighs swing like pendulums; each knee flexes through its forward swing and lands straight.
+    const kneeL = Math.max(0, c) * swing * 1.35 + Math.max(0, -s) * swing * 0.25;
+    const kneeR = Math.max(0, -c) * swing * 1.35 + Math.max(0, s) * swing * 0.25;
+    const tuck = b.air * 0.55 + b.dodge * 1.1;
+    this.lThigh.rotation.x = s * swing - b.air * 0.35 - b.dodge * 1.2 + b.crouch * -0.6;
+    this.rThigh.rotation.x = -s * swing - b.air * 0.2 - b.dodge * 1.2 + b.crouch * -0.6;
+    this.lThigh.rotation.z = 0.02 + b.air * 0.06;
+    this.rThigh.rotation.z = -0.02 - b.air * 0.06;
+    this.lShin.rotation.x = kneeL + 0.08 + b.crouch * 0.9 + tuck + b.land * 0.5;
+    this.rShin.rotation.x = kneeR + 0.08 + b.crouch * 0.9 + tuck + b.land * 0.5;
+
+    const armSwing = swing * 0.75;
+    const recoilBack = this.recoil * 0.22;
     if (this.holdWeapon) {
       // Two-handed hold in front of the chest, pitched with the camera so the weapon points where the
-      // crosshair is; the bow is held out to the left and its string arm draws back.
+      // crosshair is; the bow is held out to the left and its string arm draws back. Shots kick the
+      // arms up and back; a hit throws them up for a moment.
       const a = this.aim;
       // Camera pitch is positive looking down; the arms lower with it (less negative x).
       const pitch = a ? a.pitch * 0.75 : 0;
-      const bobArm = Math.sin(p) * 0.04 * moving;
+      const bobArm = Math.sin(p) * 0.03 * moving - this.flinchAmount * 0.25;
       const bow = a?.weapon === 'dhanush';
       const draw = bow ? a.draw : 0;
       const ads = a?.aiming ?? 0;
       if (bow) {
-        this.rUpperArm.rotation.x = -1.35 + pitch + bobArm;
+        this.rUpperArm.rotation.x = -1.35 + pitch + bobArm - recoilBack * 0.5;
         this.rUpperArm.rotation.z = -0.15;
         this.rForearm.rotation.x = -0.25 - draw * 0.2;
         this.lUpperArm.rotation.x = -1.45 + pitch + bobArm;
         this.lUpperArm.rotation.z = 0.25 - draw * 0.3;
         this.lForearm.rotation.x = -0.7 - draw * 1.1;
       } else {
-        this.rUpperArm.rotation.x = -1.05 - ads * 0.08 + pitch + bobArm;
+        this.rUpperArm.rotation.x = -1.05 - ads * 0.08 + pitch + bobArm - recoilBack;
         this.rUpperArm.rotation.z = -0.35 + ads * 0.12;
-        this.rForearm.rotation.x = -0.75 + ads * 0.05;
-        this.lUpperArm.rotation.x = -1.25 - ads * 0.06 + pitch + bobArm;
+        this.rForearm.rotation.x = -0.75 + ads * 0.05 - recoilBack * 0.6;
+        this.lUpperArm.rotation.x = -1.25 - ads * 0.06 + pitch + bobArm - recoilBack * 0.8;
         this.lUpperArm.rotation.z = 0.55 - ads * 0.15;
-        this.lForearm.rotation.x = -1.15;
+        this.lForearm.rotation.x = -1.15 - recoilBack * 0.3;
       }
     } else {
-      this.lUpperArm.rotation.x = -s * armSwing + b.air * -0.6 + b.sprint * 0.2;
-      this.rUpperArm.rotation.x = s * armSwing + b.air * -0.6 + b.sprint * 0.2;
-      this.lUpperArm.rotation.z = 0.12 + b.sprint * 0.1;
-      this.rUpperArm.rotation.z = -0.12 - b.sprint * 0.1;
-      this.lForearm.rotation.x = -0.35 - Math.max(0, -s) * armSwing * 0.8 - b.sprint * 0.7;
-      this.rForearm.rotation.x = -0.35 - Math.max(0, s) * armSwing * 0.8 - b.sprint * 0.7;
+      // Walking arms swing opposite the legs with the elbow bending on the forward swing; at a sprint
+      // the elbows stay bent and pump. In the air the arms lift; in a roll they cross over the chest.
+      const pump = b.sprint;
+      this.lUpperArm.rotation.x = -s * armSwing * (1 - pump * 0.35) + b.air * -0.7 + pump * 0.15 - b.dodge * 0.9 - this.flinchAmount * 0.6;
+      this.rUpperArm.rotation.x = s * armSwing * (1 - pump * 0.35) + b.air * -0.7 + pump * 0.15 - b.dodge * 0.9 - this.flinchAmount * 0.6;
+      this.lUpperArm.rotation.z = 0.14 + pump * 0.12 + b.air * 0.5 - b.dodge * 0.3;
+      this.rUpperArm.rotation.z = -0.14 - pump * 0.12 - b.air * 0.5 + b.dodge * 0.3;
+      this.lForearm.rotation.x = -0.3 - Math.max(0, -s) * armSwing * 0.9 - pump * 1.3 - b.dodge * 1.4 - b.air * 0.3;
+      this.rForearm.rotation.x = -0.3 - Math.max(0, s) * armSwing * 0.9 - pump * 1.3 - b.dodge * 1.4 - b.air * 0.3;
     }
 
-    // Body: bob, lean, crouch, land squash, idle breathing.
+    // Body: double-time bob, hip sway and roll, crouch, land squash, idle breathing and weight shift.
     this.breathe = Math.sin(elapsed * 1.4) * 0.5 + 0.5;
-    const bob = Math.abs(Math.sin(p)) * lerp(0.02, 0.05, b.sprint) * moving;
+    const idle = 1 - moving;
+    const bob = Math.abs(s) * lerp(0.02, 0.055, b.sprint) * moving;
     const crouchDrop = b.crouch * 0.42;
     const landDrop = b.land * 0.22;
-    const hipsBase = this.variant === 'female' ? 0.93 : 0.95;
-    this.hips.position.y = hipsBase + bob - crouchDrop - landDrop;
-    this.hips.rotation.y = -s * 0.08 * moving;
+    const dodgeDrop = b.dodge * 0.3;
+    const hipsBase = (this.variant === 'female' ? 0.93 : 0.95) - ROLL_PIVOT_Y;
+    this.hips.position.y = hipsBase + bob - crouchDrop - landDrop - dodgeDrop;
+    this.hips.position.x = s * 0.018 * moving + Math.sin(elapsed * 0.6) * 0.012 * idle;
+    this.hips.rotation.y = -s * 0.09 * moving;
+    this.hips.rotation.z = -s * 0.05 * moving + Math.sin(elapsed * 0.6) * 0.02 * idle;
     this.hips.rotation.x = 0;
-    this.torso.rotation.x = lerp(0.03, 0.26, b.sprint) * moving + b.crouch * 0.55 + b.land * 0.35 + (1 - moving) * this.breathe * 0.015;
-    this.torso.rotation.y = s * 0.1 * moving;
-    this.torso.scale.y = 1 + (1 - moving) * this.breathe * 0.012;
-    this.head.rotation.x = -this.torso.rotation.x * 0.6;
-    this.head.rotation.y = -this.torso.rotation.y * 0.8;
+    this.torso.rotation.x = lerp(0.03, 0.24, b.sprint) * moving + this.lean + b.crouch * 0.55 + b.land * 0.35 + b.dodge * 0.7 + idle * this.breathe * 0.015 - this.flinchAmount * 0.18 - this.recoil * 0.03;
+    this.torso.rotation.y = s * 0.11 * moving;
+    this.torso.rotation.z = -this.hips.rotation.z * 0.8 + this.turnLean;
+    this.torso.scale.y = 1 + idle * this.breathe * 0.012;
+    // The head stays level and looks where the body goes; idle, it glances around slowly.
+    this.head.rotation.x = -this.torso.rotation.x * 0.6 - this.flinchAmount * 0.25;
+    this.head.rotation.y = -this.torso.rotation.y * 0.8 + this.legYaw * 0.15 + Math.sin(elapsed * 0.35) * 0.08 * idle;
+    this.head.rotation.z = -this.torso.rotation.z * 0.6;
     if (this.holdWeapon && this.aim) {
       // Lean the torso and head with the aim so the whole figure tracks the crosshair.
       this.torso.rotation.x += this.aim.pitch * 0.12;
       this.head.rotation.x += this.aim.pitch * 0.35;
     }
+
+    // Dodge roll: one full turn around the mid-body pivot, in the direction of the dodge.
+    if (dodging) {
+      const sx = Math.sin(mo.dodgeAngle);
+      const sz = -Math.cos(mo.dodgeAngle);
+      this.rollAxis.set(sz, 0, -sx).normalize();
+      this.roll.quaternion.setFromAxisAngle(this.rollAxis, TWO_PI * smoothstep(clamp(mo.dodge, 0, 1)));
+    } else this.roll.quaternion.identity();
 
     // Scarf / dupatta tails: sway with stride and lift back with speed.
     const lift = clamp(horizontalSpeed / sprintSpeed, 0, 1);

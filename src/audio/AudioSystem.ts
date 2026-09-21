@@ -29,6 +29,10 @@ const ZONE_ROOM: Record<ZoneId, RoomType> = {
   shrine: 'cavern',
   sanctum: 'cavern',
   'memory-tusk': 'memory',
+  'arena-courtyard': 'courtyard',
+  'arena-hall': 'hall',
+  'arena-library': 'hall',
+  'arena-moon': 'courtyard',
 };
 
 const ROOM_AMBIENCE: Record<RoomType, AmbienceLayer[]> = {

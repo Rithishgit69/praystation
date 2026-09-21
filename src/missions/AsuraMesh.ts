@@ -277,11 +277,19 @@ export class AsuraMesh implements AsuraAvatar {
     c.legSwing = damp(c.legSwing, rig.hover ? 0 : t.legSwing, 6, dt);
     if (speed > 0.05) this.phase += (speed / 2.2) * Math.PI * 2 * dt;
     const s = Math.sin(this.phase) * 0.5 * c.legSwing;
+    const walking = this.pose === 'walk' || this.pose === 'charge';
     rig.lLeg.rotation.x = rig.hover ? 0.15 + Math.sin(elapsed * 1.3) * 0.05 : s;
     rig.rLeg.rotation.x = rig.hover ? 0.05 + Math.cos(elapsed * 1.1) * 0.05 : -s;
-    rig.rArm.rotation.x = c.rArmX + (this.pose === 'walk' ? -s * 0.25 : 0);
+    // A heavy walk: the hips yaw with the stride, the torso twists against them, the arms swing with a
+    // lag and the head stays level; standing still, the weight shifts slowly from foot to foot.
+    const weightShift = Math.sin(elapsed * 0.7) * (1 - c.legSwing);
+    rig.hips.rotation.y = -s * 0.22;
+    rig.hips.rotation.z = -s * 0.08 + weightShift * 0.03;
+    rig.lLeg.rotation.z = 0.04 + weightShift * 0.03;
+    rig.rLeg.rotation.z = -0.04 + weightShift * 0.03;
+    rig.rArm.rotation.x = c.rArmX + (walking ? -s * 0.35 : 0);
     rig.rArm.rotation.z = c.rArmZ;
-    rig.lArm.rotation.x = c.lArmX + (this.pose === 'walk' ? s * 0.35 : 0);
+    rig.lArm.rotation.x = c.lArmX + (walking ? s * 0.45 : 0);
     rig.lArm.rotation.z = c.lArmZ;
     rig.extraArms.forEach(([l, r], i) => {
       const lag = 0.35 + i * 0.3;
@@ -291,9 +299,11 @@ export class AsuraMesh implements AsuraAvatar {
       l.rotation.z = -(0.35 + i * 0.35) + c.lArmZ * 0.3;
       r.rotation.z = 0.35 + i * 0.35 + c.rArmZ * 0.3;
     });
-    rig.torso.rotation.x = c.torsoX;
-    rig.torso.rotation.y = c.torsoY;
-    rig.head.rotation.x = c.headX;
+    rig.torso.rotation.x = c.torsoX + Math.abs(Math.sin(this.phase)) * 0.05 * c.legSwing;
+    rig.torso.rotation.y = c.torsoY + s * 0.28;
+    rig.torso.rotation.z = weightShift * -0.02 + s * 0.05;
+    rig.head.rotation.x = c.headX - Math.abs(Math.sin(this.phase)) * 0.04 * c.legSwing;
+    rig.head.rotation.y = -s * 0.2;
     const hover = rig.hover ? this.hoverHeight + Math.sin(elapsed * 1.4) * 0.18 : 0;
     rig.hips.position.y = 1.55 + c.hipsY + hover + Math.abs(Math.sin(this.phase)) * 0.06 * c.legSwing;
     // Cloth ripples.

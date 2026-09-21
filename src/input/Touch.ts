@@ -20,6 +20,7 @@ export class Touch implements InputDevice {
   readonly reloadButton: HTMLButtonElement;
   readonly jumpButton: HTMLButtonElement;
   readonly weaponButton: HTMLButtonElement;
+  readonly helpButton: HTMLButtonElement;
   private fireHeld = false;
   private jumpHeld = false;
   private weaponPressed = false;
@@ -33,6 +34,7 @@ export class Touch implements InputDevice {
   private actionHeld = false;
   private secondaryHeld = false;
   private pausePressed = false;
+  private helpPressed = false;
   private activity = false;
   private lastTapTime = 0;
   private tapCount = 0;
@@ -143,6 +145,14 @@ export class Touch implements InputDevice {
       e.preventDefault();
       this.weaponPressed = true;
     });
+    this.helpButton = document.createElement('button');
+    this.helpButton.className = 'touch-btn touch-help';
+    this.helpButton.setAttribute('aria-label', 'Controls');
+    this.helpButton.textContent = '?';
+    this.helpButton.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      this.helpPressed = true;
+    });
     const hold = (btn: HTMLButtonElement, set: (v: boolean) => void): void => {
       btn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
@@ -166,7 +176,7 @@ export class Touch implements InputDevice {
       e.preventDefault();
       this.pausePressed = true;
     });
-    this.root.append(this.stickBase, this.actionButton, this.secondaryButton, this.pauseButton, this.fireButton, this.reloadButton, this.jumpButton, this.weaponButton);
+    this.root.append(this.stickBase, this.actionButton, this.secondaryButton, this.pauseButton, this.helpButton, this.fireButton, this.reloadButton, this.jumpButton, this.weaponButton);
     uiRoot.appendChild(this.root);
     canvas.addEventListener('pointerdown', this.onStart);
     window.addEventListener('pointermove', this.onMove);
@@ -217,6 +227,10 @@ export class Touch implements InputDevice {
     if (this.pausePressed) {
       frame.held.add('pause');
       this.pausePressed = false;
+    }
+    if (this.helpPressed) {
+      frame.held.add('help');
+      this.helpPressed = false;
     }
     if (this.devMenuRequested) {
       frame.held.add('devmenu');

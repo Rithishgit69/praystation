@@ -96,7 +96,7 @@ export class InputManager {
 
   private allowed(a: Action): boolean {
     if (!this.gameplayBlocked) return true;
-    return a === 'pause' || a === 'devmenu' || a === 'profiler' || a === 'journal' || a === 'map' || a === 'interact';
+    return a === 'pause' || a === 'devmenu' || a === 'profiler' || a === 'journal' || a === 'map' || a === 'interact' || a === 'help';
   }
 
   held(a: Action): boolean {
