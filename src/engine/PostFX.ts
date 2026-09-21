@@ -62,7 +62,6 @@ export class PostFX {
     this.renderPass = new RenderPass(scene, camera);
     this.gtao = new FilteredGTAOPass(scene, camera, 512, 512);
     this.gtao.output = GTAOPass.OUTPUT.Default;
-    this.gtao.updateGtaoMaterial({ radius: 0.6, distanceExponent: 1.2, thickness: 1.0, scale: 1.0, samples: 12, distanceFallOff: 1.0, screenSpaceRadius: false });
     this.gtao.blendIntensity = 0.85;
     this.bloom = new UnrealBloomPass(new THREE.Vector2(512, 512), 0.55, 0.65, 0.82);
     this.lut = new LUTPass({ lut: this.grade.texture, intensity: 1 });
@@ -83,6 +82,11 @@ export class PostFX {
     this.gtao.enabled = q.gtao;
     this.bloom.enabled = q.bloom;
     this.smaa.enabled = q.smaa;
+    // Ambient occlusion is the costliest pass on integrated GPUs: fewer AO samples and a lighter
+    // denoise on 'high'; the full quality is kept for 'ultra'.
+    const ultra = q.tier === 'ultra';
+    this.gtao.updateGtaoMaterial({ radius: 0.6, distanceExponent: 1.2, thickness: 1.0, scale: 1.0, samples: ultra ? 12 : 8, distanceFallOff: 1.0, screenSpaceRadius: false });
+    this.gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 4, radiusExponent: 1, rings: 2, samples: ultra ? 16 : 8 });
   }
 
   setCamera(camera: THREE.Camera): void {

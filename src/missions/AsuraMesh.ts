@@ -56,7 +56,7 @@ export class AsuraMesh implements AsuraAvatar {
   private readonly cur = { rArmX: 0, rArmZ: 0, lArmX: 0, lArmZ: 0, torsoX: 0, torsoY: 0, hipsY: 0, headX: 0, legSwing: 0 };
   private flash = 0;
 
-  constructor(lib: MaterialLibrary, color: number, scale = 1, weapon: WeaponKind = 'mace') {
+  constructor(lib: MaterialLibrary, color: number, scale = 1, weapon: WeaponKind = 'mace', withLight = true) {
     this.color = color;
     this.bodyMat = new THREE.MeshStandardMaterial({ color: 0x3a2e3c, roughness: 0.7, metalness: 0.15, emissive: color, emissiveIntensity: 0.22 });
     this.coreMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: color, emissiveIntensity: 2.2, roughness: 0.4 });
@@ -85,9 +85,11 @@ export class AsuraMesh implements AsuraAvatar {
     const chest = add(this.torso, new THREE.CapsuleGeometry(0.62, 0.7, 8, 18), this.bodyMat, 0, 0.7, 0);
     chest.scale.set(1.35, 1, 0.85);
     add(this.torso, new THREE.SphereGeometry(0.22, 14, 10), this.coreMat, 0, 0.75, 0.5); // the vice burning in the chest
-    const coreLight = new THREE.PointLight(color, 140, 26, 2);
-    coreLight.position.set(0, 0.9, 0.6);
-    this.torso.add(coreLight);
+    if (withLight) {
+      const coreLight = new THREE.PointLight(color, 140, 26, 2);
+      coreLight.position.set(0, 0.9, 0.6);
+      this.torso.add(coreLight);
+    }
     for (const s of [-1, 1]) add(this.torso, new THREE.SphereGeometry(0.34, 12, 10), this.bodyMat, s * 0.78, 1.32, 0);
     this.head.position.set(0, 1.6, 0.05);
     this.torso.add(this.head);
@@ -175,11 +177,7 @@ export class AsuraMesh implements AsuraAvatar {
         }
         break;
       case 'flame':
-        for (const hand of [this.lHand, this.rHand]) {
-          add(hand, new THREE.SphereGeometry(0.3, 12, 10), this.coreMat, 0, 0, 0.05);
-          const l = new THREE.PointLight(this.color, 18, 5, 2);
-          hand.add(l);
-        }
+        for (const hand of [this.lHand, this.rHand]) add(hand, new THREE.SphereGeometry(0.3, 12, 10), this.coreMat, 0, 0, 0.05);
         add(this.head, new THREE.TorusGeometry(0.34, 0.06, 6, 16), gold, 0, 0.64, 0).rotation.x = Math.PI / 2 - 0.2; // a crown too large for him
         for (let i = 0; i < 5; i++) add(this.head, new THREE.ConeGeometry(0.06, 0.28, 5), gold, Math.sin((i / 5) * Math.PI * 2) * 0.32, 0.78, Math.cos((i / 5) * Math.PI * 2) * 0.32);
         break;

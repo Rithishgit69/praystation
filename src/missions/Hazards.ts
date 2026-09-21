@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import type { Engine } from '@/engine/Engine';
+import { ParticleSystem } from '@/engine/Particles';
 import type { MaterialLibrary } from '@/world/Materials';
 
 export interface HazardContext {
@@ -14,6 +15,8 @@ interface Hazard {
   update(dt: number, elapsed: number, ctx: HazardContext): boolean;
   dispose(): void;
 }
+
+const UP = new THREE.Vector3(0, 1, 0);
 
 const near = (a: THREE.Vector3, feet: THREE.Vector3, radius: number, height = 2.4): boolean => Math.hypot(a.x - feet.x, a.z - feet.z) < radius && feet.y > a.y - 1.2 && feet.y < a.y + height;
 
@@ -30,7 +33,8 @@ export class Hazards {
   private readonly rootGeo = new THREE.ConeGeometry(0.22, 1.6, 5);
   private readonly arrowGeo: THREE.BufferGeometry;
   private readonly mats = new Map<string, THREE.Material>();
-  private readonly flamePool: THREE.Sprite[] = [];
+  /** All fire in the arena (breath, burning ground, bursts) is one particle draw call. */
+  private readonly flames: ParticleSystem;
   private readonly tmp = new THREE.Vector3();
 
   constructor(
@@ -39,6 +43,13 @@ export class Hazards {
   ) {
     this.arrowGeo = new THREE.CylinderGeometry(0.014, 0.014, 0.95, 5);
     this.arrowGeo.rotateX(Math.PI / 2);
+    this.flames = new ParticleSystem(lib.glowTexture, 0xff8a3c, 512);
+    this.flames.setViewportHeight(window.innerHeight);
+    engine.scene.add(this.flames.points);
+  }
+
+  private borrowLight(color: number, intensity: number, distance: number): THREE.PointLight | null {
+    return this.engine.lights.acquire(color, intensity, distance, 2);
   }
 
   private mat<T extends THREE.Material>(key: string, make: () => T): T {
@@ -119,37 +130,33 @@ export class Hazards {
     disc.position.copy(center);
     disc.position.y += 0.05;
     disc.scale.setScalar(radius);
-    const light = new THREE.PointLight(0xff7a2a, 12, radius * 4, 2);
-    light.position.copy(center);
-    light.position.y += 0.8;
-    const flames: THREE.Sprite[] = [];
-    for (let i = 0; i < 5; i++) {
-      const s = new THREE.Sprite(this.spriteMat(0xff8a3c).clone());
-      s.position.set(center.x + (Math.random() - 0.5) * radius * 1.2, center.y + 0.3, center.z + (Math.random() - 0.5) * radius * 1.2);
-      s.scale.set(0.9, 1.4, 1);
-      flames.push(s);
-    }
-    this.engine.scene.add(disc, light, ...flames);
+    const light = this.borrowLight(0xff7a2a, 12, radius * 4);
+    if (light) light.position.set(center.x, center.y + 0.8, center.z);
+    this.engine.scene.add(disc);
     let t = 0;
+    let emitAcc = 0;
     const m = disc.material as THREE.MeshBasicMaterial;
     this.add({
       update: (dt, elapsed, ctx) => {
         t += dt;
         const k = t < seconds - 0.8 ? 1 : Math.max(0, (seconds - t) / 0.8);
         m.opacity = (0.28 + Math.sin(elapsed * 12) * 0.08) * k;
-        light.intensity = (10 + Math.sin(elapsed * 17) * 3) * k;
-        flames.forEach((f, i) => {
-          f.position.y = center.y + 0.3 + ((elapsed * 1.3 + i * 0.37) % 1) * 0.9;
-          f.scale.set(0.7 + Math.sin(elapsed * 9 + i) * 0.2, 1.2 + Math.sin(elapsed * 7 + i) * 0.3, 1);
-          (f.material as THREE.SpriteMaterial).opacity = 0.7 * k;
-        });
+        if (light) light.intensity = (10 + Math.sin(elapsed * 17) * 3) * k;
+        // Licking flames: a few particles a second, rising and fading.
+        emitAcc += dt * 9 * k;
+        while (emitAcc >= 1) {
+          emitAcc -= 1;
+          const a = Math.random() * Math.PI * 2;
+          const r = Math.random() * radius * 0.8;
+          this.flames.emit({ x: center.x + Math.cos(a) * r, y: center.y + 0.15, z: center.z + Math.sin(a) * r, vx: (Math.random() - 0.5) * 0.4, vy: 0.9 + Math.random() * 0.8, vz: (Math.random() - 0.5) * 0.4, life: 0.7 + Math.random() * 0.4, size: 0.5 + Math.random() * 0.4, grow: 0.9, alpha: 0.75, drag: 1.2, lift: 0.6 });
+        }
         if (near(center, ctx.feet, radius, 1.6)) ctx.hurt(damage, 'burn');
         return t < seconds;
       },
       dispose: () => {
-        this.engine.scene.remove(disc, light, ...flames);
+        this.engine.scene.remove(disc);
+        this.engine.lights.release(light);
         m.dispose();
-        for (const f of flames) f.material.dispose();
       },
     });
   }
@@ -166,7 +173,7 @@ export class Hazards {
     glow.scale.set(0.8, 0.8, 1);
     this.engine.scene.add(coin, glow);
     let t = 0;
-    let burst: { light: THREE.PointLight; sprite: THREE.Sprite; t: number } | null = null;
+    let burst: { light: THREE.PointLight | null; sprite: THREE.Sprite; t: number } | null = null;
     this.add({
       update: (dt, elapsed, ctx) => {
         t += dt;
@@ -175,12 +182,11 @@ export class Hazards {
           const blink = Math.sin(elapsed * (6 + (t / fuse) * 26)) > 0 ? 1.2 : 0.4;
           glow.scale.set(blink * 0.7, blink * 0.7, 1);
           if (t >= fuse) {
-            const light = new THREE.PointLight(color, 60, radius * 5, 2);
-            light.position.copy(center);
-            light.position.y += 0.8;
+            const light = this.borrowLight(color, 60, radius * 5);
+            if (light) light.position.set(center.x, center.y + 0.8, center.z);
             const sprite = new THREE.Sprite(this.spriteMat(color).clone());
-            sprite.position.copy(light.position);
-            this.engine.scene.add(light, sprite);
+            sprite.position.set(center.x, center.y + 0.8, center.z);
+            this.engine.scene.add(sprite);
             burst = { light, sprite, t: 0 };
             this.engine.scene.remove(coin, glow);
             if (near(center, ctx.feet, radius, 2.4)) ctx.hurt(damage, 'mine');
@@ -191,14 +197,15 @@ export class Hazards {
         const k = Math.max(0, 1 - burst.t / 0.45);
         burst.sprite.scale.set(radius * 2.4 * (1.2 - k), radius * 2.4 * (1.2 - k), 1);
         (burst.sprite.material as THREE.SpriteMaterial).opacity = 0.8 * k;
-        burst.light.intensity = 60 * k;
+        if (burst.light) burst.light.intensity = 60 * k;
         return burst.t < 0.45;
       },
       dispose: () => {
         this.engine.scene.remove(coin, glow);
         coin.geometry.dispose();
         if (burst) {
-          this.engine.scene.remove(burst.light, burst.sprite);
+          this.engine.scene.remove(burst.sprite);
+          this.engine.lights.release(burst.light);
           burst.sprite.material.dispose();
         }
       },
@@ -212,8 +219,9 @@ export class Hazards {
     let traveled = 0;
     let nextBurst = 0;
     let hit = false;
-    const bursts: Array<{ cones: THREE.Mesh[]; light: THREE.PointLight; t: number }> = [];
+    const bursts: Array<{ cones: THREE.Mesh[]; t: number }> = [];
     const coneMat = this.mat('fissure-cone', () => new THREE.MeshStandardMaterial({ color: 0x3a2418, emissive: color, emissiveIntensity: 1.4, roughness: 0.9 }));
+    const light = this.borrowLight(color, 26, 6);
     this.add({
       update: (dt, _e, ctx) => {
         if (traveled < length) {
@@ -232,11 +240,11 @@ export class Hazards {
               c.scale.setScalar(0.01);
               cones.push(c);
             }
-            const light = new THREE.PointLight(color, 26, 5, 2);
-            light.position.copy(front).setY(front.y + 0.6);
-            this.engine.scene.add(light, ...cones);
-            bursts.push({ cones, light, t: 0 });
+            this.engine.scene.add(...cones);
+            bursts.push({ cones, t: 0 });
+            for (let i = 0; i < 6; i++) this.flames.emit({ x: front.x, y: front.y + 0.2, z: front.z, vx: (Math.random() - 0.5) * 2.2, vy: 2 + Math.random() * 2.5, vz: (Math.random() - 0.5) * 2.2, life: 0.5 + Math.random() * 0.3, size: 0.35, grow: 1.2, alpha: 0.9, drag: 1.5, lift: -6 });
           }
+          if (light) light.position.set(front.x, front.y + 0.6, front.z);
           if (!hit && near(front, ctx.feet, 1.3, 2.6)) {
             hit = true;
             ctx.hurt(damage, 'fissure');
@@ -247,16 +255,17 @@ export class Hazards {
           b.t += dt;
           const k = b.t < 0.15 ? b.t / 0.15 : Math.max(0, 1 - (b.t - 0.15) / 0.9);
           for (const c of b.cones) c.scale.set(k * 1.2, k * (1.4 + Math.random() * 0.2), k * 1.2);
-          b.light.intensity = 26 * k;
           if (b.t > 1.1) {
-            this.engine.scene.remove(b.light, ...b.cones);
+            this.engine.scene.remove(...b.cones);
             bursts.splice(i, 1);
           }
         }
+        if (light && traveled >= length) light.intensity = Math.max(0, light.intensity - dt * 40);
         return traveled < length || bursts.length > 0;
       },
       dispose: () => {
-        for (const b of bursts) this.engine.scene.remove(b.light, ...b.cones);
+        for (const b of bursts) this.engine.scene.remove(...b.cones);
+        this.engine.lights.release(light);
       },
     });
   }
@@ -367,30 +376,30 @@ export class Hazards {
    * anyone inside the cone within `range`.
    */
   flameCone(mouth: () => THREE.Vector3, dir: () => THREE.Vector3, halfAngle: number, range: number, seconds: number, damage: number): void {
-    const light = new THREE.PointLight(0xff7a2a, 0, 12, 2);
-    this.engine.scene.add(light);
-    const live: Array<{ s: THREE.Sprite; v: THREE.Vector3; t: number }> = [];
+    const light = this.borrowLight(0xff7a2a, 0, 12);
     let t = 0;
+    let emitAcc = 0;
     this.add({
       update: (dt, _e, ctx) => {
         t += dt;
         const m = mouth();
         const d = dir();
         const active = t < seconds;
-        light.position.copy(m).addScaledVector(d, 2.5);
-        light.intensity = active ? 40 + Math.random() * 15 : Math.max(0, light.intensity - dt * 120);
+        if (light) {
+          light.position.copy(m).addScaledVector(d, 2.5);
+          light.intensity = active ? 40 + Math.random() * 15 : Math.max(0, light.intensity - dt * 120);
+        }
         if (active) {
-          for (let i = 0; i < 4; i++) {
-            const s = this.flamePool.pop() ?? new THREE.Sprite(this.spriteMat(0xff8a3c).clone());
-            s.position.copy(m);
+          // ~150 particles a second along the cone: a thick tongue of fire, one draw call.
+          emitAcc += dt * 150;
+          const speed = range / 0.55;
+          while (emitAcc >= 1) {
+            emitAcc -= 1;
             const spread = halfAngle * 0.9;
-            const v = d.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), (Math.random() - 0.5) * 2 * spread);
+            const v = this.tmp.copy(d).applyAxisAngle(UP, (Math.random() - 0.5) * 2 * spread);
             v.y += (Math.random() - 0.3) * 0.35;
-            v.normalize().multiplyScalar(range / 0.55 * (0.7 + Math.random() * 0.4));
-            s.scale.set(0.5, 0.5, 1);
-            (s.material as THREE.SpriteMaterial).opacity = 0.85;
-            this.engine.scene.add(s);
-            live.push({ s, v, t: 0 });
+            v.normalize().multiplyScalar(speed * (0.7 + Math.random() * 0.4));
+            this.flames.emit({ x: m.x, y: m.y, z: m.z, vx: v.x, vy: v.y, vz: v.z, life: 0.55, size: 0.45, grow: 3.2, alpha: 0.85, drag: 1.6, lift: 2.2 });
           }
           this.tmp.copy(ctx.feet).setY(ctx.feet.y + 1).sub(m);
           const dist = this.tmp.length();
@@ -399,34 +408,14 @@ export class Hazards {
             if (ang < halfAngle) ctx.hurt(damage, 'flame');
           }
         }
-        for (let i = live.length - 1; i >= 0; i--) {
-          const f = live[i] as (typeof live)[number];
-          f.t += dt;
-          f.s.position.addScaledVector(f.v, dt);
-          f.v.y += dt * 2.2;
-          f.v.multiplyScalar(1 - dt * 1.6);
-          const k = f.t / 0.55;
-          f.s.scale.setScalar(0.5 + k * 1.8);
-          (f.s.material as THREE.SpriteMaterial).opacity = Math.max(0, 0.85 * (1 - k));
-          if (k >= 1) {
-            this.engine.scene.remove(f.s);
-            this.flamePool.push(f.s);
-            live.splice(i, 1);
-          }
-        }
-        return active || live.length > 0;
+        return active || t < seconds + 0.6;
       },
-      dispose: () => {
-        this.engine.scene.remove(light);
-        for (const f of live) {
-          this.engine.scene.remove(f.s);
-          this.flamePool.push(f.s);
-        }
-      },
+      dispose: () => this.engine.lights.release(light),
     });
   }
 
   update(dt: number, elapsed: number, ctx: HazardContext): void {
+    this.flames.update(dt);
     for (let i = this.list.length - 1; i >= 0; i--) {
       const h = this.list[i] as Hazard;
       if (!h.update(dt, elapsed, ctx)) {
@@ -439,16 +428,18 @@ export class Hazards {
   clear(): void {
     for (const h of this.list) h.dispose();
     this.list.length = 0;
+    this.flames.clear();
   }
 
   dispose(): void {
     this.clear();
+    this.engine.scene.remove(this.flames.points);
+    this.flames.dispose();
     this.ringGeo.dispose();
     this.discGeo.dispose();
     this.coneGeo.dispose();
     this.rootGeo.dispose();
     this.arrowGeo.dispose();
     for (const m of this.mats.values()) m.dispose();
-    for (const s of this.flamePool) s.material.dispose();
   }
 }

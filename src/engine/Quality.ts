@@ -19,7 +19,7 @@ export interface QualitySettings {
 const PRESETS: Record<QualityTier, Omit<QualitySettings, 'tier'>> = {
   low: { shadowMapSize: 1024, maxShadowLights: 1, gtao: false, bloom: true, smaa: false, anisotropy: 2, foliageDensity: 0.45, particleScale: 0.4, streamRadiusCells: 2, frameBudgetMs: 33.3, lodBias: 0.6 },
   medium: { shadowMapSize: 2048, maxShadowLights: 2, gtao: false, bloom: true, smaa: true, anisotropy: 4, foliageDensity: 0.7, particleScale: 0.7, streamRadiusCells: 3, frameBudgetMs: 33.3, lodBias: 0.8 },
-  high: { shadowMapSize: 4096, maxShadowLights: 4, gtao: true, bloom: true, smaa: true, anisotropy: 8, foliageDensity: 1, particleScale: 1, streamRadiusCells: 3, frameBudgetMs: 16.7, lodBias: 1 },
+  high: { shadowMapSize: 2048, maxShadowLights: 4, gtao: true, bloom: true, smaa: true, anisotropy: 8, foliageDensity: 1, particleScale: 1, streamRadiusCells: 3, frameBudgetMs: 16.7, lodBias: 1 },
   ultra: { shadowMapSize: 4096, maxShadowLights: 4, gtao: true, bloom: true, smaa: true, anisotropy: 16, foliageDensity: 1.2, particleScale: 1.2, streamRadiusCells: 4, frameBudgetMs: 16.7, lodBias: 1.3 },
 };
 

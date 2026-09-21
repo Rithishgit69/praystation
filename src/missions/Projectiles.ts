@@ -41,6 +41,7 @@ export interface Projectile {
   hitThisPass: boolean;
   readonly mesh: THREE.Object3D;
   chain: THREE.Mesh | null;
+  light: THREE.PointLight | null;
   dead: boolean;
 }
 
@@ -159,10 +160,6 @@ export class Projectiles {
         break;
       }
     }
-    if (spec.light) {
-      const l = new THREE.PointLight(c, 8, 6, 2);
-      group.add(l);
-    }
     return group;
   }
 
@@ -175,7 +172,9 @@ export class Projectiles {
       chain = new THREE.Mesh(this.geo('chain', () => new THREE.CylinderGeometry(0.035, 0.035, 1, 6, 1)), this.mat(spec.kind === 'vine' ? 'chain-vine' : 'chain-metal', () => new THREE.MeshStandardMaterial(spec.kind === 'vine' ? { color: 0x3d7a34, roughness: 0.85, emissive: 0x1e4a1a, emissiveIntensity: 0.5 } : { color: 0x9a9ea6, metalness: 0.9, roughness: 0.35 })));
       this.engine.scene.add(chain);
     }
-    const p: Projectile = { spec, position: mesh.position, velocity: spec.dir.clone().normalize().multiplyScalar(spec.speed), life: spec.life ?? 5, phase: 'out', traveled: 0, hitThisPass: false, mesh, chain, dead: false };
+    const light = spec.light ? this.engine.lights.acquire(spec.color, 8, 6, 2) : null;
+    if (light) light.position.copy(spec.from);
+    const p: Projectile = { spec, position: mesh.position, velocity: spec.dir.clone().normalize().multiplyScalar(spec.speed), life: spec.life ?? 5, phase: 'out', traveled: 0, hitThisPass: false, mesh, chain, light, dead: false };
     this.orient(p);
     this.list.push(p);
     return p;
@@ -265,6 +264,7 @@ export class Projectiles {
         continue;
       }
       // Visuals.
+      if (p.light) p.light.position.copy(p.position);
       if (s.kind === 'blade') p.mesh.rotation.y += dt * 28;
       else if (s.kind === 'coin') {
         p.mesh.rotation.x += dt * 9;
@@ -287,6 +287,8 @@ export class Projectiles {
     const p = this.list[i] as Projectile;
     this.engine.scene.remove(p.mesh);
     if (p.chain) this.engine.scene.remove(p.chain);
+    this.engine.lights.release(p.light);
+    p.light = null;
     this.list.splice(i, 1);
   }
 

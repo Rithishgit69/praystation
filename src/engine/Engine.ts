@@ -6,6 +6,7 @@ import { Profiler } from './Profiler';
 import { Quality, detectTier, isMobileDevice } from './Quality';
 import type { QualityTier, SceneModule, System } from './types';
 import { InputManager } from '@/input/InputManager';
+import { LightPool } from './LightPool';
 import { DevMenu } from '@/ui/DevMenu';
 import type { SceneEntry } from '@/scenes/registry';
 
@@ -35,6 +36,8 @@ export class Engine {
   readonly physics: Physics;
   readonly events = new EventBus<EngineEvents>();
   readonly devMenu: DevMenu;
+  /** Pooled point lights for transient effects (see LightPool). */
+  readonly lights: LightPool;
   readonly mobile = isMobileDevice();
   readonly fixedStep = FIXED_STEP;
   timeScale = 1;
@@ -62,7 +65,7 @@ export class Engine {
   private constructor(canvas: HTMLCanvasElement, uiRoot: HTMLElement) {
     this.canvas = canvas;
     this.uiRoot = uiRoot;
-    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false, stencil: false, depth: true, powerPreference: 'high-performance', preserveDrawingBuffer: true });
+    this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, alpha: false, stencil: false, depth: true, powerPreference: 'high-performance', preserveDrawingBuffer: false });
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
@@ -73,6 +76,7 @@ export class Engine {
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(58, 16 / 9, 0.08, 420);
     this.scene.add(this.camera);
+    this.lights = new LightPool(this.scene, 12);
     this.physics = new Physics();
     this.profiler = new Profiler(uiRoot);
     this.quality = new Quality(detectTier(), (s) => {
@@ -98,7 +102,9 @@ export class Engine {
     const width = window.innerWidth;
     const height = window.innerHeight;
     const tier = this.quality.settings.tier;
-    const dprCap = tier === 'low' ? 1.25 : tier === 'medium' ? 1.5 : 2;
+    // Retina laptops render 4× the pixels at DPR 2; 1.5 keeps text crisp while the post chain (AO,
+    // bloom, SMAA at full resolution) stays inside the frame budget on integrated GPUs.
+    const dprCap = tier === 'low' ? 1.25 : tier === 'medium' ? 1.5 : tier === 'high' ? 1.5 : 1.75;
     this.basePixelRatio = Math.min(window.devicePixelRatio || 1, dprCap);
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
@@ -137,6 +143,7 @@ export class Engine {
     }
     this.scene.clear();
     this.scene.add(this.camera);
+    this.lights.reattach();
   }
 
   start(): void {

@@ -51,7 +51,7 @@ class Illusion implements Shootable {
   readonly mesh: AsuraMesh;
   private readonly pos = new THREE.Vector3();
   constructor(lib: MaterialLibrary, def: MissionDef, at: THREE.Vector3) {
-    this.mesh = new AsuraMesh(lib, def.boss.color, def.boss.scale, def.boss.weapon);
+    this.mesh = new AsuraMesh(lib, def.boss.color, def.boss.scale, def.boss.weapon, false);
     this.mesh.coreMat.emissiveIntensity = 0.4;
     this.mesh.root.position.copy(at);
   }
