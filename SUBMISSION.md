@@ -3,7 +3,7 @@
 | Field | |
 |---|---|
 | **Game title** | PrayStation — The Temple of Eka-Danta |
-| **Live game link** | https://rithishgit69.github.io/praystation/ (static web build, public, no login; also deployable to Vercel from this repository) |
+| **Live game link** | https://rithishgit69.github.io/praystation/ (GitHub Pages, deployed on every push) · mirror: https://praystation-kappa.vercel.app/ (Vercel). Static web build, public, no login. |
 | **Source code** | https://github.com/Rithishgit69/praystation |
 | **How to play** | See below (also shown in the game on the *How to play* card and under *Controls* in the pause menu) |
 | **Demo video** | `demo/demo.mp4` in the repository (1280×720, ~2½ min: title → traveller → how to play → the five villains → ending and leaderboard), recorded from the build by `tools/demo-video.mjs` |

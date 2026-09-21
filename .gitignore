@@ -18,3 +18,4 @@ ios/App/build/
 android/keystore.properties
 android/keystore/
 *.jks
+.vercel

@@ -11,8 +11,9 @@ when you fall, and a leaderboard of finished runs.
 Sacred figures are portrayed with respect and are never fought.*
 
 Repository: **github.com/Rithishgit69/praystation** · live at **https://rithishgit69.github.io/praystation/**
-(GitHub Pages, deployed from `main` by `.github/workflows/deploy-pages.yml`; `vercel.json` for Vercel) · CI runs
-typecheck, lint, unit tests and the build on every push.
+(GitHub Pages, deployed from `main` by `.github/workflows/deploy-pages.yml`) and mirrored at
+**https://praystation-kappa.vercel.app/** (Vercel, `npx vercel --prod`) · CI runs typecheck, lint, unit
+tests and the build on every push.
 
 ## How to play (in one breath)
 
