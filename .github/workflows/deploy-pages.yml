@@ -34,7 +34,8 @@ jobs:
         env:
           SUPABASE_URL: ${{ vars.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ vars.SUPABASE_ANON_KEY }}
-        run: node -e "require('fs').writeFileSync('public/leaderboard.json', JSON.stringify({ provider: 'supabase', url: process.env.SUPABASE_URL, anonKey: process.env.SUPABASE_ANON_KEY }, null, 2))"
+        run: |
+          node -e "require('fs').writeFileSync('public/leaderboard.json', JSON.stringify({ provider: 'supabase', url: process.env.SUPABASE_URL, anonKey: process.env.SUPABASE_ANON_KEY }, null, 2))"
       - run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
