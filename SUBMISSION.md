@@ -1,8 +1,8 @@
-# Submission — The Temple of Eka-Danta
+# Submission — PrayStation
 
 | Field | |
 |---|---|
-| **Game title** | The Temple of Eka-Danta |
+| **Game title** | PrayStation — The Temple of Eka-Danta |
 | **Live game link** | https://rithishgit69.github.io/praystation/ (static web build, public, no login; also deployable to Vercel from this repository) |
 | **Source code** | https://github.com/Rithishgit69/praystation |
 | **How to play** | See below (also shown in the game on the *How to play* card and under *Controls* in the pause menu) |

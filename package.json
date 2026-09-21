@@ -1,7 +1,7 @@
 {
   "name": "temple-of-eka-danta",
   "version": "1.2.0",
-  "description": "The Temple of Eka-Danta — a mission-based mythological adventure in the browser: eight tasks against the asuras of the Vinayaka Purana. TypeScript, Three.js, Rapier.",
+  "description": "PrayStation — The Temple of Eka-Danta: a mission-based mythological adventure in the browser: eight tasks against the asuras of the Vinayaka Purana. TypeScript, Three.js, Rapier.",
   "keywords": [
     "game",
     "three.js",

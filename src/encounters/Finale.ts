@@ -41,7 +41,7 @@ export class FinaleCinematic implements PresentEncounter {
         <div class="boot-glyph">ॐ</div>
         <h1 class="boot-title">Preserved</h1>
         <p class="ending-text">The temple was built to remember. Now it can.</p>
-        <p class="ending-credits">The Temple of Eka-Danta<br/>An original work inspired by traditional stories of Ganesha.<br/>All events, characters and the temple in this game are fictional; sacred figures are portrayed with respect.<br/>Traditions differ across regions and sources; the journal's Inspirations notes describe the versions this game drew on.</p>
+        <p class="ending-credits">PrayStation — The Temple of Eka-Danta<br/>An original work inspired by traditional stories of Ganesha.<br/>All events, characters and the temple in this game are fictional; sacred figures are portrayed with respect.<br/>Traditions differ across regions and sources; the journal's Inspirations notes describe the versions this game drew on.</p>
         <button class="boot-continue">Return to title</button>
       </div>`;
     this.ctx.engine.uiRoot.appendChild(this.ending);

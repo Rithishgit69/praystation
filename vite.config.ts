@@ -32,8 +32,8 @@ export default defineConfig({
       injectRegister: 'auto',
       includeAssets: ['icons/*.png'],
       manifest: {
-        name: 'The Temple of Eka-Danta',
-        short_name: 'Eka-Danta',
+        name: 'PrayStation — The Temple of Eka-Danta',
+        short_name: 'PrayStation',
         description:
           'A cinematic mythological adventure. Explore an abandoned moonlit temple whose murals awaken playable memories inspired by traditional stories of Ganesha.',
         theme_color: '#0B1220',
