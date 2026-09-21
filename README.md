@@ -1,4 +1,5 @@
-# The Temple of Eka-Danta
+# Praystation
+        - The Temple of Eka-Danta
 
 A cinematic mythological adventure: an abandoned moonlit temple, a traveller with the temple's gun of
 remembered light, and eight tasks against the eight asuras of the Vinayaka (Mudgala) Purana tradition —
