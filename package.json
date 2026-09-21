@@ -1,6 +1,6 @@
 {
   "name": "temple-of-eka-danta",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "PrayStation — The Temple of Eka-Danta: a mission-based mythological adventure in the browser: eight tasks against the asuras of the Vinayaka Purana. TypeScript, Three.js, Rapier.",
   "keywords": [
     "game",
@@ -31,7 +31,7 @@
     "mobile:android": "npm run build && npx cap sync android && cd android && ./gradlew bundleRelease && cd .. && mkdir -p dist && cp android/app/build/outputs/bundle/release/app-release.aab dist/",
     "mobile:ios": "npm run build && npx cap sync ios && npx cap open ios",
     "screenshots": "node tools/screenshots.mjs",
-    "play:missions": "node tools/play-missions.mjs test-results/missions http://127.0.0.1:5173 8",
+    "play:missions": "node tools/play-missions.mjs test-results/missions http://127.0.0.1:5173 5",
     "voice": "node tools/gen-voice.mjs",
     "deploy": "vercel --prod"
   },

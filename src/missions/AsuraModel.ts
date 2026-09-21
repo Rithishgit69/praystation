@@ -18,6 +18,7 @@ const CLIP_NAMES: Record<AsuraPose, string[]> = {
   mirror: ['block', 'guard', 'shield', 'idle'],
   charge: ['charge', 'run', 'dash', 'walk'],
   'slam-wind': ['windup', 'wind', 'raise', 'attack'],
+  leap: ['jump', 'leap', 'charge', 'attack'],
   slam: ['slam', 'smash', 'attack'],
   stagger: ['stagger', 'hit', 'hurt', 'flinch'],
   shield: ['shield', 'guard', 'block', 'idle'],
@@ -61,6 +62,7 @@ export class GltfAsura implements AsuraAvatar {
   private readonly handL: THREE.Object3D | null;
   private readonly head: THREE.Object3D | null;
   private readonly fitScale: number;
+  readonly hoverHeight = 0;
 
   /** Resolves null when no model exists for this asura (the procedural stand-in is used). */
   static load(def: MissionDef, timeoutMs = 8000): Promise<GltfAsura | null> {
@@ -205,13 +207,13 @@ export class GltfAsura implements AsuraAvatar {
       else if (this.current) this.current.timeScale = 1;
       this.mixer.update(dt);
     }
-    this.flash = Math.max(0, this.flash - dt * 6);
+    this.flash = Math.max(0, this.flash - dt * 10);
     for (let i = 0; i < this.materials.length; i++) {
       const m = this.materials[i] as THREE.MeshStandardMaterial;
       const base = this.originalEmissive[i] as THREE.Color;
       m.emissive.copy(base);
       if (this.enraged) m.emissive.lerp(new THREE.Color(0xff3030), 0.35);
-      if (this.flash > 0) m.emissive.lerp(new THREE.Color(0xffffff), this.flash * 0.8);
+      if (this.flash > 0) m.emissive.lerp(new THREE.Color(0xffffff), this.flash * 0.35);
     }
     this.shieldMesh.material.opacity = 0.14 + Math.sin(elapsed * 6) * 0.05;
     this.shieldMesh.rotation.y = elapsed * 0.6;

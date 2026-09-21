@@ -3,6 +3,19 @@
 Status legend: **DONE** · **PARTIAL** · **BLOCKED** · **TODO**. Nothing is marked DONE that has not been
 run and seen working (headless Playwright playthroughs + screenshots; see `tools/`).
 
+## Five-villain campaign, weapons and leaderboard (2026-09-22)
+
+| Item | Status | Notes |
+|---|---|---|
+| Fewer, harder fights | DONE | Five tasks (was eight); health 260 → 1350, attack interval 2.6 → 1.6 s, enrage 30 % → 50 %, shields on Tasks 4–5. The perfect-aim bot (`tools/play-missions.mjs`) loses no heart in Tasks 1–2, two hearts in Task 3, one in Task 4 and fails Task 5 once before finishing it from the same stage. |
+| Villains from the reference paintings | DONE | Five rig-based designs in `src/missions/AsuraDesigns.ts` (blade warrior, wrestler, buffalo, three-faced, fire king) checked against the references with `tools/villain-gallery.mjs`; `.glb` drop-in still works. |
+| A different attacking style per villain | DONE | Blade combo + returning blade · leap-slam + flurry + charge · horn fissures + bellow + shades · shard fans + illusions + spirals + teleports (floating) · flame breath + fire charge + orb + mirror. `tools/attack-gallery.mjs` screenshots every attack. |
+| Hero attack mode — realistic design, shooting and aiming | DONE | Weapons held and pointed along the view, ADS over-the-shoulder camera, spread bloom + recoil, muzzle-origin projectiles toward the crosshair, per-weapon reticles/tracers/impacts. |
+| 2–3 more weapons the hero can switch between | DONE | Astra (rifle), Dhanush (charge bow), Chakra (returning disc), Vajra (burst); granted one per task; 1–4 / wheel / X–Z / D-pad / touch button. |
+| No lag | DONE | Pooled effect lights (no mid-fight shader compiles), one-draw-call particles, DPR cap, lighter AO/shadows on high; probe at DPR 2 reports max frame 20 ms and a stable program count through a full fight. |
+| Player data stored, leaderboard visible | DONE | Runs recorded in local storage and shown on the title screen, pause menu and ending card (`src/systems/Leaderboard.ts`, `src/ui/LeaderboardCard.ts`); optional shared board via `public/leaderboard.json` (Supabase; `docs/LEADERBOARD.md`). |
+| Contest rules | DONE | Live link (GitHub Pages), source, how-to-play, demo video tool, team/tools sheet (`SUBMISSION.md`); licensed voices (Kokoro); no passwords/payments/analytics; leaderboard entries only from completed runs. |
+
 ## Combat & review update (2026-09-14)
 
 | Item | Status | Notes |
@@ -22,7 +35,7 @@ run and seen working (headless Playwright playthroughs + screenshots; see `tools
 | Mouse look without pointer lock | DONE | Camera follows the pointer over the view immediately; a click captures the pointer; HUD hint when the browser refuses the lock (embedded webviews). |
 | Run control | DONE | Hold Shift (stamina) or toggle mode (pause menu); LB/L3 on gamepad; stick past the rim on touch. |
 | Instructions before play | DONE | "How to play" card: objective, hearts / villain bar / magazine legend, all controls per device; also in the pause menu. |
-| Humanised narration voice | DONE | Pre-rendered neural voice lines (Neerja en-IN default, Ava en-US optional) via `tools/gen-voice.mjs` (free `edge-tts`); Web Speech removed. |
+| Humanised narration voice | DONE | Pre-rendered neural voice lines via `tools/gen-voice.mjs`; Web Speech removed. Since 1.3.0 rendered with the Apache-licensed Kokoro-82M (Heart default, Emma optional) so every clip is redistributable. |
 | Om chant under play | DONE | Synthesised chant loop at −10 dB (−18 dB under narration), music/chant volume slider. |
 | Vercel deployment | DONE | `vercel.json`, `.vercelignore`, relative asset paths, service-worker runtime cache for voice clips. |
 | Android / iOS | PARKED | Projects untouched and still buildable; the web build is the delivery target for now. |

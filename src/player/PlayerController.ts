@@ -72,6 +72,10 @@ export class PlayerController implements System, CameraFollowTarget {
   movementLocked = false;
   /** Multiplier for movement speed (memory sequences, injuries). */
   speedScale = 1;
+  /** Extra multiplier while aiming down the Astra. */
+  aimSlow = 1;
+  /** When true (a weapon is out) the hero faces where the camera looks, strafing like a shooter. */
+  faceViewYaw = false;
   events: PlayerEvents = {};
   readonly body: RAPIER.RigidBody;
   readonly collider: RAPIER.Collider;
@@ -131,6 +135,9 @@ export class PlayerController implements System, CameraFollowTarget {
   }
   get movingForward(): boolean {
     return this.moveInputForward > 0.3 && this.moveInputMagnitude > 0.3;
+  }
+  get holdingWeapon(): boolean {
+    return this.faceViewYaw;
   }
   get capsuleHeight(): number {
     return this.crouching ? this.tuning.height * 0.72 : this.tuning.height;
@@ -216,7 +223,7 @@ export class PlayerController implements System, CameraFollowTarget {
       else if (sprinting) targetSpeed = t.sprintSpeed;
       else if (mag < 0.55) targetSpeed = t.walkSpeed;
       else targetSpeed = t.jogSpeed;
-      targetSpeed *= this.speedScale * (this.surface === 'water' ? 0.72 : 1);
+      targetSpeed *= this.speedScale * this.aimSlow * (this.surface === 'water' ? 0.72 : 1);
       // Analog: scale walk/jog by stick deflection so partial pushes creep.
       if (!sprinting && !this.crouching && mag < 0.55) targetSpeed *= clamp(mag / 0.55, 0.35, 1);
     }
@@ -301,9 +308,10 @@ export class PlayerController implements System, CameraFollowTarget {
     }
     this.lastVerticalSpeed = this.velocity.y;
 
-    // Facing.
+    // Facing: the movement direction, or the view direction while a weapon is out.
     const hs = this.horizontalSpeed;
-    if (hs > 0.2 && mag > 0.02) {
+    if (this.faceViewYaw && !this.movementLocked) this.facingYaw = dampAngle(this.facingYaw, this.getViewYaw(), 16, step);
+    else if (hs > 0.2 && mag > 0.02) {
       const targetYaw = Math.atan2(-this.velocity.x, -this.velocity.z);
       this.facingYaw = dampAngle(this.facingYaw, targetYaw, 12, step);
     }

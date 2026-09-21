@@ -32,9 +32,20 @@ All geometry, textures, murals and glyphs are generated in code (`src/world/prop
 
 `src/missions/MissionDirector.ts` is the state machine: `travel → narration → arming → battle →
 victory | failed → next task`. It shows the villain card (`Narration.ts`, typewriter paced to the
-pre-rendered voice clip), hands over the Astra (`Gun.ts`: hitscan from the crosshair with spread, light
-aim assist, magazine and reload), tracks hearts and health, saves progress, and on defeat opens the
-choice menu (`TaskMenu.ts`). Per-task stats feed the rank card at the end.
+pre-rendered voice clip), grants the task's weapon with a banner and a spoken instruction, tracks hearts
+and health, saves progress, and on defeat opens the choice menu (`TaskMenu.ts`). Per-task stats
+(time, shots, hits, hearts lost, retries) feed the rank card at the end and the leaderboard entry.
+
+## 4b. The weapons
+
+`src/missions/WeaponData.ts` is the data (four weapons: damage, rate, magazine, spread from the hip and
+while aiming, bloom, recoil, projectile flight); `src/missions/Gun.ts` is the behaviour. The rifle is
+hitscan from the crosshair; the bow is a charged projectile with gravity compensated at the draw; the
+disc flies out and returns, cutting on both passes; the burst fires six pellets with distance falloff and
+staggers the villain. Spread blooms per shot and settles, the camera kicks (`CameraRig.kick`), aiming
+blends the camera over the shoulder (`CameraRig.aim`), and the weapon mesh is oriented along the view
+every frame so projectiles leave the muzzle toward the crosshair. Weapons unlock by task and the wheel,
+`1–4`, `X`/`Z`, the D-pad or the touch button switch them.
 
 ## 5. A villain
 
@@ -43,8 +54,13 @@ choice menu (`TaskMenu.ts`). Per-task stats feed the rank card at the end.
 as it is wounded. Attacks are built from two toolkits — `Projectiles.ts` (straight-line flight, world
 collision, sphere test against the player; nothing homes) and `Hazards.ts` (telegraph circles, shock
 rings, burning ground, coin mines, fissures, root traps, arrow rain, the petal ring, the flame cone).
-Each asura's kit, stats and narration live in `src/missions/MissionData.ts`; the procedural avatar with
-its weapon is `AsuraMesh.ts`, and a modelled `.glb` can replace it through `AsuraModel.ts`.
+Each asura's kit, stats and narration live in `src/missions/MissionData.ts`. The avatar is a rig
+(`AsuraMesh.ts`: hips, torso, head, arms, legs, optional extra arms, scarves, hover) dressed by one of
+five design functions in `AsuraDesigns.ts`, each written from a reference painting (blade warrior,
+wrestler, buffalo, three-faced, fire king); poses and idle motion are procedural. A modelled `.glb` can
+replace any of them through `AsuraModel.ts`. Two attacks are specific to the new villains: the
+wrestler's `leap-slam` (a parabola onto a telegraphed circle) and the buffalo's `bellow` (a knockback
+wall through the character controller's external push).
 
 ## 6. Sound and voice
 
@@ -56,13 +72,18 @@ Kokoro model) played back by `src/audio/Voice.ts`.
 ## 7. State and saving
 
 `src/state/store.ts` (Zustand) holds flags, quest, settings and the player's profile;
-`src/systems/SaveSystem.ts` snapshots it to `localStorage` every 30 s and on task boundaries. Nothing
-leaves the device.
+`src/systems/SaveSystem.ts` snapshots it to `localStorage` every 30 s and on task boundaries.
+`src/systems/Leaderboard.ts` keeps the finished runs (name, rank, time, accuracy, hearts lost, one
+score number) in `localStorage` and, only when `public/leaderboard.json` names a Supabase project,
+posts each finished run once to its REST API and fetches the top 25; `src/ui/LeaderboardCard.ts` shows
+both. Nothing else leaves the device.
 
 ## 8. Tests
 
 `npm test` — unit tests (maths, store, data integrity, colour grading, terrain, voice manifest).
 `npm run test:e2e` — Playwright: boots the world with zero console errors, real mouse look/fire, the
 traveller and how-to-play cards, a full task with victory and defeat paths.
-`tools/play-missions.mjs` plays all eight tasks with real input; `tools/attack-gallery.mjs` screenshots
-every attack.
+`tools/play-missions.mjs` plays all five tasks with real input (and the failure path);
+`tools/attack-gallery.mjs` screenshots every attack; `tools/villain-gallery.mjs` renders the five
+portraits; `tools/weapon-check.mjs` fires each weapon at a held villain; `tools/demo-video.mjs` records
+the demo video.

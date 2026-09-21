@@ -34,11 +34,15 @@ export const DEFAULT_NARRATOR: NarratorKey = 'heart';
 /** Lines spoken by the narrator outside the villain cards. */
 export const SYSTEM_LINES: Record<string, string> = {
   'astra-granted': 'The Astra is in your hands. Aim with the crosshair, and fire. Begin.',
+  'weapon-astra': 'The temple grants you the Astra, the rifle of remembered light. Hold to fire. Aim, and the spread tightens.',
+  'weapon-dhanush': 'A second gift. The Dhanush, the bow of light. Hold to draw, release to loose. A full draw pierces, and strikes the core hardest.',
+  'weapon-chakra': 'A third gift. The Chakra, the returning disc. It cuts on the way out and on the way back, then flies home to your hand.',
+  'weapon-vajra': 'A fourth gift. The Vajra, the thunder burst. Devastating up close, nothing at range. Four charges, then it recharges.',
   'heart-lost': 'You have fallen. A heart is lost. Rise, and return to the fight.',
   'last-heart': 'One heart remains. Keep moving, and do not let the asura reach you.',
   'task-failed': 'Your hearts are spent, and the asura holds the arena. Choose your path.',
   'task-complete': 'It is done. The asura is broken, and the temple breathes again.',
-  'all-broken': 'All eight are broken. Envy, pride, delusion, greed, anger, desire, attachment and ego. None of them holds the temple now.',
+  'all-broken': 'All five are broken. Pride, anger, greed, delusion and ego. None of them holds the temple now.',
 };
 
 export const missionLineId = (missionId: string, index: number): string => `${missionId}-${index}`;

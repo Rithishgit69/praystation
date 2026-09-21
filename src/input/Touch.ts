@@ -19,8 +19,10 @@ export class Touch implements InputDevice {
   readonly fireButton: HTMLButtonElement;
   readonly reloadButton: HTMLButtonElement;
   readonly jumpButton: HTMLButtonElement;
+  readonly weaponButton: HTMLButtonElement;
   private fireHeld = false;
   private jumpHeld = false;
+  private weaponPressed = false;
   private reloadPressed = false;
   private stickId: number | null = null;
   private stickOrigin = { x: 0, y: 0 };
@@ -132,6 +134,15 @@ export class Touch implements InputDevice {
     this.jumpButton.className = 'touch-btn touch-jump';
     this.jumpButton.setAttribute('aria-label', 'Jump');
     this.jumpButton.textContent = '▲';
+    this.weaponButton = document.createElement('button');
+    this.weaponButton.className = 'touch-btn touch-weapon';
+    this.weaponButton.setAttribute('aria-label', 'Next weapon');
+    this.weaponButton.textContent = '⟳';
+    this.weaponButton.hidden = true;
+    this.weaponButton.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      this.weaponPressed = true;
+    });
     const hold = (btn: HTMLButtonElement, set: (v: boolean) => void): void => {
       btn.addEventListener('pointerdown', (e) => {
         e.preventDefault();
@@ -155,7 +166,7 @@ export class Touch implements InputDevice {
       e.preventDefault();
       this.pausePressed = true;
     });
-    this.root.append(this.stickBase, this.actionButton, this.secondaryButton, this.pauseButton, this.fireButton, this.reloadButton, this.jumpButton);
+    this.root.append(this.stickBase, this.actionButton, this.secondaryButton, this.pauseButton, this.fireButton, this.reloadButton, this.jumpButton, this.weaponButton);
     uiRoot.appendChild(this.root);
     canvas.addEventListener('pointerdown', this.onStart);
     window.addEventListener('pointermove', this.onMove);
@@ -173,6 +184,11 @@ export class Touch implements InputDevice {
   setWeaponButtons(v: boolean): void {
     this.fireButton.hidden = !v;
     this.reloadButton.hidden = !v;
+    this.weaponButton.hidden = !v;
+  }
+  /** Label the weapon button with the current weapon's initial. */
+  setWeaponLabel(label: string): void {
+    this.weaponButton.textContent = label;
   }
   setActionLabel(label: string | null): void {
     this.actionButton.textContent = label ?? '';
@@ -193,6 +209,10 @@ export class Touch implements InputDevice {
     if (this.reloadPressed) {
       frame.held.add('reload');
       this.reloadPressed = false;
+    }
+    if (this.weaponPressed) {
+      frame.held.add('weaponNext');
+      this.weaponPressed = false;
     }
     if (this.pausePressed) {
       frame.held.add('pause');

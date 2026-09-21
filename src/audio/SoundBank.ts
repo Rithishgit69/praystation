@@ -49,7 +49,11 @@ export type SoundId =
   | 'heart-lost'
   | 'task-complete'
   | 'task-begin'
-  | 'om-chant-loop';
+  | 'om-chant-loop'
+  | 'bow-release'
+  | 'chakra-throw'
+  | 'vajra-burst'
+  | 'weapon-granted';
 
 /** All game audio is synthesised here at startup; no audio files ship with the game. */
 export class SoundBank {
@@ -97,6 +101,10 @@ export class SoundBank {
     this.buffers.set('task-complete', this.tone([392, 523.25, 659.25, 783.99], 2.6, 0.5));
     this.buffers.set('task-begin', this.tone([130.81, 196], 2.2, 0.6));
     this.buffers.set('om-chant-loop', this.omChant(14));
+    this.buffers.set('bow-release', this.bowRelease());
+    this.buffers.set('chakra-throw', this.chakraThrow());
+    this.buffers.set('vajra-burst', this.vajraBurst());
+    this.buffers.set('weapon-granted', this.tone([261.63, 392, 523.25, 659.25], 2.0, 0.5));
   }
 
   /** 16-bit PCM WAV blob URL for Howler. */
@@ -477,6 +485,58 @@ export class SoundBank {
   }
 
   /** The Astra: a bright crack with a ringing tail — a weapon of light rather than powder. */
+  /** Bowstring: a plucked string with a bright transient and the whip of the release. */
+  private bowRelease(): Float32Array {
+    const n = Math.floor(0.5 * SAMPLE_RATE);
+    const out = new Float32Array(n);
+    const src = this.noise(n);
+    let lp = 0;
+    for (let i = 0; i < n; i++) {
+      const t = i / SAMPLE_RATE;
+      lp += ((src[i] as number) - lp) * 0.2;
+      const pluck = (Math.sin(2 * Math.PI * 196 * t) * 0.8 + Math.sin(2 * Math.PI * 392 * t) * 0.4 + Math.sin(2 * Math.PI * 588 * t) * 0.2) * Math.exp(-t * 18);
+      const whip = lp * Math.exp(-t * 26) * (t < 0.02 ? t / 0.02 : 1) * 0.9;
+      const snap = (src[i] as number) * Math.exp(-t * 200) * 0.6;
+      out[i] = pluck + whip + snap;
+    }
+    return normalize(out, 0.85);
+  }
+
+  /** The disc leaves the hand: a whoosh with a metallic ring that keeps spinning. */
+  private chakraThrow(): Float32Array {
+    const n = Math.floor(0.7 * SAMPLE_RATE);
+    const out = new Float32Array(n);
+    const src = this.noise(n);
+    let bp = 0;
+    for (let i = 0; i < n; i++) {
+      const t = i / SAMPLE_RATE;
+      const f = 700 + t * 1800;
+      bp += ((src[i] as number) - bp) * Math.min(0.9, f / SAMPLE_RATE * 4);
+      const whoosh = bp * Math.sin(Math.PI * Math.min(1, t / 0.3)) * 0.7;
+      const ring = (Math.sin(2 * Math.PI * 1320 * t) + Math.sin(2 * Math.PI * 1980 * t) * 0.6) * Math.exp(-t * 6) * 0.35 * (1 + 0.3 * Math.sin(2 * Math.PI * 28 * t));
+      out[i] = whoosh + ring;
+    }
+    return normalize(out, 0.8);
+  }
+
+  /** Thunder burst: a heavy crack, a low thump and a crackling tail. */
+  private vajraBurst(): Float32Array {
+    const n = Math.floor(0.7 * SAMPLE_RATE);
+    const out = new Float32Array(n);
+    const src = this.noise(n);
+    let lp = 0;
+    for (let i = 0; i < n; i++) {
+      const t = i / SAMPLE_RATE;
+      lp += ((src[i] as number) - lp) * 0.25;
+      const crack = (src[i] as number) * Math.exp(-t * 60) * 1.4;
+      const body = lp * Math.exp(-t * 9) * 0.9;
+      const thump = Math.sin(2 * Math.PI * 62 * t) * Math.exp(-t * 14) * 1.1;
+      const crackle = (src[(i * 7) % n] as number) * Math.exp(-t * 5) * 0.25 * (Math.random() < 0.08 ? 1 : 0);
+      out[i] = crack + body + thump + crackle;
+    }
+    return normalize(out, 0.98);
+  }
+
   private shot(): Float32Array {
     const n = Math.floor(0.45 * SAMPLE_RATE);
     const out = new Float32Array(n);

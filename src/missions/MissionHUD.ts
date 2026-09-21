@@ -1,6 +1,7 @@
 import type { Engine } from '@/engine/Engine';
 import type { System } from '@/engine/types';
 import type { Gun } from './Gun';
+import { WEAPONS, type WeaponDef } from './WeaponData';
 import { gameStore } from '@/state/store';
 
 const HEART = '<svg viewBox="0 0 24 24"><path d="M12 21s-7.5-4.6-9.6-9.1C1 8.5 3 5 6.6 5c2 0 3.4 1.1 5.4 3 2-1.9 3.4-3 5.4-3C21 5 23 8.5 21.6 11.9 19.5 16.4 12 21 12 21z"/></svg>';
@@ -24,6 +25,10 @@ export class MissionHUD implements System {
   private readonly banner: HTMLElement;
   private readonly vignette: HTMLElement;
   private readonly lockHint: HTMLElement;
+  private readonly weaponName: HTMLElement;
+  private readonly weaponStrip: HTMLElement;
+  private readonly hitMark: HTMLElement;
+  private hitTimer = 0;
   private bannerTimer = 0;
   private vignetteTimer = 0;
   private lowHealthPulse = 0;
@@ -38,8 +43,8 @@ export class MissionHUD implements System {
     this.root.innerHTML = `
       <div class="mhud-lives"><div class="mhud-name"></div><div class="mhud-hearts"></div><div class="mhud-health"><div class="mhud-health-fill"></div></div></div>
       <div class="mhud-boss" hidden><div class="mhud-boss-name"></div><div class="mhud-boss-bar"><div class="mhud-boss-fill"></div></div><div class="mhud-boss-text"></div></div>
-      <div class="mhud-ammo" hidden><span class="mhud-ammo-text">14 / 14</span><span class="mhud-ammo-hint">R to reload</span></div>
-      <div class="mhud-crosshair" hidden><div class="ch-dot"></div><div class="ch-ring"></div></div>
+      <div class="mhud-ammo" hidden><span class="mhud-weapon-name"></span><span class="mhud-ammo-text">12 / 12</span><span class="mhud-ammo-hint">R to reload</span><div class="mhud-weapons"></div></div>
+      <div class="mhud-crosshair" hidden><div class="ch-dot"></div><div class="ch-ring"></div><div class="ch-chev ch-chev-l"></div><div class="ch-chev ch-chev-r"></div><div class="ch-hit"></div></div>
       <div class="mhud-banner" hidden></div>
       <div class="mhud-lock-hint" hidden></div>
       <div class="mhud-vignette"></div>`;
@@ -64,6 +69,19 @@ export class MissionHUD implements System {
     this.banner = q('.mhud-banner');
     this.vignette = q('.mhud-vignette');
     this.lockHint = q('.mhud-lock-hint');
+    this.weaponName = q('.mhud-weapon-name');
+    this.weaponStrip = q('.mhud-weapons');
+    this.hitMark = q('.ch-hit');
+    for (const w of WEAPONS) {
+      const slot = document.createElement('span');
+      slot.className = 'mhud-wslot';
+      slot.dataset.id = w.id;
+      slot.innerHTML = `<b>${WEAPONS.indexOf(w) + 1}</b>${w.name}`;
+      this.weaponStrip.appendChild(slot);
+    }
+    this.gun.onWeaponChange = (def) => this.setWeapon(def);
+    this.gun.onHit = () => (this.hitTimer = 0.14);
+    this.setWeapon(this.gun.weapon);
     const nameEl = q('.mhud-name');
     const applyName = (): void => {
       nameEl.textContent = gameStore.getState().profile.name;
@@ -96,6 +114,19 @@ export class MissionHUD implements System {
   setWeaponVisible(v: boolean): void {
     this.ammoEl.hidden = !v;
     this.crosshair.hidden = !v;
+    if (v) this.setWeapon(this.gun.weapon);
+  }
+
+  /** Name, reticle style, and the 1–4 strip (locked slots dimmed). */
+  setWeapon(def: WeaponDef): void {
+    this.weaponName.textContent = `${def.name} · ${def.epithet}`;
+    this.crosshair.dataset.reticle = def.reticle;
+    for (const slot of this.weaponStrip.querySelectorAll<HTMLElement>('.mhud-wslot')) {
+      const id = slot.dataset.id as WeaponDef['id'];
+      slot.classList.toggle('active', id === def.id);
+      slot.classList.toggle('locked', !this.gun.isUnlocked(id));
+    }
+    this.engine.input.touch.setWeaponLabel(def.name.slice(0, 1));
   }
   /** Big centred banner ("TASK 1", "BEGIN", "TASK COMPLETE"). */
   showBanner(text: string, seconds = 2.4, sub = ''): void {
@@ -111,11 +142,40 @@ export class MissionHUD implements System {
   update(dt: number, elapsed: number): void {
     if (!this.ammoEl.hidden) {
       const g = this.gun;
-      this.ammoText.textContent = g.reloading > 0 ? 'RELOADING…' : `${g.ammo} / ${g.magSize}`;
-      this.ammoEl.classList.toggle('empty', g.ammo === 0 && g.reloading === 0);
+      const w = g.weapon;
       const d = this.engine.input.device;
-      (this.root.querySelector('.mhud-ammo-hint') as HTMLElement).textContent = d === 'gamepad' ? 'X to reload' : d === 'touch' ? '' : 'R to reload';
+      let text: string;
+      let hint: string;
+      switch (w.mode) {
+        case 'charge': {
+          const bars = Math.round(g.charge * 5);
+          text = g.charge > 0 ? `DRAW ${'●'.repeat(bars)}${'○'.repeat(5 - bars)}` : 'READY';
+          hint = 'hold to draw · release to loose';
+          break;
+        }
+        case 'throw':
+          text = `${g.ammo} ${g.ammo === 1 ? 'DISC' : 'DISCS'}`;
+          hint = g.ammo < w.mag ? 'returning…' : 'press to throw';
+          break;
+        case 'burst':
+          text = g.reloading > 0 ? 'RECHARGING…' : `${g.ammo} / ${w.mag}`;
+          hint = 'close range · press to burst';
+          break;
+        default:
+          text = g.reloading > 0 ? 'RELOADING…' : `${g.ammo} / ${w.mag}`;
+          hint = d === 'gamepad' ? 'X to reload' : d === 'touch' ? '' : 'R to reload';
+      }
+      this.ammoText.textContent = text;
+      this.ammoEl.classList.toggle('empty', g.ammo === 0 && g.reloading === 0 && w.mode !== 'charge');
+      const switchHint = d === 'gamepad' ? ' · d-pad ◀ ▶ switch' : d === 'touch' ? '' : ' · 1–4 / wheel switch';
+      (this.root.querySelector('.mhud-ammo-hint') as HTMLElement).textContent = hint + switchHint;
       this.crosshair.classList.toggle('aim', g.aiming);
+      // The ring opens with the spread and the chevrons close as the bow draws.
+      const spreadPx = 6 + (g.spread / (Math.PI / 180)) * 5;
+      this.crosshair.style.setProperty('--spread', `${spreadPx.toFixed(1)}px`);
+      this.crosshair.style.setProperty('--draw', String(g.charge));
+      this.hitTimer = Math.max(0, this.hitTimer - dt);
+      this.hitMark.style.opacity = this.hitTimer > 0 ? '1' : '0';
     }
     // Keyboard+mouse: until the pointer is captured the camera still follows the mouse, but say how to capture it.
     const input = this.engine.input;

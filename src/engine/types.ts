@@ -21,6 +21,8 @@ export interface SceneModule {
   canContinue?(): boolean;
   /** Called once the title card is dismissed. */
   start?(mode: 'new' | 'continue'): void;
+  /** Title-screen leaderboard, when the scene has one. */
+  showLeaderboard?(onClose?: () => void): void;
 }
 
 export type QualityTier = 'low' | 'medium' | 'high' | 'ultra';

@@ -1,25 +1,28 @@
 # PrayStation — The Temple of Eka-Danta
 
-A cinematic mythological adventure: an abandoned moonlit temple, a traveller with the temple's gun of
-remembered light, and eight tasks against the eight asuras of the Vinayaka (Mudgala) Purana tradition —
-envy, pride, delusion, greed, anger, desire, attachment and ego. Each task opens with a narrated villain
-card, arms you with the Astra, and ends with the next villain. Three hearts, a villain health bar,
-escalating difficulty, and a choice to replay or continue from the same stage when you fall.
+A cinematic mythological adventure: an abandoned moonlit temple, a traveller armed by the temple with
+four weapons of remembered light, and five tasks against five asuras of the Vinayaka (Mudgala) Purana
+tradition — pride, anger, greed, delusion and ego. Each task opens with a narrated villain card, grants
+a weapon, and ends with the next villain. Three hearts, a villain health bar, difficulty that climbs
+task by task to a last fight that demands everything, a choice to replay or continue from the same stage
+when you fall, and a leaderboard of finished runs.
 
 *Inspired by traditional stories; all events, characters and the temple in this game are fictional.
 Sacred figures are portrayed with respect and are never fought.*
 
-Repository: **github.com/Rithishgit69/praystation** · web build deploys to Vercel from `main`
-(`vercel.json`) · CI runs typecheck, lint, unit tests and the build on every push.
+Repository: **github.com/Rithishgit69/praystation** · live at **https://rithishgit69.github.io/praystation/**
+(GitHub Pages, deployed from `main` by `.github/workflows/deploy-pages.yml`; `vercel.json` for Vercel) · CI runs
+typecheck, lint, unit tests and the build on every push.
 
 ## How to play (in one breath)
 
 Move `WASD`, look with the mouse (click the view to capture it), run `Shift`, jump `Space`, dodge `Q`,
-fire `left mouse`, aim `right mouse`, reload `R`, pause `Esc`. Eight tasks, eight asuras: each card
-tells you how the villain fights, the Astra tells you how to beat it, the bar at the top is its
-health, the three hearts are yours. Everything flies straight and every floor effect is marked first —
-sidestep, jump, dodge. Play at **https://rithishgit69.github.io/praystation/**; `SUBMISSION.md` has the
-contest sheet and `docs/CODE_WALKTHROUGH.md` the five-minute tour of the code.
+fire `left mouse`, aim `right mouse`, reload `R`, switch weapon `1–4` / mouse wheel, pause `Esc`. Five
+tasks, five asuras: each card tells you how the villain fights, the tip on the weapon tells you how to
+beat it, the bar at the top is its health, the three hearts are yours. Everything flies straight and
+every floor effect is marked first — sidestep, jump, dodge. Finish all five and your run goes on the
+leaderboard. `SUBMISSION.md` has the contest sheet and `docs/CODE_WALKTHROUGH.md` the five-minute tour
+of the code.
 
 ## Run, build, deploy
 
@@ -46,12 +49,12 @@ The Capacitor Android/iOS projects remain in the repository (`npm run mobile:and
 ### Narration voices
 
 The villain cards and mission messages are spoken by pre-rendered neural voice lines in `public/voice/`
-(Neerja, Indian English, by default; Ava, American English, selectable in the pause menu). They are
-generated once with the free `edge-tts` tool through `uvx` (Python `uv` must be installed); no key or
-network is needed at run time:
+(*Heart*, American English, by default; *Emma*, British English, selectable in the pause menu). They
+are rendered once with the open-source **Kokoro-82M** model (Apache-2.0) through Python `uv`
+(`tools/kokoro_tts.py`, loudness-normalised with ffmpeg); no key or network is needed at run time:
 
 ```bash
-node tools/gen-voice.mjs          # renders only lines whose text or voice changed; --force redoes all
+node tools/gen-voice.mjs          # (= npm run voice) renders only lines whose text or voice changed; --force redoes all
 ```
 
 Edit the lines in `src/missions/MissionData.ts` / `src/missions/VoiceLines.ts` and rerun the tool.
@@ -67,6 +70,7 @@ traveller can be changed later from the pause menu.
 | Move / run | WASD, hold Shift (or toggle, see options) | Left stick, LB / L3 or push past the rim | Left floating stick, push past the rim |
 | Look | Mouse — follows the pointer at once; click the view to capture it, Esc releases | Right stick | Swipe right half |
 | Fire / aim | Left mouse / right mouse (hold) | RT / LT | FIRE button / — |
+| Switch weapon | 1 2 3 4, or the mouse wheel | D-pad left / right | weapon button |
 | Reload | R | X | ↻ button |
 | Dodge / jump | Q / Space | B / Y | ◇ / ▲ buttons |
 | Interact | E | A | contextual button |
@@ -76,11 +80,35 @@ traveller can be changed later from the pause menu.
 An Om chant loops under play at −10 dB (music & chant volume in the pause menu); it dips while the
 narrator speaks.
 
+## The weapons
+
+The temple grants one weapon per task; all of them stay with you and switch with `1–4` or the wheel:
+
+| Task | Weapon | How it fires |
+|---|---|---|
+| 1 | **Astra**, the rifle of remembered light | hold to fire hitscan rounds; aim for a tight spread; 12-round magazine, `R` reloads |
+| 2 | **Dhanush**, the bow of light | hold to draw, release to loose; a full draw pierces and hits the villain's core hardest |
+| 3 | **Chakra**, the returning disc | press to throw; it cuts on the way out and on the way back, then returns to your hand |
+| 4 | **Vajra**, the thunder burst | a fan of six pellets — devastating up close, nothing at range; staggers the villain |
+
+Hip fire blooms, aiming (`right mouse`) tightens it and pulls the camera over the shoulder, and every
+projectile leaves the muzzle toward the crosshair.
+
 ## The villains
 
-Eight asuras, eight signature kits — every projectile flies straight and every floor effect is marked
-before it hurts, so sidestepping, jumping and dodging always work. `docs/VILLAINS.md` lists them with
-their looks, and explains how to drop in modelled avatars (`public/models/asuras/*.glb`).
+Five asuras built from the team's reference paintings, five signature kits — a duelling blade, bare
+fists and a leaping slam, buffalo horns that tear fissures and a bellow that shoves, six arms of shard
+fans and illusions, and fire breath with a mirror. Every projectile flies straight and every floor
+effect is marked before it hurts, so sidestepping, jumping and dodging always work. `docs/VILLAINS.md`
+lists them with their looks and kits, and explains how to drop in modelled avatars
+(`public/models/asuras/*.glb`).
+
+## Leaderboard
+
+Every finished run is recorded on the device (name, rank, time, accuracy, hearts lost) and listed under
+*Leaderboard* on the title screen, in the pause menu and on the ending card. A shared board for
+everyone takes a free Supabase project and two lines in `public/leaderboard.json` — see
+`docs/LEADERBOARD.md`. Nothing else is collected.
 
 ## Modes and URLs
 
@@ -97,8 +125,8 @@ src/engine      loop, renderer, post chain (GTAO, bloom, LUT grade, SMAA), physi
 src/input       keyboard/mouse, gamepad, touch → one InputFrame
 src/player      kinematic controller, camera rig, character mesh
 src/world       terrain, streaming, zones, procedural props/textures/murals
-src/missions    tasks, asura AI, the Astra, mission HUD, narration, director   ← the game
-src/systems     story/exploration systems (portal, puzzles, doors, save, lighting states)
+src/missions    tasks, asura AI + designs, the four weapons, mission HUD, narration, director   ← the game
+src/systems     leaderboard, save, story/exploration systems (portal, puzzles, doors, lighting states)
 src/encounters  memory encounters (story mode)
 src/audio       synthesised sound bank + spatial audio
 data/           chapters, puzzles, dialogue, lore (JSON)
@@ -112,5 +140,8 @@ android/ ios/   Capacitor 8 projects · store/ listing assets · docs/ architect
 ```bash
 npm test                 # unit (vitest)
 npm run test:e2e         # Playwright: boot, traversal budget, save/continue, interaction, missions
-node tools/play-missions.mjs out/ http://127.0.0.1:5173 8   # plays all eight tasks headlessly
+node tools/play-missions.mjs out/ http://127.0.0.1:5173 5   # plays all five tasks headlessly (= npm run play:missions)
+node tools/attack-gallery.mjs out/ http://127.0.0.1:4173     # screenshots every villain attack
+node tools/villain-gallery.mjs out/ http://127.0.0.1:4173    # portrait sheet of the five villains
+node tools/demo-video.mjs http://127.0.0.1:4173 demo/demo.mp4 # records the demo video (needs ffmpeg)
 ```

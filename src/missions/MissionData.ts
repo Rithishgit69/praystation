@@ -12,36 +12,40 @@ export type AttackKind =
   | 'illusion'
   | 'teleport'
   | 'shield'
-  // Matsarasura — envy: crystal shards and a smothering orb
-  | 'shard'
-  | 'shard-fan'
-  | 'envy-orb'
-  // Madasura — pride: fire
-  | 'flame-breath'
-  | 'fire-charge'
-  // Mohasura — delusion: the curved sword
+  // Task 1 · Madasura, the blade warrior: the lunge-and-sweep combo and the returning blade
   | 'sword-combo'
   | 'blade-throw'
-  // Lobhasura — greed: hook-chain and coin mines
+  // Task 2 · Krodhasura, the wrestler: the leap onto a marked circle and the three-palm flurry
+  | 'leap-slam'
+  | 'mace-flurry'
+  // Task 3 · Lobhasura, the buffalo: horn fissures (in pairs) and the bellow that shoves you back
+  | 'fissure'
+  | 'bellow'
+  // Task 4 · Mohasura, three-faced: shard fans, shard rings and the spiral
+  | 'shard-fan'
+  | 'radial-burst'
+  | 'spiral'
+  // Task 5 · Ahamkarasura, the fire king: flame breath, the burning charge, the fire orb, the mirror
+  | 'flame-breath'
+  | 'fire-charge'
+  | 'envy-orb'
+  | 'mirror-shield'
+  // Implemented but not in the five-task campaign (usable in custom kits): single shards, the
+  // hook-chain and coin mines, arrow fans / arrow rain / the petal ring, root traps and the binding vine
+  | 'shard'
   | 'chain-hook'
   | 'coin-mines'
-  // Krodhasura — wrath: the mace and fissures
-  | 'fissure'
-  | 'mace-flurry'
-  // Kamasura — desire: the bow and the petal ring
   | 'arrow-fan'
   | 'arrow-rain'
   | 'petal-ring'
-  // Mamasura — attachment: roots and tethers
   | 'root-trap'
-  | 'tether'
-  // Ahamkarasura — ego: shard rings, the spiral, the mirror
-  | 'radial-burst'
-  | 'spiral'
-  | 'mirror-shield';
+  | 'tether';
 
 /** What the asura carries; drives the procedural avatar's weapon and attack poses. */
-export type WeaponKind = 'claws' | 'flame' | 'sword' | 'chain' | 'mace' | 'bow' | 'roots' | 'scepter';
+export type WeaponKind = 'claws' | 'flame' | 'sword' | 'chain' | 'mace' | 'bow' | 'roots' | 'scepter' | 'fists' | 'horns' | 'six-arms';
+
+/** Which procedural avatar design to build (see AsuraDesigns.ts; each follows a reference painting). */
+export type DesignId = 'blade-warrior' | 'wrestler' | 'buffalo' | 'three-faced' | 'fire-king';
 
 export interface BossStats {
   /** Hit points; each rifle shot deals `shotDamage` (see Gun). */
@@ -60,6 +64,8 @@ export interface BossStats {
   scale: number;
   /** Weapon carried (procedural avatar). */
   weapon: WeaponKind;
+  /** Avatar design. */
+  design: DesignId;
   /** Attack patterns for this asura, chosen from by weight (repeat an entry to make it likelier). */
   patterns: AttackKind[];
   /** Attack performed right after a teleport (kits with 'teleport'). */
@@ -105,87 +111,62 @@ export interface MissionDef {
 }
 
 /**
- * Eight tasks, eight asuras — the eight demons of the Vinayaka (Mudgala) Purana tradition, each the
- * embodiment of a vice, each in tradition subdued by a form of Ganesha. The asuras are traditional
- * antagonists, never sacred figures; their forms, words and powers here are the game's fiction.
+ * Five tasks, five asuras — five of the eight demons of the Vinayaka (Mudgala) Purana tradition, each
+ * the embodiment of a vice, each in tradition subdued by a form of Ganesha, ordered so every fight is
+ * harder than the last. The asuras are traditional antagonists, never sacred figures; their forms,
+ * words and powers here are the game's fiction; their looks follow the team's reference paintings.
  */
 export const MISSIONS: MissionDef[] = [
   {
     task: 1,
-    id: 'matsarasura',
-    villain: 'Matsarasura',
-    epithet: 'the Envier',
-    vice: 'envy',
-    subduedBy: 'Vakratunda',
+    id: 'madasura',
+    villain: 'Madasura',
+    epithet: 'the Arrogant',
+    vice: 'pride',
+    subduedBy: 'Ekadanta',
     threat: 1,
     intro: [
       'You are entering into Task 1.',
-      'Hear the first name. Matsarasura — the Envier. Born, the old books say, from a single sigh of jealousy, and grown fat on everything others hold dear.',
-      'He cannot bear a light he does not own. He has snuffed the courtyard braziers one by one, and now he waits among the stones, hungry for yours.',
-      'He throws shards of green crystal, straight and hard, and hurls a dark orb that smothers whatever ground it lands on. Step aside as he throws. Never stand still.',
-      'The temple grants you the Astra: a gun of remembered light. Aim true. Show him what cannot be stolen.',
+      'Madasura — the Arrogant. Once a devotee who won a boon and mistook it for a throne. The tradition says he swelled until three worlds bowed to his shadow; now he walks the courtyard bare-chested in gold, a curved blade loose in his hand.',
+      'He fights like a man who has never lost. He lunges the length of the stones and cuts twice, and when he throws the blade it comes back to his hand — so it passes you twice as well.',
+      'Dodge sideways when he raises the sword; the lunge is straight. Watch for the blade returning. The temple grants you the Astra: a gun of remembered light. Aim true.',
     ],
     arena: 'courtyard',
     playerSpawn: [1.6, 1.0, 2.6, 0],
     bossSpawn: [4.5, 1.92, -22],
     arenaCenter: [2, 0, -8],
     arenaRadius: 26,
-    boss: { hp: 220, speed: 2.8, meleeDamage: 18, rangedDamage: 14, projectileSpeed: 11, attackInterval: 2.6, scale: 1.0, weapon: 'claws', patterns: ['shard', 'shard', 'shard-fan', 'envy-orb', 'charge'], enrageAt: 0.3, color: 0x3aa870, shieldHits: 0, keepDistance: 7 },
-    objective: 'Task 1: Defeat Matsarasura, the Envier',
-    hint: 'His shards fly straight — sidestep them, do not backpedal. Leave the circle where the orb will land.',
-    look: 'Gaunt, long-limbed asura with green crystal growing from the shoulders and knuckles; hollow envious eyes; tattered robe; bone claws.',
+    boss: { hp: 260, speed: 3.4, meleeDamage: 18, rangedDamage: 14, projectileSpeed: 13, attackInterval: 2.6, scale: 1.0, weapon: 'sword', design: 'blade-warrior', patterns: ['sword-combo', 'blade-throw', 'sword-combo', 'charge', 'blade-throw'], enrageAt: 0.3, color: 0xe0503a, shieldHits: 0, keepDistance: 3 },
+    objective: 'Task 1: Defeat Madasura, the Arrogant',
+    hint: 'Sidestep the lunge — it is straight. The thrown blade returns: step aside twice.',
+    look: 'Athletic warrior in a black top-knot with a gold ornament, white tilak with a red centre, red glowing eyes, gold necklaces and a gold pauldron on the right shoulder, red sash over white dhoti, gold armlets and anklets, barefoot, a curved blade in the right hand.',
   },
   {
     task: 2,
-    id: 'madasura',
-    villain: 'Madasura',
-    epithet: 'the Arrogant',
-    vice: 'pride',
-    subduedBy: 'Ekadanta',
+    id: 'krodhasura',
+    villain: 'Krodhasura',
+    epithet: 'the Wrathful',
+    vice: 'anger',
+    subduedBy: 'Lambodara',
     threat: 2,
     intro: [
       'You are entering into Task 2.',
-      'Madasura — the Arrogant. Once a devotee who won a boon and mistook it for a throne; the tradition says he swelled until three worlds bowed to his shadow.',
-      'He breathes fire. A cone of flame sweeps the Hall of Memories wherever he turns, and every charge he makes leaves a burning road behind him.',
-      'Run out of the flame — it turns slower than you. Leap the rings when he strikes the floor. Fire while he recovers; pride always pauses to admire itself.',
-      'He is twice the Envier, and he knows it.',
+      'Krodhasura — the Wrathful. The tradition names him the child of rage itself. He is a mountain of a man: a wrestler’s belly, a beard like a thundercloud, a rope of braided straw across his chest, and fists that have never needed a weapon.',
+      'He does not throw. He comes. He leaps and lands where you stood, and the floor of the Hall of Memories cracks in rings around him. Up close his palms come three at a time.',
+      'Leave the circle before he lands. Jump the rings. Back out of the flurry and fire while he heaves for breath — anger tires. He is twice the Arrogant, and he knows it.',
     ],
     arena: 'hall',
     playerSpawn: [4.5, 2.0, -62, 0],
     bossSpawn: [4.5, 1.92, -84],
     arenaCenter: [4.5, 1.92, -90],
     arenaRadius: 30,
-    boss: { hp: 340, speed: 3.6, meleeDamage: 22, rangedDamage: 8, projectileSpeed: 11, attackInterval: 2.3, scale: 1.15, weapon: 'flame', patterns: ['flame-breath', 'fire-charge', 'slam', 'flame-breath', 'charge'], enrageAt: 0.35, color: 0xd85a2a, shieldHits: 0, keepDistance: 5 },
-    objective: 'Task 2: Defeat Madasura, the Arrogant',
-    hint: 'Run sideways out of the fire cone; it turns slower than you. Jump the floor rings. Stay off the burning trail.',
-    look: 'Broad, barrel-chested asura in gilded armour with a swollen proud bearing; fire behind the teeth; magma-cracked skin; a crown too large for him.',
+    boss: { hp: 440, speed: 3.3, meleeDamage: 24, rangedDamage: 16, projectileSpeed: 11, attackInterval: 2.3, scale: 1.25, weapon: 'fists', design: 'wrestler', patterns: ['leap-slam', 'charge', 'mace-flurry', 'slam', 'leap-slam'], enrageAt: 0.35, color: 0xe8842a, shieldHits: 0, keepDistance: 3 },
+    objective: 'Task 2: Defeat Krodhasura, the Wrathful',
+    hint: 'A circle marks where he will land — leave it. Jump the rings. Back out of the three-palm flurry.',
+    look: 'Huge sumo-built brute: bare chest and belly, full black beard and top-knot, thick braided straw rope worn as a necklace and belt with hanging tassels, spiral tattoos on the shoulder and arms, black studded bracers, dark blue pleated hakama with red panels, sandals.',
   },
   {
     task: 3,
-    id: 'mohasura',
-    villain: 'Mohasura',
-    epithet: 'the Deluder',
-    vice: 'delusion',
-    subduedBy: 'Mahodara',
-    threat: 3,
-    intro: [
-      'You are entering into Task 3.',
-      'Mohasura — the Deluder. Where he walks, the world lies. He wears the moon chamber like a mask and steps out of every mirror at once.',
-      'He carries a curved sword. He lunges the length of the chamber and cuts twice, and when he throws the blade it comes back to his hand — so it passes you twice as well.',
-      'Three of him will stand before you. Two are nothing but confusion. Only the true one bleeds. Shoot the copies to burst them, dodge the lunge, and watch for the blade returning.',
-    ],
-    arena: 'moon',
-    playerSpawn: [110, -1.9, -160, 0],
-    bossSpawn: [110, -2, -184],
-    arenaCenter: [110, -2, -190],
-    arenaRadius: 36,
-    boss: { hp: 460, speed: 3.9, meleeDamage: 24, rangedDamage: 16, projectileSpeed: 14, attackInterval: 2.1, scale: 1.1, weapon: 'sword', patterns: ['sword-combo', 'blade-throw', 'illusion', 'teleport', 'sword-combo', 'blade-throw'], teleportFollowUp: 'sword-combo', enrageAt: 0.4, color: 0x8a5ad8, shieldHits: 0, keepDistance: 3 },
-    objective: 'Task 3: Defeat Mohasura, the Deluder',
-    hint: 'Dodge sideways when he raises the blade — the lunge is straight. The thrown sword returns: step aside twice.',
-    look: 'Lean, veiled asura of shifting violet; face half-hidden by a mirrored mask; a great curved talwar; robes that ripple like water.',
-  },
-  {
-    task: 4,
     id: 'lobhasura',
     villain: 'Lobhasura',
     epithet: 'the Grasping',
@@ -193,95 +174,47 @@ export const MISSIONS: MissionDef[] = [
     subduedBy: 'Gajanana',
     threat: 3,
     intro: [
-      'You are entering into Task 4.',
-      'Lobhasura — the Grasping. Greed made flesh. In the old telling he was born of a glance at a beautiful thing, and he has never stopped reaching since.',
-      'He fights with a hook on a chain. If it catches you, it drags you into his reach. He scatters gold that explodes where it lands, and shades answer him while he hides behind a shield of everything he has hoarded.',
-      'Sidestep the hook — it flies straight. Stay out of the coins’ circles. Break the shades, then break the shield, and he is naked to your fire.',
-    ],
-    arena: 'tunnels',
-    playerSpawn: [-46, -13.9, -226, 0],
-    bossSpawn: [-46, -14, -252],
-    arenaCenter: [-46, -14, -240],
-    arenaRadius: 18,
-    boss: { hp: 580, speed: 3.4, meleeDamage: 26, rangedDamage: 17, projectileSpeed: 16, attackInterval: 2.2, scale: 1.2, weapon: 'chain', patterns: ['chain-hook', 'coin-mines', 'summon', 'shield', 'chain-hook', 'charge'], enrageAt: 0.35, color: 0xd8a83a, shieldHits: 6, keepDistance: 8 },
-    objective: 'Task 4: Defeat Lobhasura, the Grasping',
-    hint: 'The hook flies straight: sidestep it. Leave the gold circles before they burst. Shades first, then the shield.',
-    look: 'Bloated, jewel-encrusted asura dripping with stolen gold; too many rings; a hook on a heavy chain; sacks of coin strapped to the body.',
-  },
-  {
-    task: 5,
-    id: 'krodhasura',
-    villain: 'Krodhasura',
-    epithet: 'the Wrathful',
-    vice: 'anger',
-    subduedBy: 'Lambodara',
-    threat: 4,
-    intro: [
-      'You are entering into Task 5.',
-      'Krodhasura — the Wrathful. The tradition names him the child of rage itself. He does not plan. He erupts.',
-      'He swings a great mace. When it strikes the floor a fissure of fire tears straight across the library toward you, and when he is close the blows come three at a time.',
-      'Step out of the fissure’s line. Back away from the flurry. Wound him and the fissures come in pairs. There is no safe distance from anger — only timing.',
+      'You are entering into Task 3.',
+      'Lobhasura — the Grasping. Greed made flesh, and the flesh is a buffalo’s: a great grey bull-demon with curling horns, red eyes, a mane like smoke, and ornaments of stone grown into the skin.',
+      'He charges the length of the library and his horns tear the floor open — two fissures of fire run from every strike. When he bellows, the air itself shoves you back. When he stamps, the shock rolls out in rings. And the hungry shades answer him.',
+      'Step out of the fissures’ lines. Plant your feet against the bellow. Break the shades, then keep the bull turning — he cannot charge what stands beside him.',
     ],
     arena: 'library',
     playerSpawn: [-82, -9.9, -76, 0],
     bossSpawn: [-82, -10, -112],
     arenaCenter: [-82, -10, -96],
     arenaRadius: 22,
-    boss: { hp: 700, speed: 4.1, meleeDamage: 28, rangedDamage: 16, projectileSpeed: 14, attackInterval: 1.8, scale: 1.2, weapon: 'mace', patterns: ['fissure', 'mace-flurry', 'charge', 'slam', 'fissure', 'charge'], enrageAt: 0.5, color: 0xe83a3a, shieldHits: 0, keepDistance: 3 },
-    objective: 'Task 5: Defeat Krodhasura, the Wrathful',
-    hint: 'The fissure travels in a straight line from his mace: step to the side. Back out of the three-blow flurry.',
-    look: 'Muscular red-skinned asura with a bull-like neck, cracked lava veins, a spiked iron mace; smoke from the nostrils; heavy tusks.',
+    boss: { hp: 680, speed: 4.2, meleeDamage: 28, rangedDamage: 17, projectileSpeed: 13, attackInterval: 2.0, scale: 1.3, weapon: 'horns', design: 'buffalo', patterns: ['charge', 'fissure', 'bellow', 'summon', 'slam', 'charge', 'fissure'], enrageAt: 0.45, color: 0xc03030, shieldHits: 0, keepDistance: 4 },
+    objective: 'Task 3: Defeat Lobhasura, the Grasping',
+    hint: 'Two fissures run from every horn strike — step out of their lines. Brace for the bellow. Shades first.',
+    look: 'Massive buffalo-headed demon: dark grey hide, long curling horns, red glowing eyes with a red tilak pattern, pointed ears, an open fanged mouth, a shaggy dark mane, bead necklaces and carved stone shoulder ornaments, hugely muscled arms.',
   },
   {
-    task: 6,
-    id: 'kamasura',
-    villain: 'Kamasura',
-    epithet: 'the Desirer',
-    vice: 'desire',
-    subduedBy: 'Vikata',
+    task: 4,
+    id: 'mohasura',
+    villain: 'Mohasura',
+    epithet: 'the Deluder',
+    vice: 'delusion',
+    subduedBy: 'Mahodara',
     threat: 4,
     intro: [
-      'You are entering into Task 6.',
-      'Kamasura — the Desirer. He carries a bow of blossom-wood. His arrows come in fans, straight and fast, or fall from above onto the ground he has marked.',
-      'A ring of petals circles him: come too close and it cuts. Slip between the arrows, leave the marked ground before the rain falls, and shoot from outside the petals.',
-      'He shields himself in wanting. Break it, and he draws faster. He is the strongest asura you have yet faced.',
+      'You are entering into Task 4.',
+      'Mohasura — the Deluder. Where he walks, the world lies. He does not walk: he floats, three-faced and six-armed, his white hair streaming upward like smoke, jade beads at his throat, golden scarves circling him like thoughts.',
+      'Three of him will stand before you, and only the true one bleeds. Six hands throw shards in fans and in spirals, and rings of them burst outward from where he hovers. He steps through the air to reappear behind you, and shields himself in wanting to be believed.',
+      'Shoot the copies to burst them. Find the gaps in the rings. He is faster than the bull and far more cruel — nothing he throws will turn, so keep moving sideways.',
     ],
-    arena: 'shrine',
-    playerSpawn: [0, -19.9, -284, 0],
-    bossSpawn: [0, -20, -306],
-    arenaCenter: [0, -20, -308],
-    arenaRadius: 26,
-    boss: { hp: 840, speed: 3.8, meleeDamage: 30, rangedDamage: 17, projectileSpeed: 19, attackInterval: 1.9, scale: 1.3, weapon: 'bow', patterns: ['arrow-fan', 'arrow-rain', 'petal-ring', 'shield', 'arrow-fan', 'arrow-rain'], enrageAt: 0.4, color: 0xe86ab8, shieldHits: 8, keepDistance: 9 },
-    objective: 'Task 6: Defeat Kamasura, the Desirer',
-    hint: 'Slip between the arrows of the fan; leave the marked circles before the rain falls; keep outside the petal ring.',
-    look: 'Beautiful, dangerous asura garlanded in blossoms; peacock-feather cloak; a long bow of flowering wood; a smile that promises everything.',
+    arena: 'moon',
+    playerSpawn: [110, -1.9, -160, 0],
+    bossSpawn: [110, -2, -184],
+    arenaCenter: [110, -2, -190],
+    arenaRadius: 36,
+    boss: { hp: 900, speed: 4.0, meleeDamage: 26, rangedDamage: 17, projectileSpeed: 14, attackInterval: 1.8, scale: 1.15, weapon: 'six-arms', design: 'three-faced', patterns: ['shard-fan', 'illusion', 'radial-burst', 'teleport', 'spiral', 'shard-fan', 'shield', 'radial-burst'], teleportFollowUp: 'shard-fan', enrageAt: 0.45, color: 0x4ad8a0, shieldHits: 8, keepDistance: 9 },
+    objective: 'Task 4: Defeat Mohasura, the Deluder',
+    hint: 'Only the true one bleeds — burst the copies. Slip through the gaps in the shard rings; nothing homes.',
+    look: 'Slender floating ascetic-demon with three faces (one forward, two in profile) and six arms, a great mass of wild white hair, red glowing eyes, jade bead necklace, gold sash over patterned dark trousers, long golden scarves coiling around him.',
   },
   {
-    task: 7,
-    id: 'mamasura',
-    villain: 'Mamasura',
-    epithet: 'the Possessor',
-    vice: 'attachment',
-    subduedBy: 'Vighnaraja',
-    threat: 5,
-    intro: [
-      'You are entering into Task 7.',
-      'Mamasura — the Possessor. "Mine," he says of the sanctum, of the statue, of you. Attachment that cannot let go of anything, ever.',
-      'Roots answer him. He marks the ground and they erupt through it. He throws a vine that binds you and bleeds you — shoot the glowing knot to cut it. Shades cling to him; he vanishes and reappears behind you.',
-      'Leave the marked ground before the roots rise. Cut the vine at its knot. Only the sanctum stands between him and the deepest memory. Hold it.',
-    ],
-    arena: 'sanctum',
-    playerSpawn: [0, -25.9, -372, 0],
-    bossSpawn: [0, -26, -396],
-    arenaCenter: [0, -26, -396],
-    arenaRadius: 34,
-    boss: { hp: 980, speed: 4.3, meleeDamage: 32, rangedDamage: 18, projectileSpeed: 15, attackInterval: 1.7, scale: 1.35, weapon: 'roots', patterns: ['root-trap', 'tether', 'summon', 'teleport', 'shield', 'root-trap', 'charge'], teleportFollowUp: 'root-trap', enrageAt: 0.45, color: 0x5ad8d0, shieldHits: 10, keepDistance: 7 },
-    objective: 'Task 7: Defeat Mamasura, the Possessor',
-    hint: 'Leave the marked circles before the roots rise. If the vine binds you, shoot its glowing knot.',
-    look: 'Ancient asura grown into a banyan: bark skin, roots for a lower body, vines wrapped round the arms, small clinging shade-faces in the branches.',
-  },
-  {
-    task: 8,
+    task: 5,
     id: 'ahamkarasura',
     villain: 'Ahamkarasura',
     epithet: 'the Ego',
@@ -289,20 +222,20 @@ export const MISSIONS: MissionDef[] = [
     subduedBy: 'Dhumravarna',
     threat: 5,
     intro: [
-      'You are entering into Task 8. The last.',
-      'Ahamkarasura — the Ego. The root of all seven you have broken. The old books say every other asura was only a shadow he cast.',
-      'He carries a mirror. Shots fired at his face come back at you; only from behind does he bleed. He rings himself with shards, spins them into spirals, splits into copies and steps through the air.',
-      'Circle him. Find the gaps in the rings. At the mountain gateway where the first memory was made, end this. Remember everything you have learned. Then aim.',
+      'You are entering into Task 5. The last.',
+      'Ahamkarasura — the Ego. The root of the four you have broken; the old books say every other asura was only a shadow he cast. He wears a spired crown between two great horns, gold at his throat and arms, fangs behind a moustache, claws on his hands — and the fire behind him is his own.',
+      'He breathes flame in a cone that sweeps wherever he turns. His charges leave a burning road. He hurls a fire orb that scorches the ground it marks, throws rings of embers, calls his shades, and raises a mirror that throws your shots back at you.',
+      'And when he is wounded he does not weaken — he burns twice as hot. Run out of the fire. Circle the mirror. At the mountain gateway where the first memory was made, end this.',
     ],
     arena: 'memory-tusk',
     playerSpawn: [2000, 0.2, 22, 0],
     bossSpawn: [2000, 0, -12],
     arenaCenter: [2000, 0, 0],
     arenaRadius: 30,
-    boss: { hp: 1200, speed: 4.5, meleeDamage: 34, rangedDamage: 19, projectileSpeed: 13, attackInterval: 1.5, scale: 1.5, weapon: 'scepter', patterns: ['radial-burst', 'spiral', 'mirror-shield', 'charge', 'illusion', 'teleport', 'slam', 'radial-burst'], teleportFollowUp: 'radial-burst', enrageAt: 0.5, color: 0xf0f0ff, shieldHits: 12, keepDistance: 6 },
-    objective: 'Task 8: Defeat Ahamkarasura, the Ego',
-    hint: 'While the mirror is up, shoot him from behind. Jump or dodge through the gaps in the shard rings.',
-    look: 'Towering, luminous asura of white gold with a crown of many faces; a mirror-shield on one arm and a scepter in the other; his own reflection etched on every surface.',
+    boss: { hp: 1350, speed: 4.4, meleeDamage: 34, rangedDamage: 19, projectileSpeed: 13, attackInterval: 1.6, scale: 1.45, weapon: 'claws', design: 'fire-king', patterns: ['flame-breath', 'fire-charge', 'envy-orb', 'radial-burst', 'summon', 'mirror-shield', 'slam', 'flame-breath', 'fire-charge'], enrageAt: 0.5, color: 0xff7a2a, shieldHits: 10, keepDistance: 5 },
+    objective: 'Task 5: Defeat Ahamkarasura, the Ego',
+    hint: 'Run sideways out of the flame cone. Leave the marked ground before the orb lands. Shoot him from behind while the mirror is up.',
+    look: 'Broad horned rakshasa king: brown-orange skin, a tall spired gold crown between two great curved horns, long dark curling hair, heavy moustache, fangs, gold necklaces, armlets and bracelets, a red dhoti with a gold belt-plate, clawed hands, fire around him.',
   },
 ];
 

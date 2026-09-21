@@ -20,6 +20,8 @@ import { Narration } from './Narration';
 import { TaskMenu } from './TaskMenu';
 import { Voice } from '@/audio/Voice';
 import { missionLineId } from './VoiceLines';
+import { scoreOf, type Leaderboard, type RunResult } from '@/systems/Leaderboard';
+import type { LeaderboardCard } from '@/ui/LeaderboardCard';
 
 type Phase = 'idle' | 'travel' | 'narration' | 'arming' | 'battle' | 'respawn' | 'victory' | 'failed' | 'ended';
 
@@ -39,9 +41,10 @@ interface TaskStats {
 const fmtTime = (s: number): string => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 const pct = (hits: number, shots: number): string => (shots > 0 ? `${Math.round((hits / shots) * 100)} %` : '—');
 
-/** Rank a run: hearts lost weigh most, then accuracy, then pace. */
-const rankOf = (t: TaskStats): { rank: string; title: string } => {
+/** Rank a run: only a full run of every task can rank above C; then hearts lost, accuracy and retries. */
+const rankOf = (t: TaskStats, complete: boolean): { rank: string; title: string } => {
   const acc = t.shots > 0 ? t.hits / t.shots : 0;
+  if (!complete) return { rank: 'C', title: 'Unbroken — a partial run' };
   if (t.heartsLost <= 1 && acc >= 0.55 && t.retries === 0) return { rank: 'S', title: 'Flawless pilgrim' };
   if (t.heartsLost <= 5 && t.retries <= 1) return { rank: 'A', title: 'Steadfast' };
   if (t.heartsLost <= 10) return { rank: 'B', title: 'Persevering' };
@@ -94,6 +97,8 @@ export class MissionDirector implements System {
     private readonly hud: MissionHUD,
     private readonly lighting: LightingStates,
     private readonly save: SaveSystem,
+    private readonly leaderboard: Leaderboard,
+    private readonly leaderboardCard: LeaderboardCard,
   ) {
     this.voice = new Voice();
     this.narration = new Narration(engine, audio, this.voice);
@@ -183,7 +188,7 @@ export class MissionDirector implements System {
       }
     }
     table.appendChild(body);
-    const rank = rankOf(total);
+    const rank = rankOf(total, MISSIONS.every((m) => this.readStats(m.task) !== null));
     const foot = document.createElement('tfoot');
     foot.innerHTML = `<tr><td colspan="2">Rank <strong class="results-rank">${rank.rank}</strong> · ${rank.title}</td><td>${fmtTime(total.seconds)}</td><td>${pct(total.hits, total.shots)}</td><td>${total.heartsLost}</td></tr>`;
     table.appendChild(foot);
@@ -267,16 +272,29 @@ export class MissionDirector implements System {
     if (!this.def) return;
     this.phase = 'arming';
     this.visual.setLantern(true, true);
+    const fresh = this.gun.setUnlockedTask(Math.max(this.unlocked, this.def.task));
     this.gun.setEquipped(true);
-    this.gun.ammo = this.gun.magSize;
+    this.gun.refill();
     this.hud.setWeaponVisible(true);
     this.hud.showBoss(this.def.villain, this.def.epithet);
     this.hud.setBossHealth(this.asura?.hp ?? 0, this.asura?.maxHp ?? 1, false);
-    this.hud.showBanner(`TASK ${this.def.task}`, 3.4, `The Astra is yours. ${this.def.hint}`);
-    this.audio.play('diya-light', { volume: 0.8, rate: 0.8 });
-    this.voice.speak('astra-granted');
     this.player.movementLocked = false;
-    gsap.delayedCall(2.4, () => {
+    const granted = fresh.find((w) => w.unlockTask === this.def?.task);
+    if (granted) {
+      // A new Astra is granted with this task: hand it over, then the fighting tip.
+      this.gun.select(granted.id, true);
+      this.hud.showBanner(`THE ${granted.name.toUpperCase()}`, 3.4, `${granted.epithet} · ${granted.howTo}`);
+      this.audio.play('weapon-granted', { volume: 0.8 });
+      this.voice.speak(`weapon-${granted.id}`);
+      gsap.delayedCall(3.6, () => {
+        if (this.phase === 'arming' || this.phase === 'battle') this.hud.showBanner(`TASK ${this.def?.task ?? ''}`, 3.0, this.def?.hint ?? '');
+      });
+    } else {
+      this.hud.showBanner(`TASK ${this.def.task}`, 3.4, `The Astra is yours. ${this.def.hint}`);
+      this.audio.play('diya-light', { volume: 0.8, rate: 0.8 });
+      this.voice.speak('astra-granted');
+    }
+    gsap.delayedCall(granted ? 3.6 : 2.4, () => {
       if (this.phase !== 'arming') return;
       this.phase = 'battle';
       this.hud.showBanner('BEGIN', 1.4);
@@ -322,7 +340,7 @@ export class MissionDirector implements System {
       this.rig.snapBehind();
       this.health = 100;
       this.hud.setHealth(this.health);
-      this.gun.ammo = this.gun.magSize;
+      this.gun.refill();
       this.asura?.hold(2.5);
       this.setVeil?.(0);
       gsap.delayedCall(0.8, () => {
@@ -399,23 +417,42 @@ export class MissionDirector implements System {
     this.phase = 'ended';
     this.gun.setEquipped(false);
     this.hud.setWeaponVisible(false);
-    this.hud.showBanner('ALL EIGHT ARE BROKEN', 6, 'The temple remembers. Envy, pride, delusion, greed, anger, desire, attachment and ego — none of them holds it now.');
+    this.hud.showBanner('ALL FIVE ARE BROKEN', 6, 'The temple remembers. Pride, anger, greed, delusion and ego — none of them holds it now.');
     this.voice.speak('all-broken');
     void this.lighting.transition('present', 4);
     const dawn = { t: 0 };
     gsap.to(dawn, { t: 1, duration: 14, delay: 3, onUpdate: () => this.onDawn?.(dawn.t) });
     gsap.delayedCall(9, () => {
-      const { table, rank } = this.buildResults();
-      const name = gameStore.getState().profile.name;
+      const { table, total, rank } = this.buildResults();
+      const profile = gameStore.getState().profile;
+      // Record the run once per ending; the card shows where it landed.
+      const done = MISSIONS.filter((m) => this.readStats(m.task) !== null).length;
+      const run: RunResult = { name: profile.name, hero: profile.hero, rank: rank.rank as RunResult['rank'], seconds: Math.round(total.seconds), heartsLost: total.heartsLost, accuracy: total.shots > 0 ? Math.round((total.hits / total.shots) * 100) : 0, tasks: done, date: new Date().toISOString(), score: 0 };
+      run.score = scoreOf(run);
+      const localPos = this.leaderboard.recordLocal(run);
+      const note = document.createElement('p');
+      note.className = 'taskmenu-sub results-note';
+      note.textContent = `Recorded: #${localPos} on this device${this.leaderboard.hasRemote ? ' · submitting to everyone…' : ''}`;
+      void this.leaderboard.submitRemote(run).then((pos) => {
+        if (pos !== null) note.textContent = `Recorded: #${localPos} on this device · #${pos} among everyone`;
+        else if (this.leaderboard.hasRemote) note.textContent = `Recorded: #${localPos} on this device · the shared board could not be reached`;
+      });
+      const body = document.createElement('div');
+      body.append(table, note);
       this.menu.show(
-        `${name} — Rank ${rank.rank}`,
-        `${rank.title}. Every asura of the Vinayaka Purana tradition has been faced. Inspired by traditional stories; all events and characters here are fictional.`,
+        `${profile.name} — Rank ${rank.rank}`,
+        `${rank.title}. Every asura has been faced. Inspired by traditional stories; all events and characters here are fictional.`,
         [
-          { label: 'Play any task again', primary: true, onSelect: () => this.openTaskSelect() },
+          { label: 'Leaderboard', primary: true, onSelect: () => void this.leaderboardCard.show(run, () => this.menu.show(`${profile.name} — Rank ${rank.rank}`, rank.title, [
+            { label: 'Play any task again', primary: true, onSelect: () => this.openTaskSelect() },
+            { label: 'New game', detail: 'from Task 1 with a fresh traveller', onSelect: () => this.engine.resetSaveAndReload() },
+            { label: 'Return to title', onSelect: () => location.reload() },
+          ])) },
+          { label: 'Play any task again', onSelect: () => this.openTaskSelect() },
           { label: 'New game', detail: 'from Task 1 with a fresh traveller', onSelect: () => this.engine.resetSaveAndReload() },
           { label: 'Return to title', onSelect: () => location.reload() },
         ],
-        table,
+        body,
       );
     });
   }
@@ -456,13 +493,17 @@ export class MissionDirector implements System {
   debugSkipNarration(): void {
     while (this.narration.isActive) this.narration.advance();
   }
+  /** Test hook: freeze the boss for a few seconds (portraits). */
+  debugHold(seconds: number): void {
+    this.asura?.hold(seconds);
+  }
   /** Test hook: make the boss perform an attack. */
   debugAttack(kind: string): void {
     this.asura?.debugAttack(kind as AttackKind);
   }
   /** Test hook: hit the boss directly. */
   debugDamageBoss(amount: number): void {
-    if (this.asura) this.asura.onShot(amount, this.asura.position.clone());
+    if (this.asura) this.asura.onShot(amount, this.asura.position.clone(), true);
   }
   /** Test hook: drain the player. */
   debugHurtPlayer(amount: number): void {

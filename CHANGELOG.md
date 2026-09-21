@@ -1,5 +1,45 @@
 # Changelog
 
+## 1.3.0 — 2026-09-22
+
+- **Five-task campaign.** The eight tasks are now five fights that climb steadily to a last one that
+  demands everything: Madasura (blade), Krodhasura (bare hands), Lobhasura (horns), Mohasura (six arms),
+  Ahamkarasura (fire) — health 260 → 1350, attack intervals 2.6 → 1.6 s, later enrage thresholds,
+  shields on the last two. The narration was rewritten for the new order and re-rendered.
+- **Villains built from the team's reference paintings** (`src/missions/AsuraDesigns.ts`): the comic-style
+  blade warrior with the top-knot and gold pauldron; the sumo brute with the braided straw rope, tattoos
+  and hakama; the buffalo-headed demon with curling horns and a mane; the floating three-faced, six-armed
+  ascetic with white hair and golden scarves; the horned rakshasa king with the spired crown. Each has its
+  own stance, walk, attack poses and idle life (breathing, scarf ripple, hover bob). Portrait sheet:
+  `tools/villain-gallery.mjs`.
+- **Every villain fights differently.** New attacks: the wrestler's *leap-slam* (a circle marks the
+  landing, shock rings on impact) and the buffalo's *bellow* (a wall of air that shoves you back); horn
+  strikes tear two fissures; the three-faced one floats and follows every teleport with a shard fan.
+- **Four weapons, realistic handling.** The temple grants the Astra rifle (Task 1), the Dhanush bow
+  (Task 2, hold to draw, full draw pierces and hits the core hardest), the Chakra returning disc (Task 3,
+  cuts out and back) and the Vajra thunder burst (Task 4, six pellets with falloff, staggers). Switch with
+  1–4, the wheel, X/Z, D-pad or the touch weapon button. Spread bloom and recoil, aim-down-sights that
+  pulls the camera over the shoulder and tightens the spread, weapons held and pointed along the view,
+  projectiles that leave the muzzle toward the crosshair, per-weapon reticles and tracers, and a granted
+  banner with its spoken instruction.
+- **Leaderboard.** Every finished run (name, hero, rank, time, accuracy, hearts lost, score) is recorded
+  on the device and listed under *Leaderboard* on the title screen, in the pause menu and on the ending
+  card; the ending card says where the run placed. An optional shared board for everyone reads two
+  lines in `public/leaderboard.json` (Supabase REST, anon key; `docs/LEADERBOARD.md` has the SQL and
+  policies). Partial runs (`?task=N` starts) rank C and are labelled.
+- **Smoothness.** Effect lights come from a pool (no shader recompiles mid-fight), flames and sparks are
+  one particle draw call, the device-pixel ratio is capped (1.5 high, 1.75 ultra), ambient occlusion and
+  shadows are lighter on the high tier, and the canvas no longer preserves its drawing buffer. Frame-time
+  probe at DPR 2: max 20 ms in a full fight.
+- Fixed: a villain stayed lit pure white from the first hit onward (the hit flash never restored the
+  design materials' own emissive), which also swamped the fight in bloom; the flash is now a short,
+  restrained brightening. The rifle reloads on its own when the magazine empties (R still reloads early).
+- Fixed: switching tabs on the title screen wrote a save, so the next visit offered *Continue* and
+  skipped the traveller card; nothing is saved until a game has begun.
+- Contest compliance: narration re-rendered with the Apache-licensed Kokoro-82M voices (Heart, Emma);
+  analytics toggle removed; `public/privacy.html`, `docs/CREDITS.md`, `SUBMISSION.md`, `docs/CODE_WALKTHROUGH.md`;
+  GitHub Pages deployment (`.github/workflows/deploy-pages.yml`) with the live link in the submission sheet.
+
 ## 1.2.0 — 2026-09-14
 
 - Combat rework: nothing homes any more. Every projectile flies straight from where it is thrown to

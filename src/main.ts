@@ -48,13 +48,29 @@ async function boot(): Promise<void> {
     window.removeEventListener('keydown', onKey);
   };
   const canContinue = mod.canContinue?.() === true;
-  const onKey = (): void => dismiss(canContinue ? 'continue' : 'new');
+  const onKey = (e: KeyboardEvent): void => {
+    if (document.querySelector('.leaderboard:not([hidden])')) return;
+    if (e.code === 'Escape' || e.repeat) return;
+    dismiss(canContinue ? 'continue' : 'new');
+  };
   if (params.has('autostart')) {
     dismiss(params.has('continue') ? 'continue' : 'new');
   } else {
     $('boot-status').hidden = true;
     cont.hidden = false;
     cont.textContent = canContinue ? 'Continue' : 'Enter';
+    if (mod.showLeaderboard) {
+      const board = $<HTMLButtonElement>('boot-board');
+      board.hidden = false;
+      board.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Lift the UI layer above the title card while the board is open; the title stays until Enter.
+        uiRoot.style.zIndex = '60';
+        mod.showLeaderboard?.(() => {
+          uiRoot.style.zIndex = '';
+        });
+      });
+    }
     cont.addEventListener('click', () => dismiss(canContinue ? 'continue' : 'new'));
     if (canContinue) {
       newBtn.hidden = false;

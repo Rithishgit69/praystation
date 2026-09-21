@@ -15,9 +15,15 @@ export type Action =
   | 'cameraReset'
   | 'fire'
   | 'reload'
-  | 'aim';
+  | 'aim'
+  | 'weapon1'
+  | 'weapon2'
+  | 'weapon3'
+  | 'weapon4'
+  | 'weaponNext'
+  | 'weaponPrev';
 
-export const ACTIONS: readonly Action[] = ['interact', 'sprint', 'jump', 'crouch', 'dodge', 'block', 'pause', 'journal', 'map', 'devmenu', 'profiler', 'cameraReset', 'fire', 'reload', 'aim'];
+export const ACTIONS: readonly Action[] = ['interact', 'sprint', 'jump', 'crouch', 'dodge', 'block', 'pause', 'journal', 'map', 'devmenu', 'profiler', 'cameraReset', 'fire', 'reload', 'aim', 'weapon1', 'weapon2', 'weapon3', 'weapon4', 'weaponNext', 'weaponPrev'];
 
 /** One frame of merged input. `look` is an unscaled delta (radians before sensitivity); stick look is already scaled by dt. */
 export interface InputFrame {

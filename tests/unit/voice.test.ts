@@ -13,7 +13,7 @@ describe('narration voice lines', () => {
     const lines = allVoiceLines();
     const introCount = MISSIONS.reduce((n, m) => n + m.intro.length, 0);
     expect(lines.length).toBe(introCount + Object.keys(SYSTEM_LINES).length);
-    expect(lines[0]).toEqual({ id: missionLineId('matsarasura', 0), text: 'You are entering into Task 1.' });
+    expect(lines[0]).toEqual({ id: missionLineId('madasura', 0), text: 'You are entering into Task 1.' });
     for (const m of MISSIONS) expect(m.intro[0]?.startsWith(`You are entering into Task ${m.task}.`)).toBe(true);
   });
 

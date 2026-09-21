@@ -50,6 +50,9 @@ log('armed', JSON.stringify(await mission()));
 async function fight(label, maxMs = 240000) {
   const t0 = Date.now();
   await key('KeyW', false);
+  // The temple hands over each new Astra as it is granted; the bot fights with the rifle.
+  await page.keyboard.press('Digit1');
+  await wait(120);
   let lastLog = 0;
   while (Date.now() - t0 < maxMs) {
     const m = await mission();

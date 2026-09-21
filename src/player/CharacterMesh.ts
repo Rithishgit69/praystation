@@ -66,6 +66,8 @@ export class CharacterMesh {
   private breathe = 0;
   /** When true the arms hold a weapon in front of the chest. */
   holdWeapon = false;
+  /** Aim state while a weapon is held: camera pitch to follow, which weapon, bow draw and ADS blend. */
+  aim: { pitch: number; weapon: 'astra' | 'dhanush' | 'chakra' | 'vajra'; draw: number; aiming: number } | null = null;
   get rightHand(): THREE.Group {
     return this.rForearm;
   }
@@ -339,14 +341,30 @@ export class CharacterMesh {
     this.rShin.rotation.x = Math.max(0, c * swing * 1.2) + 0.08 + b.crouch * 0.9 + b.air * 0.6;
     const armSwing = swing * 0.7;
     if (this.holdWeapon) {
-      // Two-handed hold in front of the chest; slight bob with the stride.
+      // Two-handed hold in front of the chest, pitched with the camera so the weapon points where the
+      // crosshair is; the bow is held out to the left and its string arm draws back.
+      const a = this.aim;
+      // Camera pitch is positive looking down; the arms lower with it (less negative x).
+      const pitch = a ? a.pitch * 0.75 : 0;
       const bobArm = Math.sin(p) * 0.04 * moving;
-      this.rUpperArm.rotation.x = -1.05 + bobArm;
-      this.rUpperArm.rotation.z = -0.35;
-      this.rForearm.rotation.x = -0.75;
-      this.lUpperArm.rotation.x = -1.25 + bobArm;
-      this.lUpperArm.rotation.z = 0.55;
-      this.lForearm.rotation.x = -1.15;
+      const bow = a?.weapon === 'dhanush';
+      const draw = bow ? a.draw : 0;
+      const ads = a?.aiming ?? 0;
+      if (bow) {
+        this.rUpperArm.rotation.x = -1.35 + pitch + bobArm;
+        this.rUpperArm.rotation.z = -0.15;
+        this.rForearm.rotation.x = -0.25 - draw * 0.2;
+        this.lUpperArm.rotation.x = -1.45 + pitch + bobArm;
+        this.lUpperArm.rotation.z = 0.25 - draw * 0.3;
+        this.lForearm.rotation.x = -0.7 - draw * 1.1;
+      } else {
+        this.rUpperArm.rotation.x = -1.05 - ads * 0.08 + pitch + bobArm;
+        this.rUpperArm.rotation.z = -0.35 + ads * 0.12;
+        this.rForearm.rotation.x = -0.75 + ads * 0.05;
+        this.lUpperArm.rotation.x = -1.25 - ads * 0.06 + pitch + bobArm;
+        this.lUpperArm.rotation.z = 0.55 - ads * 0.15;
+        this.lForearm.rotation.x = -1.15;
+      }
     } else {
       this.lUpperArm.rotation.x = -s * armSwing + b.air * -0.6 + b.sprint * 0.2;
       this.rUpperArm.rotation.x = s * armSwing + b.air * -0.6 + b.sprint * 0.2;
@@ -370,6 +388,11 @@ export class CharacterMesh {
     this.torso.scale.y = 1 + (1 - moving) * this.breathe * 0.012;
     this.head.rotation.x = -this.torso.rotation.x * 0.6;
     this.head.rotation.y = -this.torso.rotation.y * 0.8;
+    if (this.holdWeapon && this.aim) {
+      // Lean the torso and head with the aim so the whole figure tracks the crosshair.
+      this.torso.rotation.x += this.aim.pitch * 0.12;
+      this.head.rotation.x += this.aim.pitch * 0.35;
+    }
 
     // Scarf / dupatta tails: sway with stride and lift back with speed.
     const lift = clamp(horizontalSpeed / sprintSpeed, 0, 1);

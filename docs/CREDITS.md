@@ -33,8 +33,9 @@ through every part of it (see `docs/CODE_WALKTHROUGH.md`).
 ## Story and cultural sources
 
 Story inspirations: traditional narratives associated with Ganesha (the broken tusk, Vakratunda and
-Matsarasura, the Moon, Ganesha as Vyasa's scribe) and the eight asuras of the Mudgala Purana
-tradition. Versions differ across regions and sources; the in-game *Inspirations* journal entries name
+Matsarasura, the Moon, Ganesha as Vyasa's scribe) and the asuras of the Mudgala Purana tradition
+(five of the eight are fought in the campaign). Versions differ across regions and sources; the in-game *Inspirations* journal entries name
 the versions drawn on. The temple, the Forgetting, the serpent chapter and all game events are fictional.
 Sacred figures are portrayed with respect and are never fought or controlled; the villains are the
-tradition's asuras — embodiments of envy, pride, delusion, greed, anger, desire, attachment and ego.
+tradition's asuras — embodiments of pride, anger, greed, delusion and ego. The five villain designs
+follow concept paintings made by the team for this game.

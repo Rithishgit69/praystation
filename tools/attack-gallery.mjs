@@ -4,19 +4,16 @@ import { chromium } from '@playwright/test';
 import fs from 'node:fs';
 const base = process.argv[2] ?? 'http://127.0.0.1:4173';
 const out = process.argv[3] ?? 'test-results/attacks';
-const only = (process.argv[4] ?? '1,2,3,4,5,6,7,8').split(',').map(Number);
+const only = (process.argv[4] ?? '1,2,3,4,5').split(',').map(Number);
 fs.mkdirSync(out, { recursive: true });
 const KITS = {
-  1: ['shard', 'shard-fan', 'envy-orb', 'charge'],
-  2: ['flame-breath', 'fire-charge', 'slam'],
-  3: ['sword-combo', 'blade-throw', 'illusion', 'teleport'],
-  4: ['chain-hook', 'coin-mines', 'summon', 'shield'],
-  5: ['fissure', 'mace-flurry', 'slam'],
-  6: ['arrow-fan', 'arrow-rain', 'petal-ring'],
-  7: ['root-trap', 'tether', 'summon'],
-  8: ['radial-burst', 'spiral', 'mirror-shield', 'illusion'],
+  1: ['sword-combo', 'blade-throw', 'charge'],
+  2: ['leap-slam', 'mace-flurry', 'slam', 'charge'],
+  3: ['charge', 'fissure', 'bellow', 'summon', 'slam'],
+  4: ['shard-fan', 'illusion', 'radial-burst', 'teleport', 'spiral', 'shield'],
+  5: ['flame-breath', 'fire-charge', 'envy-orb', 'radial-burst', 'summon', 'mirror-shield', 'slam'],
 };
-const DELAY = { 'flame-breath': 1600, 'fire-charge': 1500, charge: 1300, 'sword-combo': 900, 'blade-throw': 1100, 'chain-hook': 900, 'coin-mines': 1700, fissure: 1600, 'mace-flurry': 900, 'arrow-fan': 1000, 'arrow-rain': 1500, 'petal-ring': 1800, 'root-trap': 1600, tether: 1400, 'radial-burst': 1100, spiral: 1800, 'mirror-shield': 1300, slam: 1200, shard: 800, 'shard-fan': 900, 'envy-orb': 1300, summon: 1500, shield: 1200, illusion: 1200, teleport: 900 };
+const DELAY = { 'leap-slam': 1700, bellow: 1000, 'flame-breath': 1600, 'fire-charge': 1500, charge: 1300, 'sword-combo': 900, 'blade-throw': 1100, 'chain-hook': 900, 'coin-mines': 1700, fissure: 1600, 'mace-flurry': 900, 'arrow-fan': 1000, 'arrow-rain': 1500, 'petal-ring': 1800, 'root-trap': 1600, tether: 1400, 'radial-burst': 1100, spiral: 1800, 'mirror-shield': 1300, slam: 1200, shard: 800, 'shard-fan': 900, 'envy-orb': 1300, summon: 1500, shield: 1200, illusion: 1200, teleport: 900 };
 const browser = await chromium.launch({ headless: true, args: ['--use-gl=angle', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
 const errors = [];
 for (const task of only) {

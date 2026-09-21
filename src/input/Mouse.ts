@@ -13,6 +13,8 @@ export class Mouse implements InputDevice {
   private dx = 0;
   private dy = 0;
   private readonly buttons = new Set<number>();
+  /** Buttons clicked since the last poll: a click shorter than a frame still fires once. */
+  private readonly tapped = new Set<number>();
   private activity = false;
   private readonly canvas: HTMLCanvasElement;
   private lastX: number | null = null;
@@ -39,8 +41,21 @@ export class Mouse implements InputDevice {
     return e.pointerType === 'mouse' || e.pointerType === 'pen';
   }
 
+  /** Pointer events report chorded buttons only through the `buttons` mask: sync the set from it. */
+  private syncButtons(e: PointerEvent): void {
+    const mask = e.buttons;
+    const now: number[] = [];
+    if (mask & 1) now.push(0);
+    if (mask & 2) now.push(2);
+    if (mask & 4) now.push(1);
+    for (const b of now) if (!this.buttons.has(b)) this.tapped.add(b);
+    this.buttons.clear();
+    for (const b of now) this.buttons.add(b);
+  }
+
   private readonly onMove = (e: PointerEvent): void => {
     if (!this.isMouse(e)) return;
+    if (this.buttons.size > 0 || e.buttons !== 0) this.syncButtons(e);
     if (this.locked) {
       // Browsers occasionally emit huge spurious deltas right after lock; clamp them.
       this.dx += Math.max(-200, Math.min(200, e.movementX));
@@ -69,13 +84,16 @@ export class Mouse implements InputDevice {
   };
   private readonly onDown = (e: PointerEvent): void => {
     if (!this.isMouse(e) || !this.isGameSurface(e.target)) return;
+    this.syncButtons(e);
     this.buttons.add(e.button);
+    this.tapped.add(e.button);
     this.activity = true;
     if (!this.locked && this.lockOnClick) this.requestLock();
   };
   private readonly onUp = (e: PointerEvent): void => {
     if (!this.isMouse(e)) return;
     this.buttons.delete(e.button);
+    this.syncButtons(e);
   };
   private readonly onLockChange = (): void => {
     this.locked = document.pointerLockElement === this.canvas;
@@ -86,6 +104,14 @@ export class Mouse implements InputDevice {
   private readonly onLockError = (): void => {
     this.locked = false;
     this.lockAvailable = false;
+  };
+  private wheelDir = 0;
+  private readonly onWheel = (e: WheelEvent): void => {
+    if (!this.lockOnClick || !this.isGameSurface(e.target)) return;
+    if (Math.abs(e.deltaY) < 1) return;
+    this.wheelDir = e.deltaY > 0 ? 1 : -1;
+    this.activity = true;
+    e.preventDefault();
   };
   private readonly onBlur = (): void => this.buttons.clear();
   private readonly onContextMenu = (e: MouseEvent): void => {
@@ -100,6 +126,7 @@ export class Mouse implements InputDevice {
     window.addEventListener('pointercancel', this.onUp);
     window.addEventListener('blur', this.onBlur);
     window.addEventListener('contextmenu', this.onContextMenu);
+    window.addEventListener('wheel', this.onWheel, { passive: false });
     document.addEventListener('pointerlockchange', this.onLockChange);
     document.addEventListener('pointerlockerror', this.onLockError);
   }
@@ -129,13 +156,18 @@ export class Mouse implements InputDevice {
     frame.lookY += this.dy;
     this.dx = 0;
     this.dy = 0;
-    if (this.buttons.has(0)) {
+    if (this.buttons.has(0) || this.tapped.has(0)) {
       frame.held.add('interact');
       frame.held.add('fire');
     }
-    if (this.buttons.has(2)) {
+    if (this.buttons.has(2) || this.tapped.has(2)) {
       frame.held.add('block');
       frame.held.add('aim');
+    }
+    this.tapped.clear();
+    if (this.wheelDir !== 0) {
+      frame.held.add(this.wheelDir > 0 ? 'weaponNext' : 'weaponPrev');
+      this.wheelDir = 0;
     }
     const had = this.activity;
     this.activity = false;
@@ -149,6 +181,7 @@ export class Mouse implements InputDevice {
     window.removeEventListener('pointercancel', this.onUp);
     window.removeEventListener('blur', this.onBlur);
     window.removeEventListener('contextmenu', this.onContextMenu);
+    window.removeEventListener('wheel', this.onWheel);
     document.removeEventListener('pointerlockchange', this.onLockChange);
     document.removeEventListener('pointerlockerror', this.onLockError);
   }

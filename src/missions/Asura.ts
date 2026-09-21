@@ -51,7 +51,7 @@ class Illusion implements Shootable {
   readonly mesh: AsuraMesh;
   private readonly pos = new THREE.Vector3();
   constructor(lib: MaterialLibrary, def: MissionDef, at: THREE.Vector3) {
-    this.mesh = new AsuraMesh(lib, def.boss.color, def.boss.scale, def.boss.weapon, false);
+    this.mesh = new AsuraMesh(lib, def.boss.color, def.boss.scale, def.boss.weapon, false, def.boss.design);
     this.mesh.coreMat.emissiveIntensity = 0.4;
     this.mesh.root.position.copy(at);
   }
@@ -147,6 +147,9 @@ export class Asura implements Shootable {
   private yankTimer = 0;
   private readonly yankDir = new THREE.Vector3();
   private flurry = 0;
+  private staggerCooldown = 0;
+  private readonly leapFrom = new THREE.Vector3();
+  private readonly leapTo = new THREE.Vector3();
   private stuckTime = 0;
   private stallTime = 0;
   private stallBest = Infinity;
@@ -169,7 +172,7 @@ export class Asura implements Shootable {
     const b = def.boss;
     this.maxHp = b.hp;
     this.hp = startHp !== undefined ? clamp(startHp, 1, b.hp) : b.hp;
-    this.avatar = avatar ?? new AsuraMesh(lib, b.color, b.scale, b.weapon);
+    this.avatar = avatar ?? new AsuraMesh(lib, b.color, b.scale, b.weapon, true, b.design);
     this.avatar.root.position.set(def.bossSpawn[0], def.bossSpawn[1], def.bossSpawn[2]);
     this.avatar.root.scale.setScalar(0.01);
     engine.scene.add(this.avatar.root);
@@ -219,14 +222,14 @@ export class Asura implements Shootable {
   hitSphere(): { center: THREE.Vector3; radius: number } | null {
     if (!this.alive || this.state === 'dormant' || this.avatar.root.scale.x < 0.3) return null;
     this.hit.copy(this.position);
-    this.hit.y += 1.9 * this.scale;
+    this.hit.y += (1.9 + this.avatar.hoverHeight) * this.scale;
     return { center: this.hit, radius: 1.15 * this.scale };
   }
 
-  onShot(damage: number, point: THREE.Vector3): void {
+  onShot(damage: number, point: THREE.Vector3, ignoreGuards = false): void {
     if (!this.alive || this.state === 'dormant') return;
     // The mirror throws back anything fired at the front half.
-    if (this.mirrorTimer > 0) {
+    if (this.mirrorTimer > 0 && !ignoreGuards) {
       this.tmp.set(this.player.position.x - this.position.x, 0, this.player.position.z - this.position.z).normalize();
       const facing = this.tmpB.set(Math.sin(this.avatar.root.rotation.y), 0, Math.cos(this.avatar.root.rotation.y));
       if (facing.dot(this.tmp) > -0.2) {
@@ -237,7 +240,7 @@ export class Asura implements Shootable {
         return;
       }
     }
-    if (this.shieldHits > 0) {
+    if (this.shieldHits > 0 && !ignoreGuards) {
       this.shieldHits--;
       this.audio.play('asura-hit', { position: point, volume: 0.4, rate: 1.6 });
       if (this.shieldHits === 0) {
@@ -263,6 +266,20 @@ export class Asura implements Shootable {
       this.timer = 0;
       this.avatar.setPose('stagger');
     }
+  }
+
+  /** A heavy blow (the Vajra up close) knocks the asura out of what it was doing; not spammable. */
+  onStagger(): void {
+    if (!this.alive || this.state === 'dormant' || this.state === 'dead') return;
+    if (this.staggerCooldown > 0) return;
+    if (this.state === 'attack' && (this.attack === 'charge' || this.attack === 'fire-charge' || this.attack === 'sword-combo')) return;
+    this.staggerCooldown = 5;
+    this.state = 'stagger';
+    this.attack = null;
+    this.timer = 0;
+    this.meleeWind = -1;
+    this.avatar.setPose('stagger');
+    this.audio.play('asura-roar', { position: this.position, volume: 0.6, rate: 1.5 });
   }
 
   private die(): void {
@@ -509,6 +526,8 @@ export class Asura implements Shootable {
     if (pick === 'summon' && this.shades.filter((s) => s.alive).length >= 3) pick = pool[0] ?? 'charge';
     if (pick === 'tether' && this.tether) pick = 'root-trap';
     if (pick === 'mace-flurry' && this.distanceToPlayer() > 5) pick = 'charge';
+    if (pick === 'bellow' && this.distanceToPlayer() > 12) pick = 'charge';
+    if (pick === 'leap-slam' && this.distanceToPlayer() < 3) pick = 'slam';
     if (pick === 'petal-ring' && this.distanceToPlayer() > 10) pick = 'arrow-fan';
     this.attack = pick;
     this.stage = 0;
@@ -633,6 +652,71 @@ export class Asura implements Shootable {
           this.audio.play('shimmer', { position: this.position, volume: 0.7 });
         }
         if (t > 1.0) this.endAttack();
+        break;
+      // ---- Krodhasura: the wrestler's leap ----------------------------------------------------
+      case 'leap-slam':
+        if (this.stage === 0) {
+          this.facePlayer(dt, 10);
+          this.avatar.setPose('slam-wind');
+          if (t > 0.5) {
+            // Mark the landing where the player stands now, then jump to it over one second.
+            this.leapFrom.copy(this.position);
+            this.leapTo.copy(this.clampToArena(new THREE.Vector3(p.x, p.y, p.z)));
+            this.leapTo.y = this.floorY(this.leapTo.x, this.leapTo.z, p.y);
+            this.hazards.telegraph(this.leapTo.clone(), 3.6 * this.scale, 1.0, this.color);
+            this.audio.play('asura-roar', { position: this.position, volume: 0.7, rate: 0.9 });
+            this.avatar.setPose('leap');
+            this.stage = 1;
+            this.attackTimer = 0;
+          }
+        } else if (this.stage === 1) {
+          const k = clamp(t / 1.0, 0, 1);
+          const x = this.leapFrom.x + (this.leapTo.x - this.leapFrom.x) * k;
+          const z = this.leapFrom.z + (this.leapTo.z - this.leapFrom.z) * k;
+          const y = this.leapFrom.y + (this.leapTo.y - this.leapFrom.y) * k + Math.sin(k * Math.PI) * 4.5;
+          this.body?.teleport(this.position, x, z, y);
+          this.position.y = y;
+          this.walkSpeed = 0;
+          if (k >= 1) {
+            this.body?.teleport(this.position, this.leapTo.x, this.leapTo.z, this.leapTo.y);
+            this.avatar.setPose('slam');
+            this.hazards.shockRing(this.position.clone(), b.meleeDamage * 0.7, this.color, 22, 12);
+            if (this.distanceToPlayer() < 3.6 * this.scale) this.hurtPlayer(b.meleeDamage, 'leap');
+            this.audio.play('rumble', { position: this.position, volume: 1 });
+            this.rig.shake(1.1);
+            this.stage = 2;
+            this.attackTimer = 0;
+          }
+        } else if (t > 0.9) this.endAttack();
+        break;
+      // ---- Lobhasura: the buffalo's bellow ----------------------------------------------------
+      case 'bellow':
+        if (this.stage === 0) {
+          this.facePlayer(dt, 10);
+          this.avatar.setPose('breathe');
+          if (t > 0.7) {
+            // A wall of air: everything in front within 14 m is shoved back; close, it hurts.
+            const mouth = this.avatar.mouthWorld(new THREE.Vector3());
+            this.hazards.shockRing(new THREE.Vector3(mouth.x, this.position.y, mouth.z), 0, this.color, 16, 24);
+            this.audio.play('asura-roar', { position: this.position, volume: 1, rate: 0.6 });
+            this.rig.shake(0.9);
+            this.stage = 1;
+            this.attackTimer = 0;
+          }
+        } else if (this.stage === 1) {
+          this.tmp.set(p.x - this.position.x, 0, p.z - this.position.z);
+          const d = this.tmp.length() || 1;
+          this.tmp.divideScalar(d);
+          if (d < 14 && this.facing(this.tmpB).dot(this.tmp) > 0.5) {
+            this.player.externalPush.addScaledVector(this.tmp, 26 * (1 - d / 14));
+            if (t < 0.1 && d < 6) this.hurtPlayer(b.rangedDamage * 0.5, 'bellow');
+          }
+          if (t > 0.55) {
+            this.stage = 2;
+            this.attackTimer = 0;
+            this.avatar.setPose('idle');
+          }
+        } else if (t > 0.5) this.endAttack();
         break;
       // ---- Matsarasura: envy ------------------------------------------------------------------
       case 'shard':
@@ -829,8 +913,14 @@ export class Asura implements Shootable {
             this.avatar.setPose('slam');
             const dir = this.tmp.set(p.x - this.position.x, 0, p.z - this.position.z).normalize().clone();
             const from = this.position.clone().addScaledVector(dir, 1.5 * this.scale);
-            this.hazards.fissure(from, dir, 11, 20, b.rangedDamage, this.color);
-            if (this.enraged) for (const a of [-0.32, 0.32]) this.hazards.fissure(from, dir.clone().applyAxisAngle(UP, a), 11, 18, b.rangedDamage * 0.8, this.color);
+            if (b.weapon === 'horns') {
+              // The horns tear two lines; enraged, a third runs straight between them.
+              for (const a of [-0.22, 0.22]) this.hazards.fissure(from, dir.clone().applyAxisAngle(UP, a), 12, 22, b.rangedDamage, this.color);
+              if (this.enraged) this.hazards.fissure(from, dir, 12, 22, b.rangedDamage * 0.8, this.color);
+            } else {
+              this.hazards.fissure(from, dir, 11, 20, b.rangedDamage, this.color);
+              if (this.enraged) for (const a of [-0.32, 0.32]) this.hazards.fissure(from, dir.clone().applyAxisAngle(UP, a), 11, 18, b.rangedDamage * 0.8, this.color);
+            }
             this.audio.play('rumble', { position: this.position, volume: 0.9, rate: 0.8 });
             this.rig.shake(0.6);
           }
@@ -1037,6 +1127,7 @@ export class Asura implements Shootable {
       if (this.mirrorTimer <= 0) this.avatar.setMirror(false);
     }
     this.meleeCooldown = Math.max(0, this.meleeCooldown - dt);
+    this.staggerCooldown = Math.max(0, this.staggerCooldown - dt);
     if (this.state === 'idle') {
       this.timer += dt;
       const d = this.distanceToPlayer();
@@ -1152,7 +1243,8 @@ export class Asura implements Shootable {
 
   /** Test hook. */
   debugState(): Record<string, unknown> {
-    return { attack: this.attack, stage: this.stage, projectiles: this.projectiles.count, shades: this.shades.length, illusions: this.illusions.length, tether: this.tether !== null, mirror: this.mirrorTimer > 0, grounded: this.body?.grounded ?? null };
+    const hs = this.hitSphere();
+    return { attack: this.attack, stage: this.stage, projectiles: this.projectiles.count, shades: this.shades.length, illusions: this.illusions.length, tether: this.tether !== null, mirror: this.mirrorTimer > 0, grounded: this.body?.grounded ?? null, bossCenter: hs ? hs.center.toArray() : null, bossRadius: hs?.radius ?? null };
   }
 
   dispose(): void {

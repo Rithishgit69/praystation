@@ -27,6 +27,8 @@ export class SaveSystem implements System {
     if (document.hidden) this.save();
   };
   private dirty = false;
+  /** Nothing is written until the game has actually begun (a visit to the title screen is not a save). */
+  active = false;
 
   constructor(
     private readonly engine: Engine,
@@ -77,6 +79,7 @@ export class SaveSystem implements System {
   }
 
   save(): boolean {
+    if (!this.active) return false;
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(this.serialize()));
       this.dirty = false;

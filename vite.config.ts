@@ -35,7 +35,7 @@ export default defineConfig({
         name: 'PrayStation — The Temple of Eka-Danta',
         short_name: 'PrayStation',
         description:
-          'A cinematic mythological adventure. Explore an abandoned moonlit temple whose murals awaken playable memories inspired by traditional stories of Ganesha.',
+          'A cinematic mythological action game: five tasks against five asuras in an abandoned moonlit temple, four weapons of remembered light, three hearts and a leaderboard. Inspired by traditional stories of Ganesha.',
         theme_color: '#0B1220',
         background_color: '#0B1220',
         display: 'fullscreen',

@@ -12,6 +12,8 @@ import { PauseMenu } from '@/ui/PauseMenu';
 import { MapScreen } from '@/ui/MapScreen';
 import { HowToPlay } from '@/ui/HowToPlay';
 import { TravellerCard, loadProfile } from '@/ui/TravellerCard';
+import { Leaderboard } from '@/systems/Leaderboard';
+import { LeaderboardCard } from '@/ui/LeaderboardCard';
 import { MaterialLibrary } from '@/world/Materials';
 import { MoonLight } from '@/world/fx/Atmosphere';
 import { patchIvyMaterial } from '@/world/props/Foliage';
@@ -114,6 +116,7 @@ export class GameScene implements SceneModule {
   private missions: MissionDirector | null = null;
   private howto: HowToPlay | null = null;
   private traveller: TravellerCard | null = null;
+  private leaderboardCard: LeaderboardCard | null = null;
   private visual: PlayerVisual | null = null;
   private readonly disposers: Array<() => void> = [];
   private mode: 'missions' | 'story' = 'missions';
@@ -209,17 +212,21 @@ export class GameScene implements SceneModule {
     const howto = new HowToPlay(engine, this.mode);
     this.howto = howto;
     this.traveller = new TravellerCard(engine);
+    const leaderboard = new Leaderboard();
+    const leaderboardCard = new LeaderboardCard(engine, leaderboard);
+    this.leaderboardCard = leaderboardCard;
     const showControls = (): void => howto.show({ mode: 'reference', onClose: () => undefined });
+    const showBoard = (): void => void leaderboardCard.show();
     if (this.mode === 'missions') {
-      // Mission mode: eight tasks, eight asuras, the Astra. The exploration story systems stay dormant.
+      // Mission mode: five tasks, five asuras, four weapons. The exploration story systems stay dormant.
       const gun = new Gun(engine, lib, controller, visual, cam, audio);
       const mhud = new MissionHUD(engine, gun);
       hud.setSlotsVisible(false);
-      const missions = new MissionDirector(engine, lib, streamer, controller, visual, cam, audio, gun, mhud, lighting, save);
+      const missions = new MissionDirector(engine, lib, streamer, controller, visual, cam, audio, gun, mhud, lighting, save, leaderboard, leaderboardCard);
       missions.setVeil = (v) => gsap.to(atmosphere, { veil: v, duration: v > 0 ? 0.9 : 1.4, ease: v > 0 ? 'power2.in' : 'power2.out' });
       missions.onDawn = (t) => (atmosphere.dawn = t);
       this.missions = missions;
-      const pause = new PauseMenu(engine, save, () => location.reload(), () => journal.toggle(), () => missions.openTaskSelect(), showControls);
+      const pause = new PauseMenu(engine, save, () => location.reload(), () => journal.toggle(), () => missions.openTaskSelect(), showControls, showBoard);
       for (const s of [controller, streamer, lighting, missions, gun, visual, atmosphere, audio, save, subtitles, journal, map, pause, trail, distant, cam, hud, mhud]) engine.addSystem(s);
       if (window.__eka) {
         window.__eka.mission = () => missions.debugState();
@@ -229,6 +236,8 @@ export class GameScene implements SceneModule {
         window.__eka.missionMenuChoose = (i) => missions.debugMenuChoose(i);
         window.__eka.missionVoice = () => missions.debugVoice();
         window.__eka.missionAttack = (kind) => missions.debugAttack(kind);
+        window.__eka.gun = () => gun.debugState();
+        window.__eka.missionHold = (sec) => missions.debugHold(sec);
       }
     } else {
       const interaction = new InteractionSystem(engine, streamer, controller, hud);
@@ -243,7 +252,7 @@ export class GameScene implements SceneModule {
       const runner = new EncounterRunner();
       const illusions = new IllusionSystem(engine, streamer, controller, audio, subtitles);
       const storyChapters = new StoryChapters(engine, streamer, interaction, chapters, audio, visual, subtitles, lighting, doors, puzzles, runner, encounterContext, lib, moon, (t) => (atmosphere.dawn = t));
-      const pause = new PauseMenu(engine, save, () => location.reload(), () => journal.toggle(), null, showControls);
+      const pause = new PauseMenu(engine, save, () => location.reload(), () => journal.toggle(), null, showControls, showBoard);
       for (const s of [controller, streamer, lighting, story, storyChapters, interaction, puzzles, doors, portal, runner, illusions, chapters, visual, atmosphere, audio, save, subtitles, journal, map, pause, trail, distant, cam, hud]) engine.addSystem(s);
       if (window.__eka) {
         window.__eka.interact = () => {
@@ -283,6 +292,11 @@ export class GameScene implements SceneModule {
     return SaveSystem.hasSave();
   }
 
+  /** Title-screen leaderboard. */
+  showLeaderboard(onClose?: () => void): void {
+    void this.leaderboardCard?.show(null, onClose);
+  }
+
   start(mode: 'new' | 'continue'): void {
     if (this.started) return;
     this.started = true;
@@ -293,6 +307,7 @@ export class GameScene implements SceneModule {
         this.streamer.reset(1);
       }
     } else SaveSystem.clear();
+    if (this.save) this.save.active = true;
     // New game: name + traveller, then the instructions card, then the first task. `?autostart` /
     // `?help=0` skip both (automation); `?hero=female&name=…` preset the profile.
     const params = new URLSearchParams(location.search);

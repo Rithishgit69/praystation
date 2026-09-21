@@ -19,6 +19,7 @@ export class PauseMenu implements System {
     private readonly onJournal: () => void,
     private readonly onTaskSelect: (() => void) | null,
     private readonly onControls: (() => void) | null = null,
+    private readonly onLeaderboard: (() => void) | null = null,
   ) {
     this.root = document.createElement('div');
     this.root.className = 'pause menu';
@@ -151,6 +152,15 @@ export class PauseMenu implements System {
         this.onControls?.();
       });
       extras.push(controls);
+    }
+    if (this.onLeaderboard) {
+      const board = document.createElement('button');
+      board.textContent = 'Leaderboard';
+      board.addEventListener('click', () => {
+        this.setVisible(false);
+        this.onLeaderboard?.();
+      });
+      extras.push(board);
     }
     if (this.onTaskSelect) {
       const tasks = document.createElement('button');

@@ -59,7 +59,7 @@ test('the how-to-play card explains every control before the first task', async 
   await page.click('.traveller-go');
   await page.waitForSelector('.howto:not([hidden])', { timeout: 10_000 });
   const text = (await page.locator('.howto').textContent()) ?? '';
-  for (const needle of ['W A S D', 'Shift (hold)', 'Run', 'Left mouse', 'Fire the Astra', 'Right mouse (hold)', 'Reload', 'three hearts', 'Left stick', 'FIRE']) expect(text).toContain(needle);
+  for (const needle of ['W A S D', 'Shift (hold)', 'Run', 'Left mouse', 'Fire', 'Right mouse (hold)', 'Reload', 'three hearts', 'Left stick', 'FIRE', 'Switch weapon', 'Dhanush', 'Chakra', 'Vajra']) expect(text).toContain(needle);
   expect(await mission(page)).toMatchObject({ phase: 'idle' });
   await page.click('.howto-begin');
   await page.waitForFunction(() => window.__eka?.mission?.()?.narrating === true, null, { timeout: 30_000 });
@@ -107,7 +107,7 @@ test('new game opens on the Task 1 card and arms the player after the narration'
   await enter(page);
   await page.waitForFunction(() => window.__eka?.mission?.()?.narrating === true, null, { timeout: 30_000 });
   await page.waitForFunction(() => (document.querySelector('.narration-text')?.textContent ?? '').startsWith('You are entering into Task 1'), null, { timeout: 15_000 });
-  expect(await page.locator('.narration-title').textContent()).toBe('Matsarasura');
+  expect(await page.locator('.narration-title').textContent()).toBe('Madasura');
   // The narrator's pre-rendered clip for the line loaded and paced the typewriter.
   await page.waitForFunction(() => (window.__eka?.missionVoice?.()?.lineDuration as number) > 3.5, null, { timeout: 10_000 });
   expect(await page.evaluate(() => window.__eka?.missionVoice?.())).toMatchObject({ hasClip: true, ended: false });
@@ -116,7 +116,7 @@ test('new game opens on the Task 1 card and arms the player after the narration'
   const m = await mission(page);
   expect(m.task).toBe(1);
   expect(m.hearts).toBe(3);
-  expect(m.bossMax).toBe(220);
+  expect(m.bossMax).toBe(260);
   expect(await page.locator('.mhud-boss').isHidden()).toBe(false);
   expect(await page.locator('.mhud-ammo').isHidden()).toBe(false);
   expect(problems).toEqual([]);
@@ -131,7 +131,7 @@ test('defeating a villain advances to the next task; losing every heart shows th
   await page.evaluate(() => window.__eka?.missionDamageBoss?.(10_000));
   await page.waitForFunction(() => window.__eka?.mission?.()?.phase === 'victory', null, { timeout: 15_000 });
   await page.waitForFunction(() => window.__eka?.mission?.()?.task === 2 && window.__eka?.mission?.()?.narrating === true, null, { timeout: 30_000 });
-  expect(await page.locator('.narration-title').textContent()).toBe('Madasura');
+  expect(await page.locator('.narration-title').textContent()).toBe('Krodhasura');
   await page.evaluate(() => window.__eka?.missionSkipNarration?.());
   await page.waitForFunction(() => window.__eka?.mission?.()?.phase === 'battle', null, { timeout: 30_000 });
   for (let i = 0; i < 3; i++) {
@@ -149,4 +149,40 @@ test('defeating a villain advances to the next task; losing every heart shows th
   expect(labels[1]).toContain('Play Task 1 again');
   await page.evaluate(() => window.__eka?.missionMenuChoose?.(1));
   await page.waitForFunction(() => window.__eka?.mission?.()?.task === 1 && window.__eka?.mission?.()?.narrating === true, null, { timeout: 30_000 });
+});
+
+test('the leaderboard opens from the title screen, and a finished run is recorded on it', async ({ page }) => {
+  const problems = await boot(page);
+  // Title screen: the board opens over the title card, empty on a fresh device, and closes with Back.
+  await page.click('#boot-board');
+  await page.waitForSelector('.leaderboard:not([hidden])', { timeout: 10_000 });
+  expect(await page.locator('.leaderboard-body').textContent()).toContain('No runs on this device yet');
+  expect(await page.locator('.leaderboard-tabs [data-tab="global"]').isHidden()).toBe(true); // no backend configured
+  await page.click('.leaderboard-close');
+  await page.waitForSelector('.leaderboard', { state: 'hidden' });
+  // A run that starts at the last task (partial run, rank C) finishes → ending card → recorded → listed.
+  await page.evaluate(() => localStorage.clear()); // no save to continue from: Enter starts the new game at ?task=5
+  await page.goto('/?scene=game&help=0&task=5&name=Meera&hero=female', { waitUntil: 'load' });
+  await page.waitForFunction(() => window.__eka?.ready === true, null, { timeout: 90_000 });
+  await page.click('#boot-continue');
+  await page.waitForFunction(() => window.__eka?.mission?.()?.narrating === true, null, { timeout: 30_000 });
+  await page.evaluate(() => window.__eka?.missionSkipNarration?.());
+  await page.waitForFunction(() => window.__eka?.mission?.()?.phase === 'battle', null, { timeout: 30_000 });
+  await page.evaluate(() => window.__eka?.missionDamageBoss?.(10_000));
+  await page.waitForFunction(() => window.__eka?.mission?.()?.phase === 'ended' && window.__eka?.mission?.()?.menu === true, null, { timeout: 60_000 });
+  expect(await page.locator('.results-note').textContent()).toContain('#1 on this device');
+  const stored = await page.evaluate(() => JSON.parse(localStorage.getItem('eka:leaderboard') ?? '[]') as Array<Record<string, unknown>>);
+  expect(stored).toHaveLength(1);
+  expect(stored[0]).toMatchObject({ name: 'Meera', hero: 'female', rank: 'C', tasks: 1 });
+  expect(typeof stored[0].score).toBe('number');
+  const labels = await page.locator('.taskmenu-btn span').allTextContents();
+  expect(labels[0]).toContain('Leaderboard');
+  await page.evaluate(() => window.__eka?.missionMenuChoose?.(0));
+  await page.waitForSelector('.leaderboard:not([hidden])', { timeout: 10_000 });
+  const rows = await page.locator('.leaderboard-table tbody tr').allTextContents();
+  expect(rows).toHaveLength(1);
+  expect(rows[0]).toContain('Meera');
+  expect(rows[0]).toContain('C');
+  expect(await page.locator('.leaderboard-table tbody tr.mine').count()).toBe(1);
+  expect(problems).toEqual([]);
 });

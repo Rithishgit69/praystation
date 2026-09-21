@@ -19,11 +19,19 @@ const KEYMAP: Record<string, Action> = {
   F3: 'profiler',
   KeyV: 'cameraReset',
   KeyR: 'reload',
+  Digit1: 'weapon1',
+  Digit2: 'weapon2',
+  Digit3: 'weapon3',
+  Digit4: 'weapon4',
+  KeyX: 'weaponNext',
+  KeyZ: 'weaponPrev',
 };
 
 export class Keyboard implements InputDevice {
   readonly kind = 'kbm' as const;
   private readonly down = new Set<string>();
+  /** Keys pressed since the last poll: a tap shorter than a frame still counts for one frame. */
+  private readonly tapped = new Set<string>();
   private readonly onDown = (e: KeyboardEvent): void => {
     // Typing in a text field (the traveller's name) is not game input.
     const tag = (e.target as HTMLElement | null)?.tagName;
@@ -31,6 +39,7 @@ export class Keyboard implements InputDevice {
     if (e.code === 'Tab' || e.code === 'F1' || e.code === 'F3' || e.code === 'Space') e.preventDefault();
     if (this.down.has(e.code)) return;
     this.down.add(e.code);
+    this.tapped.add(e.code);
     this.activity = true;
   };
   private readonly onUp = (e: KeyboardEvent): void => {
@@ -58,6 +67,11 @@ export class Keyboard implements InputDevice {
       const a = KEYMAP[code];
       if (a) frame.held.add(a);
     }
+    for (const code of this.tapped) {
+      const a = KEYMAP[code];
+      if (a) frame.held.add(a);
+    }
+    this.tapped.clear();
     const had = this.activity || x !== 0 || y !== 0;
     this.activity = false;
     return had;
