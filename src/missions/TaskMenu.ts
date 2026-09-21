@@ -23,7 +23,7 @@ export class TaskMenu {
     return this.visible;
   }
 
-  show(title: string, subtitle: string, buttons: TaskMenuButton[]): void {
+  show(title: string, subtitle: string, buttons: TaskMenuButton[], body?: HTMLElement): void {
     this.root.innerHTML = '';
     const inner = document.createElement('div');
     inner.className = 'taskmenu-inner';
@@ -34,6 +34,7 @@ export class TaskMenu {
     p.className = 'taskmenu-sub';
     p.textContent = subtitle;
     inner.append(h, p);
+    if (body) inner.appendChild(body);
     for (const b of buttons) {
       const btn = document.createElement('button');
       btn.className = `boot-continue${b.primary ? '' : ' boot-secondary'} taskmenu-btn`;

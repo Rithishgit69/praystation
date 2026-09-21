@@ -25,7 +25,7 @@ describe('game store', () => {
     expect(r.activatedShrines).toEqual(['shrine:gate']);
     expect(r.settings.cinematicMode).toBe(true);
     expect(r.settings.lookSensitivity).toBe(1.4);
-    expect(r.settings.analyticsOptIn).toBe(false);
+    expect(r.profile.name).toBe('Traveller');
   });
   it('does not duplicate memories or journal entries', () => {
     const s = gameStore.getState();

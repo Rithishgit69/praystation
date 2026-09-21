@@ -5,8 +5,8 @@ import { MISSIONS } from '@/missions/MissionData';
 import { NARRATORS, SYSTEM_LINES, allVoiceLines, missionLineId } from '@/missions/VoiceLines';
 
 const manifest = JSON.parse(readFileSync('public/voice/manifest.json', 'utf8')) as { narrators: Record<string, unknown>; lines: Record<string, string> };
-const hashOf = (n: { ttsVoice: string; rate: string; pitch: string }, text: string): string =>
-  createHash('sha1').update(`${n.ttsVoice}|${n.rate}|${n.pitch}|${text}`).digest('hex').slice(0, 12);
+const hashOf = (n: { engine: string; voice: string; tuning: string }, text: string): string =>
+  createHash('sha1').update(`${n.engine}|${n.voice}|${n.tuning}|${text}`).digest('hex').slice(0, 12);
 
 describe('narration voice lines', () => {
   it('lists every villain introduction line and the system lines', () => {
@@ -15,6 +15,10 @@ describe('narration voice lines', () => {
     expect(lines.length).toBe(introCount + Object.keys(SYSTEM_LINES).length);
     expect(lines[0]).toEqual({ id: missionLineId('matsarasura', 0), text: 'You are entering into Task 1.' });
     for (const m of MISSIONS) expect(m.intro[0]?.startsWith(`You are entering into Task ${m.task}.`)).toBe(true);
+  });
+
+  it('ships only narrators whose engine output is licensed for redistribution', () => {
+    for (const n of Object.values(NARRATORS)) expect(n.engine).toBe('kokoro');
   });
 
   it('has a rendered clip for every line and narrator, matching the current text (rerun tools/gen-voice.mjs otherwise)', () => {

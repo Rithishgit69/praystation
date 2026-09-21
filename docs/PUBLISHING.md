@@ -74,7 +74,7 @@ so it is 16 KB page-size compatible by construction; `targetSdk` and `compileSdk
 3. Store listing: copy from `store/listing.md`; icon `store/icons/icon-1024.png`; feature graphic
    `store/feature-graphic.png`; screenshots `store/screenshots/*.png` (1920×1080, landscape).
 4. **Data safety**: *Does your app collect or share user data?* → **No**. The game stores saves in
-   local storage only; nothing leaves the device. No analytics, no crash reporting unless the player
+   local storage only; nothing leaves the device. No analytics and no crash reporting of any kind; nothing
    opts in (the toggle exists in Options but no third-party SDK is bundled, so even opted-in it sends nothing).
 5. **Content rating (IARC)**: answer *Violence → fantasy violence against non-human/mythic creatures:
    yes; blood: no; gambling: no; controlled substances: no; user interaction: none*. Expected rating:

@@ -1,8 +1,12 @@
-// Pre-renders every narration line to MP3 with a neural text-to-speech voice, once per narrator, into
-// public/voice/<narrator>/<line-id>.mp3, plus public/voice/manifest.json. Uses Microsoft's neural voices
-// through the free `edge-tts` tool (run via `uvx`, so nothing is installed globally). Lines whose text and
-// voice settings are unchanged since the last run are skipped.
-//   usage: node tools/gen-voice.mjs [--force] [--narrator neerja|ava] [--concurrency 4]
+// Pre-renders every narration line to MP3, once per narrator, into public/voice/<narrator>/<line-id>.mp3
+// plus public/voice/manifest.json. Lines whose text and voice settings are unchanged are skipped.
+//
+// Engines (per narrator, see src/missions/VoiceLines.ts):
+//   kokoro — Kokoro-82M (Apache-2.0; output free to use and ship). Runs locally through `uv`
+//            (https://docs.astral.sh/uv/) + ffmpeg; the first run downloads the model (~330 MB).
+//   edge   — Microsoft neural voices via edge-tts. NOT licensed for redistribution: for private
+//            experiments only; never commit its output.
+//   usage: node tools/gen-voice.mjs [--force] [--narrator heart|emma]
 import { build } from 'esbuild';
 import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
@@ -15,7 +19,6 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const args = process.argv.slice(2);
 const force = args.includes('--force');
 const only = args.includes('--narrator') ? args[args.indexOf('--narrator') + 1] : null;
-const concurrency = Number(args.includes('--concurrency') ? args[args.indexOf('--concurrency') + 1] : 4);
 
 // Load the TypeScript line list by bundling it to a temp ESM file (type-only imports are erased).
 const tmp = path.join(os.tmpdir(), `eka-voice-lines-${process.pid}.mjs`);
@@ -36,49 +39,60 @@ const narrators = Object.values(mod.NARRATORS).filter((n) => !only || n.key === 
 const outRoot = path.join(root, 'public/voice');
 const manifestPath = path.join(outRoot, 'manifest.json');
 const manifest = fs.existsSync(manifestPath) ? JSON.parse(fs.readFileSync(manifestPath, 'utf8')) : { narrators: {}, lines: {} };
-const hashOf = (n, text) => createHash('sha1').update(`${n.ttsVoice}|${n.rate}|${n.pitch}|${text}`).digest('hex').slice(0, 12);
+if (!manifest.narrators) manifest.narrators = {};
+if (!manifest.lines) manifest.lines = {};
+const hashOf = (n, text) => createHash('sha1').update(`${n.engine}|${n.voice}|${n.tuning}|${text}`).digest('hex').slice(0, 12);
+const tuningOf = (n) => Object.fromEntries(n.tuning.split(';').filter(Boolean).map((kv) => kv.split('=')));
 
-const run = (cmd, argv) =>
+const run = (cmd, argv, opts = {}) =>
   new Promise((resolve, reject) => {
-    const p = spawn(cmd, argv, { stdio: ['ignore', 'pipe', 'pipe'] });
+    const p = spawn(cmd, argv, { stdio: ['ignore', 'pipe', 'pipe'], ...opts });
     let err = '';
+    let out = '';
+    p.stdout.on('data', (d) => (out += d));
     p.stderr.on('data', (d) => (err += d));
-    p.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`${cmd} ${argv.join(' ')} failed (${code}): ${err.trim()}`))));
+    p.on('close', (code) => (code === 0 ? resolve(out) : reject(new Error(`${cmd} ${argv.slice(0, 4).join(' ')} … failed (${code}): ${err.trim().slice(-600)}`))));
   });
+// Loudness-normalised so both narrators sit at the same level under the chant (EBU R128, −18 LUFS).
+const toMp3 = (wav, mp3) => run('ffmpeg', ['-y', '-v', 'error', '-i', wav, '-af', 'loudnorm=I=-18:TP=-1.5:LRA=11', '-ac', '1', '-ar', '24000', '-b:a', '48k', mp3]);
 
-const jobs = [];
+let rendered = 0;
 for (const n of narrators) {
   fs.mkdirSync(path.join(outRoot, n.key), { recursive: true });
-  manifest.narrators[n.key] = { ttsVoice: n.ttsVoice, rate: n.rate, pitch: n.pitch, label: n.label };
-  for (const { id, text } of lines) {
-    const file = path.join(outRoot, n.key, `${id}.mp3`);
-    const h = hashOf(n, text);
-    const key = `${n.key}/${id}`;
-    if (!force && manifest.lines[key] === h && fs.existsSync(file)) continue;
-    jobs.push(async () => {
-      // A few retries: the service occasionally drops a connection.
-      for (let attempt = 1; ; attempt++) {
-        try {
-          await run('uvx', ['edge-tts', '--voice', n.ttsVoice, `--rate=${n.rate}`, `--pitch=${n.pitch}`, '--text', text, '--write-media', file]);
-          break;
-        } catch (e) {
-          if (attempt >= 4) throw e;
-          await new Promise((r) => setTimeout(r, 1500 * attempt));
-        }
-      }
-      manifest.lines[key] = h;
-      console.log(`  ${key}  (${Math.round(fs.statSync(file).size / 1024)} KB)`);
-    });
+  manifest.narrators[n.key] = { engine: n.engine, voice: n.voice, tuning: n.tuning, label: n.label };
+  const pending = lines.filter(({ id, text }) => force || manifest.lines[`${n.key}/${id}`] !== hashOf(n, text) || !fs.existsSync(path.join(outRoot, n.key, `${id}.mp3`)));
+  console.log(`${n.key} (${n.engine} ${n.voice}): ${pending.length} of ${lines.length} clip(s) to render`);
+  if (pending.length === 0) continue;
+  if (n.engine === 'kokoro') {
+    const t = tuningOf(n);
+    const work = fs.mkdtempSync(path.join(os.tmpdir(), 'eka-kokoro-'));
+    const jobs = pending.map(({ id, text }) => ({ file: path.join(work, `${id}.wav`), text, voice: n.voice, lang: n.lang, speed: Number(t.speed ?? 1) }));
+    const jobsFile = path.join(work, 'jobs.json');
+    fs.writeFileSync(jobsFile, JSON.stringify(jobs));
+    await run('uv', ['run', '--python', '3.12', '--with', 'kokoro', '--with', 'soundfile', '--with', 'numpy', path.join(root, 'tools/kokoro_tts.py'), jobsFile]);
+    for (const { id, text } of pending) {
+      const mp3 = path.join(outRoot, n.key, `${id}.mp3`);
+      await toMp3(path.join(work, `${id}.wav`), mp3);
+      manifest.lines[`${n.key}/${id}`] = hashOf(n, text);
+      rendered++;
+      console.log(`  ${n.key}/${id}  (${Math.round(fs.statSync(mp3).size / 1024)} KB)`);
+    }
+    fs.rmSync(work, { recursive: true, force: true });
+  } else {
+    const t = tuningOf(n);
+    for (const { id, text } of pending) {
+      const mp3 = path.join(outRoot, n.key, `${id}.mp3`);
+      await run('uvx', ['edge-tts', '--voice', n.voice, `--rate=${t.rate ?? '+0%'}`, `--pitch=${t.pitch ?? '+0Hz'}`, '--text', text, '--write-media', mp3]);
+      manifest.lines[`${n.key}/${id}`] = hashOf(n, text);
+      rendered++;
+      console.log(`  ${n.key}/${id}  (${Math.round(fs.statSync(mp3).size / 1024)} KB)`);
+    }
   }
 }
-console.log(`${lines.length} lines × ${narrators.length} narrator(s); ${jobs.length} clip(s) to render`);
-let next = 0;
-const worker = async () => {
-  while (next < jobs.length) await jobs[next++]();
-};
-await Promise.all(Array.from({ length: Math.min(concurrency, jobs.length) }, worker));
-// Drop manifest entries for lines that no longer exist.
-const valid = new Set(narrators.flatMap((n) => lines.map((l) => `${n.key}/${l.id}`)));
-for (const k of Object.keys(manifest.lines)) if (k.split('/')[0] in manifest.narrators && !valid.has(k) && narrators.some((n) => n.key === k.split('/')[0])) delete manifest.lines[k];
+// Drop manifest entries and folders for narrators that no longer exist.
+const keys = new Set(Object.values(mod.NARRATORS).map((n) => n.key));
+for (const k of Object.keys(manifest.narrators)) if (!keys.has(k)) delete manifest.narrators[k];
+for (const k of Object.keys(manifest.lines)) if (!keys.has(k.split('/')[0])) delete manifest.lines[k];
+for (const dir of fs.readdirSync(outRoot, { withFileTypes: true })) if (dir.isDirectory() && !keys.has(dir.name)) fs.rmSync(path.join(outRoot, dir.name), { recursive: true, force: true });
 fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
-console.log(`done → ${path.relative(root, outRoot)}`);
+console.log(`done: ${rendered} clip(s) rendered → ${path.relative(root, outRoot)}`);

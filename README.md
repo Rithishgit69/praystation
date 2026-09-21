@@ -13,6 +13,15 @@ Sacred figures are portrayed with respect and are never fought.*
 Repository: **github.com/Rithishgit69/praystation** · web build deploys to Vercel from `main`
 (`vercel.json`) · CI runs typecheck, lint, unit tests and the build on every push.
 
+## How to play (in one breath)
+
+Move `WASD`, look with the mouse (click the view to capture it), run `Shift`, jump `Space`, dodge `Q`,
+fire `left mouse`, aim `right mouse`, reload `R`, pause `Esc`. Eight tasks, eight asuras: each card
+tells you how the villain fights, the Astra tells you how to beat it, the bar at the top is its
+health, the three hearts are yours. Everything flies straight and every floor effect is marked first —
+sidestep, jump, dodge. Play at **https://rithishgit69.github.io/praystation/**; `SUBMISSION.md` has the
+contest sheet and `docs/CODE_WALKTHROUGH.md` the five-minute tour of the code.
+
 ## Run, build, deploy
 
 ```bash

@@ -25,6 +25,28 @@ type Phase = 'idle' | 'travel' | 'narration' | 'arming' | 'battle' | 'respawn' |
 
 const MAX_HEARTS = 3;
 const FLAG_UNLOCKED = 'mission:unlocked';
+const FLAG_STATS = 'mission:stats:';
+
+/** What one completed task took: seconds of battle, hearts lost, shots fired and hit, retries. */
+interface TaskStats {
+  seconds: number;
+  heartsLost: number;
+  shots: number;
+  hits: number;
+  retries: number;
+}
+
+const fmtTime = (s: number): string => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+const pct = (hits: number, shots: number): string => (shots > 0 ? `${Math.round((hits / shots) * 100)} %` : '—');
+
+/** Rank a run: hearts lost weigh most, then accuracy, then pace. */
+const rankOf = (t: TaskStats): { rank: string; title: string } => {
+  const acc = t.shots > 0 ? t.hits / t.shots : 0;
+  if (t.heartsLost <= 1 && acc >= 0.55 && t.retries === 0) return { rank: 'S', title: 'Flawless pilgrim' };
+  if (t.heartsLost <= 5 && t.retries <= 1) return { rank: 'A', title: 'Steadfast' };
+  if (t.heartsLost <= 10) return { rank: 'B', title: 'Persevering' };
+  return { rank: 'C', title: 'Unbroken' };
+};
 const FLAG_CURRENT = 'mission:current';
 const FLAG_BOSS_HP = 'mission:bossHp';
 const FLAG_HEARTS = 'mission:hearts';
@@ -53,6 +75,12 @@ export class MissionDirector implements System {
   private generation = 0;
   onDawn: ((t: number) => void) | null = null;
   setVeil: ((v: number) => void) | null = null;
+  /** Battle clock and counters for the task in progress. */
+  private battleSeconds = 0;
+  private taskHeartsLost = 0;
+  private taskRetries = 0;
+  private shotsAtStart = 0;
+  private hitsAtStart = 0;
 
   constructor(
     private readonly engine: Engine,
@@ -120,7 +148,46 @@ export class MissionDirector implements System {
     this.hearts = MAX_HEARTS;
     this.health = 100;
     gameStore.getState().setFlag(FLAG_BOSS_HP, 0);
-    this.startTask(task, fresh ? undefined : undefined);
+    if (fresh) gameStore.getState().setFlag(`${FLAG_STATS}${task}`, '');
+    this.startTask(task);
+  }
+
+  private readStats(task: number): TaskStats | null {
+    const raw = gameStore.getState().flags[`${FLAG_STATS}${task}`];
+    if (typeof raw !== 'string' || !raw) return null;
+    try {
+      return JSON.parse(raw) as TaskStats;
+    } catch {
+      return null;
+    }
+  }
+
+  /** The run's results: one row per task plus totals and a rank. */
+  private buildResults(): { table: HTMLElement; total: TaskStats; rank: { rank: string; title: string } } {
+    const total: TaskStats = { seconds: 0, heartsLost: 0, shots: 0, hits: 0, retries: 0 };
+    const table = document.createElement('table');
+    table.className = 'results';
+    table.innerHTML = '<thead><tr><th>Task</th><th>Asura</th><th>Time</th><th>Accuracy</th><th>Hearts lost</th></tr></thead>';
+    const body = document.createElement('tbody');
+    for (const m of MISSIONS) {
+      const t = this.readStats(m.task);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `<td>${m.task}</td><td>${m.villain}</td><td>${t ? fmtTime(t.seconds) : '—'}</td><td>${t ? pct(t.hits, t.shots) : '—'}</td><td>${t ? t.heartsLost : '—'}</td>`;
+      body.appendChild(tr);
+      if (t) {
+        total.seconds += t.seconds;
+        total.heartsLost += t.heartsLost;
+        total.shots += t.shots;
+        total.hits += t.hits;
+        total.retries += t.retries;
+      }
+    }
+    table.appendChild(body);
+    const rank = rankOf(total);
+    const foot = document.createElement('tfoot');
+    foot.innerHTML = `<tr><td colspan="2">Rank <strong class="results-rank">${rank.rank}</strong> · ${rank.title}</td><td>${fmtTime(total.seconds)}</td><td>${pct(total.hits, total.shots)}</td><td>${total.heartsLost}</td></tr>`;
+    table.appendChild(foot);
+    return { table, total, rank };
   }
 
   private startTask(task: number, bossHp?: number): void {
@@ -140,6 +207,13 @@ export class MissionDirector implements System {
     this.health = 100;
     this.hud.setHealth(this.health);
     this.hud.hideBoss();
+    if (bossHp === undefined) {
+      this.battleSeconds = 0;
+      this.taskHeartsLost = 0;
+      this.taskRetries = 0;
+    } else this.taskRetries++;
+    this.shotsAtStart = this.gun.shotsFired;
+    this.hitsAtStart = this.gun.shotsHit;
     this.gun.setEquipped(false);
     this.hud.setWeaponVisible(false);
     this.phase = 'travel';
@@ -225,6 +299,7 @@ export class MissionDirector implements System {
 
   private loseHeart(): void {
     this.hearts--;
+    this.taskHeartsLost++;
     gameStore.getState().setFlag(FLAG_HEARTS, this.hearts);
     this.hud.setHearts(this.hearts);
     this.audio.play('heart-lost', { volume: 0.9 });
@@ -294,7 +369,17 @@ export class MissionDirector implements System {
     s.setFlag(FLAG_BOSS_HP, 0);
     s.unlockJournal(`asura-${def.id}`);
     this.hud.hideBoss();
-    this.hud.showBanner('TASK COMPLETE', 3.2, `${def.villain}, ${def.epithet}, is broken. Well fought, ${gameStore.getState().profile.name}.`);
+    const prev = this.readStats(def.task);
+    const stats: TaskStats = {
+      seconds: this.battleSeconds,
+      heartsLost: this.taskHeartsLost,
+      shots: (prev?.shots ?? 0) + (this.gun.shotsFired - this.shotsAtStart),
+      hits: (prev?.hits ?? 0) + (this.gun.shotsHit - this.hitsAtStart),
+      retries: this.taskRetries,
+    };
+    s.setFlag(`${FLAG_STATS}${def.task}`, JSON.stringify(stats));
+    const hearts = stats.heartsLost === 0 ? 'no hearts lost' : `${stats.heartsLost} ${stats.heartsLost === 1 ? 'heart' : 'hearts'} lost`;
+    this.hud.showBanner('TASK COMPLETE', 3.6, `${def.villain}, ${def.epithet}, is broken. ${fmtTime(stats.seconds)} · ${pct(stats.hits, stats.shots)} accuracy · ${hearts}. Well fought, ${gameStore.getState().profile.name}.`);
     this.audio.play('task-complete', { volume: 0.9 });
     this.voice.speak('task-complete');
     void this.lighting.transition('present', 3);
@@ -320,10 +405,18 @@ export class MissionDirector implements System {
     const dawn = { t: 0 };
     gsap.to(dawn, { t: 1, duration: 14, delay: 3, onUpdate: () => this.onDawn?.(dawn.t) });
     gsap.delayedCall(9, () => {
-      this.menu.show('The Temple of Eka-Danta', 'Every asura of the Vinayaka Purana tradition has been faced. Inspired by traditional stories; all events and characters here are fictional.', [
-        { label: 'Play any task again', primary: true, onSelect: () => this.openTaskSelect() },
-        { label: 'Return to title', onSelect: () => location.reload() },
-      ]);
+      const { table, rank } = this.buildResults();
+      const name = gameStore.getState().profile.name;
+      this.menu.show(
+        `${name} — Rank ${rank.rank}`,
+        `${rank.title}. Every asura of the Vinayaka Purana tradition has been faced. Inspired by traditional stories; all events and characters here are fictional.`,
+        [
+          { label: 'Play any task again', primary: true, onSelect: () => this.openTaskSelect() },
+          { label: 'New game', detail: 'from Task 1 with a fresh traveller', onSelect: () => this.engine.resetSaveAndReload() },
+          { label: 'Return to title', onSelect: () => location.reload() },
+        ],
+        table,
+      );
     });
   }
 
@@ -336,6 +429,7 @@ export class MissionDirector implements System {
   update(dt: number, elapsed: number): void {
     this.narration.update(dt);
     this.invuln = Math.max(0, this.invuln - dt);
+    if (this.phase === 'battle') this.battleSeconds += dt;
     this.asura?.update(dt, elapsed);
     if (this.phase === 'battle') {
       // Keep the player inside the arena: the asura will not chase beyond its ring.

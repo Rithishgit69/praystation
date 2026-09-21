@@ -7,17 +7,29 @@ import { MISSIONS } from './MissionData';
  */
 export interface NarratorVoice {
   key: string;
-  /** Text-to-speech voice name (Microsoft neural voice, rendered offline by the tool). */
-  ttsVoice: string;
-  rate: string;
-  pitch: string;
+  /**
+   * Rendering engine. `kokoro` is Kokoro-82M (Apache-2.0: output free to use and ship) — the voices
+   * in the game. `edge` is Microsoft's neural voices via edge-tts, whose output is NOT licensed for
+   * redistribution; it stays available for private experiments only and its clips are never committed.
+   */
+  engine: 'kokoro' | 'edge';
+  /** Voice id for the engine (Kokoro: af_heart, bf_emma …; edge: en-IN-NeerjaNeural …). */
+  voice: string;
+  /** Kokoro language code ('a' American, 'b' British); ignored by edge. */
+  lang: string;
+  /** Prosody: Kokoro `speed=0.92`; edge `rate=-8%;pitch=-3Hz`. Part of the clip hash. */
+  tuning: string;
   label: string;
 }
 
-export const NARRATORS: Record<'neerja' | 'ava', NarratorVoice> = {
-  neerja: { key: 'neerja', ttsVoice: 'en-IN-NeerjaExpressiveNeural', rate: '-8%', pitch: '-3Hz', label: 'Neerja (Indian English)' },
-  ava: { key: 'ava', ttsVoice: 'en-US-AvaMultilingualNeural', rate: '-8%', pitch: '-4Hz', label: 'Ava (American English)' },
+export type NarratorKey = 'heart' | 'emma';
+
+export const NARRATORS: Record<NarratorKey, NarratorVoice> = {
+  heart: { key: 'heart', engine: 'kokoro', voice: 'af_heart', lang: 'a', tuning: 'speed=0.9;loudnorm=-18', label: 'Heart (American English)' },
+  emma: { key: 'emma', engine: 'kokoro', voice: 'bf_emma', lang: 'b', tuning: 'speed=0.9;loudnorm=-18', label: 'Emma (British English)' },
 };
+
+export const DEFAULT_NARRATOR: NarratorKey = 'heart';
 
 /** Lines spoken by the narrator outside the villain cards. */
 export const SYSTEM_LINES: Record<string, string> = {

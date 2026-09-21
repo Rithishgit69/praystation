@@ -83,8 +83,8 @@ export class PauseMenu implements System {
     });
     const narrator = document.createElement('select');
     for (const [value, label] of [
-      ['neerja', 'Neerja (Indian English)'],
-      ['ava', 'Ava (American English)'],
+      ['heart', 'Heart (American English)'],
+      ['emma', 'Emma (British English)'],
     ] as const) {
       const o = document.createElement('option');
       o.value = value;
@@ -135,7 +135,6 @@ export class PauseMenu implements System {
       slider('sfxVolume', 'Effects volume', 0, 1, 0.01),
       slider('voiceVolume', 'Narration volume', 0, 1, 0.01),
       row('Narrator', narrator),
-      toggle('analyticsOptIn', 'Share anonymous crash reports (off by default)'),
     );
     const journalBtn = document.createElement('button');
     journalBtn.textContent = 'Journal';

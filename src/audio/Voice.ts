@@ -1,5 +1,6 @@
 import { Howl } from 'howler';
 import { gameStore } from '@/state/store';
+import { DEFAULT_NARRATOR, NARRATORS } from '@/missions/VoiceLines';
 
 export interface VoiceHandle {
   /** Resolves with the clip length in seconds once it is loaded, or null if the clip is unavailable. */
@@ -27,7 +28,8 @@ export class Voice {
   }
 
   private howlFor(lineId: string): Howl {
-    const narrator = gameStore.getState().settings.narrator;
+    const chosen = gameStore.getState().settings.narrator;
+    const narrator = chosen in NARRATORS ? chosen : DEFAULT_NARRATOR;
     const key = `${narrator}/${lineId}`;
     let h = this.cache.get(key);
     if (!h) {

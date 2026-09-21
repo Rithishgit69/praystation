@@ -15,11 +15,10 @@ export interface Settings {
   sfxVolume: number;
   /** Narration voice volume (pre-rendered voice lines). */
   voiceVolume: number;
-  /** Narrator voice: Neerja (Indian English) or Ava (American English). */
-  narrator: 'neerja' | 'ava';
+  /** Narrator voice (see src/missions/VoiceLines.ts). */
+  narrator: 'heart' | 'emma';
   /** When true, tapping Shift toggles running instead of holding it. */
   sprintToggle: boolean;
-  analyticsOptIn: boolean;
   language: 'en';
 }
 
@@ -81,9 +80,8 @@ export const DEFAULT_SETTINGS: Settings = {
   musicVolume: 0.8,
   sfxVolume: 1,
   voiceVolume: 1,
-  narrator: 'neerja',
+  narrator: 'heart',
   sprintToggle: false,
-  analyticsOptIn: false,
   language: 'en',
 };
 
@@ -112,7 +110,12 @@ export const gameStore = createStore<GameState>((set) => ({
   setSettings: (patch) => set((s) => ({ settings: { ...s.settings, ...patch } })),
   setProfile: (patch) => set((s) => ({ profile: { ...s.profile, ...patch } })),
   addPlayTime: (sec) => set((s) => ({ playTimeSec: s.playTimeSec + sec })),
-  hydrate: (snap) => set({ ...snap, settings: { ...DEFAULT_SETTINGS, ...snap.settings }, profile: { ...DEFAULT_PROFILE, ...(snap.profile ?? {}) } }),
+  hydrate: (snap) => {
+    const settings = { ...DEFAULT_SETTINGS, ...snap.settings };
+    // Older saves may name a narrator that no longer ships.
+    if (settings.narrator !== 'heart' && settings.narrator !== 'emma') settings.narrator = DEFAULT_SETTINGS.narrator;
+    set({ ...snap, settings, profile: { ...DEFAULT_PROFILE, ...(snap.profile ?? {}) } });
+  },
 }));
 
 export const snapshotOf = (s: GameState): GameSnapshot => ({
