@@ -209,41 +209,41 @@ const releaseKeys = (s) => s.ev(() => { for (const k of ['KeyW', 'KeyS', 'KeyA',
 // ---- Segment 1: title → traveller → how to play → Task 1 ----------------------------------------
 await segment('start', '/?scene=game', async (s) => {
   s.trimStart = Math.max(0, s.now() - 0.3);
-  await s.wait(1200);
+  await s.wait(1000);
   await s.page.click('#boot-continue');
   s.mark('ui-tick', 0.6);
   await s.page.waitForSelector('.traveller:not([hidden])');
-  await s.wait(400);
-  await s.page.click('.traveller-name input');
-  await s.page.keyboard.type('Arjun', { delay: 70 });
   await s.wait(300);
+  await s.page.click('.traveller-name input');
+  await s.page.keyboard.type('Arjun', { delay: 60 });
+  await s.wait(250);
   await s.page.click('.traveller-hero[data-hero="female"]');
-  await s.wait(700);
+  await s.wait(600);
   await s.page.click('.traveller-hero[data-hero="male"]');
-  await s.wait(400);
+  await s.wait(300);
   await s.page.click('.traveller-go');
   s.mark('ui-tick', 0.6);
   await s.page.waitForSelector('.howto:not([hidden])');
-  await s.wait(1500);
+  await s.wait(1200);
   await s.page.mouse.wheel(0, 600);
   await s.wait(600);
   await s.page.click('.howto-begin');
   s.mark('task-begin', 0.6);
-  await narrate(s, 'madasura', 2, 5);
+  await narrate(s, 'madasura', 2, 3.5);
   await s.page.waitForFunction(() => window.__eka.mission().phase === 'arming', null, { timeout: 20000 });
   s.mark('weapon-granted', 0.7);
   s.mark('voice:weapon-astra', 1);
   await s.wait(2200);
   // The blade warrior throws his returning blade; the hero rolls out of the way, and B shows the controls.
-  await fightUntil(s, 9.5, 'Digit1', rifle, 'blade-throw', [{ at: 2.6, run: dodge }, { at: 5.0, run: helpCard }]);
+  await fightUntil(s, 8, 'Digit1', rifle, 'blade-throw', [{ at: 2.2, run: dodge }, { at: 4.4, run: helpCard }]);
   if (s.mouseDown) { await s.page.mouse.up(); s.mouseDown = false; }
   await releaseKeys(s);
   await finishFight(s);
   s.mark('asura-death', 0.9);
-  await s.wait(2400);
+  await s.wait(2000);
   s.mark('task-complete', 0.8);
   s.mark('voice:task-complete', 1);
-  await s.wait(1800);
+  await s.wait(1400);
 });
 
 // ---- Segments 2–4: each new Astra ----------------------------------------------------------------
@@ -252,7 +252,7 @@ const weaponSegment = async (task, id, key, driver, seconds, lines, signature) =
     await s.page.click('#boot-continue');
     await s.page.waitForFunction(() => window.__eka.mission().narrating === true, null, { timeout: 30000 });
     s.trimStart = s.now() - 0.3;
-    await narrate(s, id === 'dhanush' ? 'krodhasura' : id === 'chakra' ? 'lobhasura' : 'mohasura', lines, 1.7);
+    await narrate(s, id === 'dhanush' ? 'krodhasura' : id === 'chakra' ? 'lobhasura' : 'mohasura', lines, 1.1);
     await s.page.waitForFunction(() => window.__eka.mission().phase === 'arming', null, { timeout: 20000 });
     s.mark('weapon-granted', 0.7);
     s.mark(`voice:weapon-${id}`, 1);
@@ -265,12 +265,12 @@ const weaponSegment = async (task, id, key, driver, seconds, lines, signature) =
     await s.wait(800);
   });
 };
-await weaponSegment(2, 'dhanush', 'Digit2', bow, 4.5, 1, 'leap-slam');
-await weaponSegment(3, 'chakra', 'Digit3', disc, 4.2, 1, 'fissure');
-await weaponSegment(4, 'vajra', 'Digit4', burst, 4.2, 1, 'radial-burst');
+await weaponSegment(2, 'dhanush', 'Digit2', bow, 3.6, 1, 'leap-slam');
+await weaponSegment(3, 'chakra', 'Digit3', disc, 3.3, 1, 'fissure');
+await weaponSegment(4, 'vajra', 'Digit4', burst, 3.3, 1, 'radial-burst');
 
 // ---- Segment 5: the last villain's flame breath ------------------------------------------------
-const MONTAGE = [[5, 'flame-breath', 1300]];
+const MONTAGE = [];
 for (const [task, attack, hold] of MONTAGE) {
   await segment(`montage-${task}`, `/?scene=game&help=0&task=${task}&name=Arjun&hero=male`, async (s) => {
     await s.page.click('#boot-continue');
@@ -312,8 +312,19 @@ await segment('ending', '/?scene=game&help=0&task=5&name=Arjun&hero=male', async
   await s.wait(400);
   await s.aim();
   s.trimStart = s.now();
+  // The fire king's flame breath, sidestepped, then the last blow.
   await s.page.mouse.down();
-  await s.pollFight(1500, async () => { await s.aim(); return true; });
+  await s.ev(() => window.__eka.key('KeyA', true));
+  await s.pollFight(4200, async (m) => {
+    await s.aim();
+    if (!s.breathed && ['idle', 'stagger'].includes(m.bossState)) {
+      s.breathed = true;
+      await s.ev(() => window.__eka.missionAttack('flame-breath'));
+      s.mark('asura-roar', 0.6);
+    }
+    return true;
+  });
+  await s.ev(() => window.__eka.key('KeyA', false));
   await s.page.mouse.up();
   await finishFight(s);
   s.mark('asura-death', 0.9);
@@ -323,11 +334,10 @@ await segment('ending', '/?scene=game&help=0&task=5&name=Arjun&hero=male', async
   await s.page.waitForFunction(() => window.__eka.mission().climax === true, null, { timeout: 30000 });
   await climaxSounds(s);
   await s.page.waitForFunction(() => window.__eka.mission().menu === true, null, { timeout: 60000 });
-  await s.wait(2400);
+  await s.wait(1800);
   await s.page.click('.taskmenu-btn'); // Leaderboard
   await s.page.waitForSelector('.leaderboard:not([hidden])', { timeout: 10000 });
-  await s.wait(2400);
-  await s.wait(400);
+  await s.wait(2200);
   s.cutEnd = s.now();
   await s.page.click('.leaderboard-close');
 });
