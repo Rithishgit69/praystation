@@ -9,6 +9,7 @@ import { Engine } from '@/engine/Engine';
 import { findScene, SCENES } from '@/scenes/registry';
 import { installDebugApi } from '@/debug/DebugApi';
 import { initNativeShell } from '@/platform/native';
+import { OrientationGate } from '@/ui/OrientationGate';
 
 const $ = <T extends HTMLElement>(id: string): T => {
   const el = document.getElementById(id);
@@ -35,12 +36,15 @@ async function boot(): Promise<void> {
   const mod = await engine.loadScene(entry);
   setBoot(1, 'Ready');
   engine.start();
+  // Phones: landscape only while playing (a rotate card otherwise).
+  new OrientationGate(engine);
 
   const bootEl = $('boot');
   const cont = $<HTMLButtonElement>('boot-continue');
   const newBtn = $<HTMLButtonElement>('boot-new');
   const dismiss = (mode: 'new' | 'continue'): void => {
     void initNativeShell();
+    void OrientationGate.requestLandscape();
     mod.start?.(mode);
     bootEl.classList.add('hidden');
     bootEl.addEventListener('transitionend', () => bootEl.remove(), { once: true });

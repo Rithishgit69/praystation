@@ -154,6 +154,9 @@ export class PlayerController implements System, CameraFollowTarget {
   get holdingWeapon(): boolean {
     return this.faceViewYaw;
   }
+  get sprinting(): boolean {
+    return this.state === 'sprint';
+  }
   get capsuleHeight(): number {
     return this.crouching ? this.tuning.height * 0.72 : this.tuning.height;
   }

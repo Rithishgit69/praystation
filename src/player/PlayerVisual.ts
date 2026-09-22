@@ -100,6 +100,9 @@ export class PlayerVisual implements System {
   private prevYaw = 0;
   private yawRate = 0;
 
+  /** What the traveller looks at when no weapon is out (the villain on its card); null looks ahead. */
+  lookTarget: THREE.Vector3 | null = null;
+
   /** Weapon recoil / a hit: forwarded to the character's animation. */
   kick(amount = 1): void {
     this.mesh.kick(amount);
@@ -122,6 +125,7 @@ export class PlayerVisual implements System {
     mo.dodgeAngle = c.dodgeAngle;
     mo.moveAngle = c.moveAngle;
     mo.yawRate = this.yawRate;
+    this.mesh.lookTarget = this.lookTarget;
     this.mesh.animate(dt, c.state, c.horizontalSpeed, c.tuning.sprintSpeed, elapsed);
   }
   dispose(): void {

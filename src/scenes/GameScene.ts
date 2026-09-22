@@ -122,8 +122,14 @@ export class GameScene implements SceneModule {
   private mode: 'missions' | 'story' = 'missions';
 
   async init(engine: Engine): Promise<void> {
-    const lib = MaterialLibrary.get(engine.maxAnisotropy);
+    const mark = (name: string): void => void performance.mark(`eka:${name}`);
+    mark('materials-start');
+    const params0 = new URLSearchParams(location.search);
+    const storyMode = params0.get('mode') === 'story';
+    // Phones bake the procedural textures at half resolution (the largest boot cost); mission mode skips the story murals.
+    const lib = MaterialLibrary.get(engine.maxAnisotropy, { detail: engine.mobile ? 0.5 : 1, murals: storyMode });
     patchIvyMaterial(lib.ivy);
+    mark('materials-end');
     engine.renderer.setClearColor(0x0b1626, 1);
     engine.renderer.toneMappingExposure = 1.2;
     engine.postfx.setBloom(0.6, 0.5, 0.86);
@@ -153,15 +159,19 @@ export class GameScene implements SceneModule {
     engine.scene.add(moon.sun, moon.sun.target, moon.hemi);
     const lighting = new LightingStates(engine, moon);
     const atmosphere = new WorldAtmosphere(engine, moon, lighting, () => controller.position);
+    mark('audio-start');
     const audio = new AudioSystem(engine);
     audio.setListener(() => controller.position);
+    mark('audio-end');
     streamer.onZoneChange = (zone) => {
       const def = world.zones.find((z) => z.id === zone);
       atmosphere.setZone(def?.fog, def?.ambient);
       audio.setZone(zone);
     };
 
+    mark('stream-start');
     streamer.loadImmediate(1);
+    mark('stream-end');
     const y = world.terrain.heightAt(spawn.position.x, spawn.position.z);
     if (!startZone || startZone === 'forest') controller.teleport(new THREE.Vector3(spawn.position.x, y + 0.3, spawn.position.z), spawn.yaw);
 
@@ -200,12 +210,16 @@ export class GameScene implements SceneModule {
       });
     };
     const map = new MapScreen(engine, world, streamer, () => ({ x: controller.position.x, z: controller.position.z, yaw: cam.yaw }), travel);
-    hud.onMinimapTap(() => map.setVisible(true));
+    // Story mode only: tapping the compass opens the temple map. The missions have no map to walk.
+    if (this.mode === 'story') hud.onMinimapTap(() => map.setVisible(true));
     const trail = new WaypointTrail(engine, lib, () => map.waypoint, () => (map.waypoint = null), () => controller.position);
     const distant = new DistantForest(engine, lib, world.terrain, () => controller.position);
     controller.events = {
       onFootstep: (surface, position, intensity) => audio.footstep(surface, position, intensity),
-      onLand: (_surface, position, hard) => audio.land(hard, position),
+      onLand: (_surface, position, hard) => {
+        audio.land(hard, position);
+        cam.kick(hard ? -0.04 : -0.016, 0);
+      },
       onDodge: () => audio.play('dodge', { volume: 0.55, rate: 0.95 + Math.random() * 0.1 }),
     };
     lighting.onMoonChange((state) => streamer.setMoonState(state));
@@ -238,6 +252,7 @@ export class GameScene implements SceneModule {
       const missions = new MissionDirector(engine, lib, streamer, controller, visual, cam, audio, gun, mhud, lighting, save, leaderboard, leaderboardCard);
       missions.setVeil = (v) => gsap.to(atmosphere, { veil: v, duration: v > 0 ? 0.9 : 1.4, ease: v > 0 ? 'power2.in' : 'power2.out' });
       missions.onDawn = (t) => (atmosphere.dawn = t);
+      missions.onCinematic = (v) => hud.setCinematic(v);
       this.missions = missions;
       const pause = new PauseMenu(engine, save, () => location.reload(), () => journal.toggle(), () => missions.openTaskSelect(), showControls, showBoard);
       for (const s of [controller, streamer, lighting, missions, gun, visual, atmosphere, audio, save, subtitles, journal, map, pause, helpKey, trail, distant, cam, hud, mhud]) engine.addSystem(s);

@@ -43,6 +43,7 @@ export const SYSTEM_LINES: Record<string, string> = {
   'task-failed': 'Your hearts are spent, and the asura holds the arena. Choose your path.',
   'task-complete': 'It is done. The asura is broken, and the temple breathes again.',
   'all-broken': 'All five are broken. Pride, anger, greed, delusion and ego. None of them holds the temple now.',
+  climax: 'The shadows are gone, and the temple remembers whose house it is. Where the first memory was made, Ekadanta rises: the one-tusked, the remover of obstacles, patient as stone. Bow, traveller. The night is over.',
 };
 
 export const missionLineId = (missionId: string, index: number): string => `${missionId}-${index}`;

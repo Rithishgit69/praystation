@@ -78,6 +78,7 @@ traveller can be changed later from the pause menu.
 | Controls card | B (or H) — pauses the game while it is open | Back | ? button |
 | Pause | Esc | Start | ❚❚ |
 
+On a phone the game plays in **landscape only** (turn the phone; the first tap asks for fullscreen).
 Mission mode deliberately has no other keys: nothing crouches, blocks or opens a map, so there is no
 stance to get stuck in. (Story mode, `?mode=story`, keeps E interact, C crouch, M map, J journal, V
 camera reset.)
@@ -98,6 +99,13 @@ The temple grants one weapon per task; all of them stay with you and switch with
 
 Hip fire blooms, aiming (`right mouse`) tightens it and pulls the camera over the shoulder, and every
 projectile leaves the muzzle toward the crosshair.
+
+## The climax
+
+When the fifth asura falls, the temple's lord is revealed: the traveller kneels before the mountain
+gateway and a golden Ganesha idol rises to its full height while the diyas light, petals fall and dawn
+comes up — then the rank card and the leaderboard. Sacred figures are honoured, never fought: the idol
+is revealed and bowed to, nothing more. A small shrine also stands at the head of every arena.
 
 ## The arenas
 

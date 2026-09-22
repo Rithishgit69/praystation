@@ -640,7 +640,7 @@ export class Gun implements System {
     this.aiming = wantAim;
     this.rig.aim = damp(this.rig.aim, wantAim ? 1 : 0, 12, dt);
     this.player.aimSlow = wantAim ? 0.55 : 1;
-    this.fov = damp(this.fov, wantAim ? this.def.fovAim : 58, 10, dt);
+    this.fov = damp(this.fov, wantAim ? this.def.fovAim : 58 + this.rig.fovExtra, 10, dt);
     if (Math.abs(cam.fov - this.fov) > 0.05) {
       cam.fov = this.fov;
       cam.updateProjectionMatrix();

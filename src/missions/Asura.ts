@@ -285,7 +285,9 @@ export class Asura implements Shootable {
   private die(): void {
     this.alive = false;
     this.state = 'dead';
-    this.avatar.setPose('death');
+    // Reel back, then collapse; the body fades away as the vice burns out of it.
+    this.avatar.setPose('stagger');
+    gsap.delayedCall(0.45, () => this.avatar.setPose('death'));
     this.avatar.setShield(false);
     this.avatar.setMirror(false);
     this.mirrorTimer = 0;
@@ -299,9 +301,9 @@ export class Asura implements Shootable {
     this.player.speedScale = 1;
     this.body?.dispose();
     this.body = null;
-    const s = 0.01;
-    gsap.to(this.avatar.root.scale, { x: s, y: s, z: s, duration: 3.0, delay: 1.2, ease: 'power2.in' });
-    gsap.to(this.avatar.root.position, { y: this.position.y - 1.5, duration: 4, delay: 1.0 });
+    const dissolve = { k: 0 };
+    gsap.to(dissolve, { k: 1, duration: 2.4, delay: 1.5, ease: 'power2.in', onUpdate: () => this.avatar.setDissolve(dissolve.k) });
+    gsap.to(this.avatar.root.position, { y: this.position.y - 0.45, duration: 3.6, delay: 1.2, ease: 'sine.in' });
     gsap.delayedCall(4.2, () => this.cb.onDefeated());
   }
 

@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { makeBanner } from '../props/Banner';
 import { makeBrazierPlinth, makeSteps } from '../props/Stone';
+import { buildGaneshaStatue } from '../props/Statue';
 import type { UnitBuild, ZoneBuildContext, ZoneId } from '../WorldTypes';
 import { UnitAccumulator, addWhiteColor, buildRoom, setTriplanar } from './UnitKit';
 
@@ -18,6 +19,19 @@ export const ARENA_CENTRES: Record<'arena-courtyard' | 'arena-hall' | 'arena-lib
   'arena-library': { x: 2000, z: -1200 },
   'arena-moon': { x: 2000, z: -1600 },
 };
+
+/**
+ * The temple's lord watches every arena: a small sandstone Ganesha on the north dais, flanked by two
+ * diyas. Never part of the fight — the asuras rage in front of it and it does not move.
+ */
+function shrine(acc: UnitAccumulator, ctx: ZoneBuildContext, x: number, y: number, z: number, scale = 0.22): void {
+  const idol = buildGaneshaStatue(ctx.lib);
+  idol.group.scale.setScalar(scale);
+  idol.group.position.set(x, y, z);
+  acc.group.add(idol.group);
+  acc.colliders.push({ kind: 'cylinder', center: new THREE.Vector3(x, y + idol.height * scale * 0.5, z), halfHeight: idol.height * scale * 0.5, radius: 5.8 * scale, surface: 'dry-stone' });
+  for (const side of [-1, 1]) acc.fire(x + side * 2.2, y + 0.25, z + 1.8, { scale: 0.6, intensity: 16, distance: 12, light: side < 0 });
+}
 
 const CORNERS: Array<[number, number]> = [
   [-1, -1],
@@ -85,6 +99,7 @@ export function* buildArenaCourtyard(ctx: ZoneBuildContext): Generator<void, Uni
   dais.position.set(cx, 1.2 - 0.0, cz - R - 3.4);
   acc.mesh(dais);
   for (const dx of [-9, -4.5, 0, 4.5, 9]) acc.pillar(cx + dx, 2.4, cz - R - 4.5, 7.4);
+  shrine(acc, ctx, cx, 2.4, cz - R - 2.2, 0.24);
   const lintel = new THREE.Mesh(new THREE.BoxGeometry(22, 0.9, 1.6), ctx.lib.sandstoneDark);
   addWhiteColor(lintel.geometry, 0.55);
   lintel.position.set(cx, 2.4 + 7.4 + 0.45, cz - R - 4.5);
@@ -160,6 +175,7 @@ export function* buildArenaHall(ctx: ZoneBuildContext): Generator<void, UnitBuil
   setTriplanar(dais.geometry, 5.6, 0.75);
   dais.position.set(cx, 0.48, cz - W / 2 + 4.2);
   acc.mesh(dais);
+  shrine(acc, ctx, cx, 0.96, cz - W / 2 + 3.6);
   for (const s of [-1, 1]) {
     const b = makeBrazierPlinth(ctx.lib, { rng: ctx.rng.fork(9 + s) });
     acc.place(b, cx + s * 9, 0.96, cz - W / 2 + 4);
@@ -213,6 +229,7 @@ export function* buildArenaLibrary(ctx: ZoneBuildContext): Generator<void, UnitB
   setTriplanar(dais.geometry, 5.6, 0.75);
   dais.position.set(cx, 0.36, cz - W / 2 + 4.2);
   acc.mesh(dais);
+  shrine(acc, ctx, cx, 0.72, cz - W / 2 + 4.0, 0.2);
   const frame = new THREE.Mesh(new RoundedBoxGeometry(18, 5.6, 0.5, 2, 0.05), ctx.lib.sandstoneDark);
   setTriplanar(frame.geometry, 3, 0.85);
   frame.position.set(cx, 0.72 + 3.2, cz - W / 2 + 0.5);
@@ -257,6 +274,11 @@ export function* buildArenaMoon(ctx: ZoneBuildContext): Generator<void, UnitBuil
     ],
   });
   rimPillars(acc, cx, cz, W / 2, 0, 16, 10.25, (x, z) => Math.abs(x - cx) < 4 && z > cz + 34);
+  const plinth = new THREE.Mesh(new THREE.CylinderGeometry(3.2, 3.6, 0.8, 24), ctx.lib.flagstone);
+  setTriplanar(plinth.geometry, 3, 0.8);
+  plinth.position.set(cx, 0.4, cz - W / 2 + 4.4);
+  acc.mesh(plinth);
+  shrine(acc, ctx, cx, 0.8, cz - W / 2 + 4.4, 0.21);
   yield;
   // A ring of shallow steps marks the fighting circle without blocking it (a 0.2 m lip, walkable).
   const ring = new THREE.Mesh(new THREE.RingGeometry(35, 37.5, 64), ctx.lib.sandstoneDark);

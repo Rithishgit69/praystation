@@ -132,6 +132,22 @@ export class AudioSystem implements System {
     this.duckGain.connect(ctx.destination);
     this.reverbSend.gain.value = ROOM_REVERB.exterior.wet;
     for (const rt of Object.keys(ROOM_REVERB) as RoomType[]) this.reverbBuffers.set(rt, this.makeImpulse(ROOM_REVERB[rt].decay));
+    // Synthesise the rest of the bank in idle time behind the title card, fight sounds first, so the
+    // boot stays short and no first shot or hit hitches the game.
+    const first: SoundId[] = ['astra-shot', 'astra-reload', 'asura-hit', 'block-impact', 'asura-roar', 'asura-bolt', 'heart-lost', 'task-begin', 'weapon-granted', 'bow-release', 'chakra-throw', 'vajra-burst', 'dodge', 'om-chant-loop', 'step-dry-stone', 'land-soft', 'land-hard'];
+    const queue = [...first, ...this.bank.ids().filter((id) => !first.includes(id))];
+    const idle = (fn: () => void): void => {
+      const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+      if (w.requestIdleCallback) w.requestIdleCallback(fn, { timeout: 400 });
+      else setTimeout(fn, 25);
+    };
+    const step = (): void => {
+      const id = queue.shift();
+      if (!id) return;
+      if (!this.bank.isRendered(id)) this.bank.get(id);
+      idle(step);
+    };
+    idle(step);
     this.convolver.buffer = this.reverbBuffers.get('exterior') ?? null;
     this.applyVolumes();
     gameStore.subscribe(() => this.applyVolumes());
@@ -251,8 +267,10 @@ export class AudioSystem implements System {
   setChantDuck(ducked: boolean): void {
     this.chantDucked = ducked;
   }
+  /** Extra chant level in dB (the climax lets the Om swell above the effects). */
+  chantBoostDb = 0;
   get chantLevelDb(): number {
-    return this.chantDucked ? CHANT_DUCK_DB : CHANT_DB;
+    return (this.chantDucked ? CHANT_DUCK_DB : CHANT_DB) + this.chantBoostDb;
   }
 
   /** Duck everything to silence (the tusk break) and release later. */

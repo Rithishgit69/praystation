@@ -22,12 +22,17 @@ export class MaterialLibrary {
   private readonly disposables: Array<{ dispose(): void }> = [];
   private static instance: MaterialLibrary | null = null;
 
-  static get(anisotropy: number): MaterialLibrary {
-    if (!MaterialLibrary.instance) MaterialLibrary.instance = new MaterialLibrary(anisotropy);
+  /**
+   * `detail` scales the procedural texture resolutions (1 on desktop, 0.5 on phones: the per-pixel
+   * bakes are the single largest cost of booting); `murals` pre-bakes the story murals here rather
+   * than at first sight (mission mode never shows one).
+   */
+  static get(anisotropy: number, opts: { detail?: number; murals?: boolean } = {}): MaterialLibrary {
+    if (!MaterialLibrary.instance) MaterialLibrary.instance = new MaterialLibrary(anisotropy, opts.detail ?? 1, opts.murals ?? true);
     return MaterialLibrary.instance;
   }
 
-  private constructor(anisotropy: number) {
+  private constructor(anisotropy: number, detail: number, murals: boolean) {
     const track = <T extends { dispose(): void }>(x: T): T => {
       this.disposables.push(x);
       return x;
@@ -36,7 +41,10 @@ export class MaterialLibrary {
       t.anisotropy = anisotropy;
       return track(t);
     };
-    const fs = flagstoneTextures(1024, 3);
+    const step = (name: string): void => void performance.mark(`eka:tex-${name}`);
+    const px = (n: number): number => Math.max(128, Math.round(n * detail));
+    step('flagstone');
+    const fs = flagstoneTextures(px(1024), 3);
     this.flagstone = track(
       new THREE.MeshStandardMaterial({
         map: aniso(fs.map),
@@ -49,30 +57,41 @@ export class MaterialLibrary {
         vertexColors: true,
       }),
     );
-    const ss = sandstoneTextures(512, 11);
+    step('sandstone');
+    const ss = sandstoneTextures(px(512), 11);
     this.sandstone = track(
       new THREE.MeshStandardMaterial({ map: aniso(ss.map), normalMap: aniso(ss.normalMap), roughnessMap: aniso(ss.roughnessMap), roughness: 1, metalness: 0, normalScale: new THREE.Vector2(0.7, 0.7), vertexColors: true }),
     );
-    const sd = sandstoneTextures(512, 23, [0.3, 0.29, 0.26]);
+    step('sandstone-dark');
+    const sd = sandstoneTextures(px(512), 23, [0.3, 0.29, 0.26]);
     this.sandstoneDark = track(
       new THREE.MeshStandardMaterial({ map: aniso(sd.map), normalMap: aniso(sd.normalMap), roughnessMap: aniso(sd.roughnessMap), roughness: 1, metalness: 0, normalScale: new THREE.Vector2(0.8, 0.8), vertexColors: true }),
     );
-    const bk = barkTextures(256, 83);
+    step('bark');
+    const bk = barkTextures(px(256), 83);
     this.bark = track(new THREE.MeshStandardMaterial({ map: aniso(bk.map), normalMap: aniso(bk.normalMap), roughness: 0.95, metalness: 0 }));
+    step('ivy');
     this.ivy = track(new THREE.MeshStandardMaterial({ map: aniso(ivyLeafTexture(256)), alphaTest: 0.45, side: THREE.DoubleSide, roughness: 0.8, metalness: 0, color: 0xffffff }));
-    this.canopy = track(new THREE.MeshStandardMaterial({ map: track(canopyTexture(512, 71)), alphaTest: 0.35, side: THREE.DoubleSide, roughness: 1, metalness: 0, color: 0xffffff }));
-    const bn = bannerTexture(512);
+    step('canopy');
+    this.canopy = track(new THREE.MeshStandardMaterial({ map: track(canopyTexture(px(512), 71)), alphaTest: 0.35, side: THREE.DoubleSide, roughness: 1, metalness: 0, color: 0xffffff }));
+    step('banner');
+    const bn = bannerTexture(px(512));
     this.banner = track(new THREE.MeshStandardMaterial({ map: aniso(bn.map), alphaMap: track(bn.alphaMap), alphaTest: 0.5, side: THREE.DoubleSide, roughness: 0.92, metalness: 0 }));
     this.wood = track(new THREE.MeshStandardMaterial({ color: 0x3b2a1c, roughness: 0.85, metalness: 0 }));
     this.iron = track(new THREE.MeshStandardMaterial({ color: 0x2a2624, roughness: 0.55, metalness: 0.7 }));
-    this.debris = track(new THREE.MeshStandardMaterial({ map: track(debrisTexture(512)), transparent: true, depthWrite: false, roughness: 0.9, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
-    const ff = forestFloorTextures(512, 151);
+    step('debris');
+    this.debris = track(new THREE.MeshStandardMaterial({ map: track(debrisTexture(px(512))), transparent: true, depthWrite: false, roughness: 0.9, metalness: 0, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+    step('forest-floor');
+    const ff = forestFloorTextures(px(512), 151);
     this.forestFloor = track(new THREE.MeshStandardMaterial({ map: aniso(ff.map), normalMap: aniso(ff.normalMap), roughnessMap: aniso(ff.roughnessMap), roughness: 1, metalness: 0, normalScale: new THREE.Vector2(0.6, 0.6), vertexColors: true }));
     this.water = track(new THREE.MeshStandardMaterial({ color: 0x0c1a26, roughness: 0.08, metalness: 0.1, transparent: true, opacity: 0.86 }));
     this.glowTexture = track(glowSprite(128));
     this.noiseTexture = track(noiseTexture(256));
-    // Murals bake per-pixel and cost ~200 ms each: do it here, behind the title card, never during streaming.
-    for (const scene of ['broken-tusk', 'scribe', 'moon', 'serpent', 'remembrance'] as const) this.mural(scene);
+    step('murals');
+    // Murals bake per-pixel and cost ~200 ms each: story mode does it here, behind the title card, never
+    // during streaming. Mission mode never shows one and skips them.
+    if (murals) for (const scene of ['broken-tusk', 'scribe', 'moon', 'serpent', 'remembrance'] as const) this.mural(scene);
+    step('done');
   }
 
   /** Mural material per scene (lazy; each is unique so a waking mural can pulse its own emissive). */

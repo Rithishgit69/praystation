@@ -3,6 +3,16 @@
 Status legend: **DONE** · **PARTIAL** · **BLOCKED** · **TODO**. Nothing is marked DONE that has not been
 run and seen working (headless Playwright playthroughs + screenshots; see `tools/`).
 
+## Review round 4 — climax, phones, animation (2026-09-22)
+
+| Item | Status | Notes |
+|---|---|---|
+| "We never show the Ganesh idol" — a climax where it grows | DONE | `src/missions/Climax.ts`: kneeling traveller, golden idol rising 15 s before the gateway, diyas, petals, halo, bells, Om swell, dawn, new narrator line; shrines on every arena dais. Respectful: revealed and bowed to only. |
+| Phones: congested in portrait | DONE | `src/ui/OrientationGate.ts`: landscape only; rotate card pauses the game; fullscreen + orientation lock requested on the first tap. |
+| Map opened from the compass and could not be closed on touch | DONE | Mission mode never opens it; story mode has a Close button and Esc. |
+| Slow start on a phone | DONE | Boot 10.4 s → 2.0 s at 4× CPU throttle (`tools/boot-profile.mjs`): half-res textures on phones, no story murals in mission mode, lazy sound synthesis with idle-time warm-up. |
+| Animation to an industry look | PARTIAL | Foot-planted two-bone leg IK with speed-driven cadence, strike-timed arm/hip swing, head look-at; villain hit recoil and collapse-and-dissolve death; camera sprint FOV, landing dip, dodge roll. Still procedural: a motion-captured hero needs an animated GLB. |
+
 ## Review round 3 — space, controls, animation (2026-09-22)
 
 | Item | Status | Notes |

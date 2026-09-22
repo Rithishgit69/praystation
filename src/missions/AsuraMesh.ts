@@ -15,8 +15,10 @@ export interface AsuraAvatar {
   setShield(on: boolean): void;
   /** The ego's mirror: a reflective hemisphere held in front. */
   setMirror(on: boolean): void;
-  /** Brief white flash on hit. */
+  /** Brief white flash on hit (and a small recoil of the body). */
   hitFlash(): void;
+  /** 0 → 1: the body fades away after death (the vice burns out). */
+  setDissolve(k: number): void;
   /** Tint the core (enrage). */
   setEnraged(on: boolean): void;
   animate(dt: number, elapsed: number, speed: number): void;
@@ -138,8 +140,21 @@ export class AsuraMesh implements AsuraAvatar {
   setMirror(on: boolean): void {
     this.mirrorMesh.visible = on;
   }
+  private react = 0;
   hitFlash(): void {
     this.flash = 1;
+    // A fresh recoil only once the last one has mostly settled (a rifle lands five rounds a second).
+    if (this.react < 0.35) this.react = 1;
+  }
+  setDissolve(k: number): void {
+    const mats: THREE.Material[] = [this.bodyMat, this.coreMat, ...this.extraMats];
+    for (const m of mats) {
+      m.transparent = true;
+      m.opacity = 1 - k;
+      m.depthWrite = k < 0.6;
+    }
+    this.eyeMat.opacity = 1 - k;
+    this.auraMat.opacity = 0.7 * (1 - k);
   }
   setEnraged(on: boolean): void {
     this.coreMat.emissive.set(on ? 0xff3030 : this.color);
@@ -299,11 +314,16 @@ export class AsuraMesh implements AsuraAvatar {
       l.rotation.z = -(0.35 + i * 0.35) + c.lArmZ * 0.3;
       r.rotation.z = 0.35 + i * 0.35 + c.rArmZ * 0.3;
     });
-    rig.torso.rotation.x = c.torsoX + Math.abs(Math.sin(this.phase)) * 0.05 * c.legSwing;
-    rig.torso.rotation.y = c.torsoY + s * 0.28;
+    // Hit recoil: the torso and head snap back and the arms lift, settling over ~0.3 s.
+    this.react = Math.max(0, this.react - dt * 4.5);
+    const react = this.react * this.react;
+    rig.torso.rotation.x = c.torsoX + Math.abs(Math.sin(this.phase)) * 0.05 * c.legSwing - react * 0.22;
+    rig.torso.rotation.y = c.torsoY + s * 0.28 + react * 0.08;
     rig.torso.rotation.z = weightShift * -0.02 + s * 0.05;
-    rig.head.rotation.x = c.headX - Math.abs(Math.sin(this.phase)) * 0.04 * c.legSwing;
+    rig.head.rotation.x = c.headX - Math.abs(Math.sin(this.phase)) * 0.04 * c.legSwing - react * 0.3;
     rig.head.rotation.y = -s * 0.2;
+    rig.rArm.rotation.x -= react * 0.35;
+    rig.lArm.rotation.x -= react * 0.35;
     const hover = rig.hover ? this.hoverHeight + Math.sin(elapsed * 1.4) * 0.18 : 0;
     rig.hips.position.y = 1.55 + c.hipsY + hover + Math.abs(Math.sin(this.phase)) * 0.06 * c.legSwing;
     // Cloth ripples.

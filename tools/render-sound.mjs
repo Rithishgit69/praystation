@@ -13,7 +13,7 @@ await build({ entryPoints: [path.join(root, 'src/audio/SoundBank.ts')], bundle: 
 const { SoundBank, SAMPLE_RATE } = await import(pathToFileURL(tmp).href);
 fs.rmSync(tmp, { force: true });
 const bank = new SoundBank();
-const data = bank.buffers.get(id);
+const data = bank.get(id);
 if (!data) throw new Error(`unknown sound ${id}`);
 const buf = Buffer.alloc(44 + data.length * 2);
 buf.write('RIFF', 0); buf.writeUInt32LE(36 + data.length * 2, 4); buf.write('WAVE', 8); buf.write('fmt ', 12);

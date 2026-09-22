@@ -12,6 +12,7 @@ import type { LightingStates } from '@/systems/LightingStates';
 import type { SaveSystem } from '@/systems/SaveSystem';
 import { gameStore } from '@/state/store';
 import { Asura } from './Asura';
+import { Climax } from './Climax';
 import { GltfAsura } from './AsuraModel';
 import type { Gun } from './Gun';
 import { MISSIONS, missionByTask, type AttackKind, type MissionDef } from './MissionData';
@@ -78,6 +79,9 @@ export class MissionDirector implements System {
   private generation = 0;
   onDawn: ((t: number) => void) | null = null;
   setVeil: ((v: number) => void) | null = null;
+  /** Hide/show the base HUD (quest tracker, compass) around the climax. */
+  onCinematic: ((v: boolean) => void) | null = null;
+  private readonly climax: Climax;
   /** Battle clock and counters for the task in progress. */
   private battleSeconds = 0;
   private taskHeartsLost = 0;
@@ -107,6 +111,7 @@ export class MissionDirector implements System {
       if (engine.input.device === 'kbm') engine.input.mouse.requestLock();
     };
     this.menu = new TaskMenu(engine);
+    this.climax = new Climax(engine, lib, player, rig, audio, visual);
     this.battleFill.visible = false;
     engine.scene.add(this.battleFill);
   }
@@ -221,6 +226,9 @@ export class MissionDirector implements System {
     this.hitsAtStart = this.gun.shotsHit;
     this.gun.setEquipped(false);
     this.hud.setWeaponVisible(false);
+    this.climax.dispose();
+    this.hud.setCinematic(false);
+    this.onCinematic?.(false);
     this.phase = 'travel';
     this.player.movementLocked = true;
     this.audio.play('task-begin', { volume: 0.7 });
@@ -418,12 +426,34 @@ export class MissionDirector implements System {
     this.phase = 'ended';
     this.gun.setEquipped(false);
     this.hud.setWeaponVisible(false);
-    this.hud.showBanner('ALL FIVE ARE BROKEN', 6, 'The temple remembers. Pride, anger, greed, delusion and ego — none of them holds it now.');
-    this.voice.speak('all-broken');
+    this.hud.hideBoss();
+    this.hud.setCinematic(true);
+    this.onCinematic?.(true);
     void this.lighting.transition('present', 4);
-    const dawn = { t: 0 };
-    gsap.to(dawn, { t: 1, duration: 14, delay: 3, onUpdate: () => this.onDawn?.(dawn.t) });
-    gsap.delayedCall(9, () => {
+    // The climax: before the mountain gateway (the last arena) the temple's lord is revealed — the
+    // idol rises to its full height while the traveller kneels and dawn comes up. Then the results.
+    const def = this.def as MissionDef;
+    const [cx, cy, cz] = def.arenaCenter;
+    const idolAt = new THREE.Vector3(cx, cy, cz - 12);
+    const heroAt = new THREE.Vector3(cx, cy + 0.2, cz + 10);
+    const generation = ++this.generation;
+    this.setVeil?.(1);
+    gsap.delayedCall(1.0, () => {
+      if (generation !== this.generation) return;
+      const dawn = { t: 0 };
+      gsap.to(dawn, { t: 0.7, duration: 13, delay: 2.5, ease: 'sine.inOut', onUpdate: () => this.onDawn?.(dawn.t) });
+      this.climax.start(idolAt, heroAt, 0, (id) => this.voice.speak(id), () => {
+        if (generation !== this.generation) return;
+        this.hud.showBanner('ALL FIVE ARE BROKEN', 6, 'The temple remembers whose house it is. Pride, anger, greed, delusion and ego — none of them holds it now.');
+        this.voice.speak('all-broken');
+        gsap.delayedCall(7.5, () => generation === this.generation && this.showResults());
+      });
+      this.setVeil?.(0);
+    });
+  }
+
+  private showResults(): void {
+    {
       const { table, total, rank } = this.buildResults();
       const profile = gameStore.getState().profile;
       // Record the run once per ending; the card shows where it landed.
@@ -455,7 +485,7 @@ export class MissionDirector implements System {
         ],
         body,
       );
-    });
+    }
   }
 
   private teardownAsura(): void {
@@ -466,6 +496,8 @@ export class MissionDirector implements System {
 
   update(dt: number, elapsed: number): void {
     this.narration.update(dt);
+    this.climax.update(dt, elapsed);
+    this.visual.lookTarget = this.asura && this.asura.alive ? this.asura.position : null;
     this.invuln = Math.max(0, this.invuln - dt);
     if (this.phase === 'battle') this.battleSeconds += dt;
     this.asura?.update(dt, elapsed);
@@ -484,7 +516,7 @@ export class MissionDirector implements System {
 
   /** Test hook. */
   debugState(): Record<string, unknown> {
-    return { phase: this.phase, task: this.task, hearts: this.hearts, health: this.health, bossHp: this.asura?.hp ?? null, bossMax: this.asura?.maxHp ?? null, bossState: this.asura?.state ?? null, bossPos: this.asura?.position.toArray() ?? null, narrating: this.narration.isActive, menu: this.menu.isVisible, ...(this.asura?.debugState() ?? {}) };
+    return { phase: this.phase, task: this.task, hearts: this.hearts, health: this.health, bossHp: this.asura?.hp ?? null, bossMax: this.asura?.maxHp ?? null, bossState: this.asura?.state ?? null, bossPos: this.asura?.position.toArray() ?? null, narrating: this.narration.isActive, menu: this.menu.isVisible, climax: this.climax.isRunning, ...(this.asura?.debugState() ?? {}) };
   }
   /** Test hook: narration voice state. */
   debugVoice(): Record<string, unknown> {
@@ -518,6 +550,7 @@ export class MissionDirector implements System {
 
   dispose(): void {
     this.teardownAsura();
+    this.climax.dispose();
     this.narration.dispose();
     this.voice.dispose();
     this.audio.setChant(false);

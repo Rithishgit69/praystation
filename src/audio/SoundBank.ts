@@ -58,61 +58,90 @@ export type SoundId =
 
 /** All game audio is synthesised here at startup; no audio files ship with the game. */
 export class SoundBank {
-  private readonly rng = new SeededRandom(4242);
-  readonly buffers = new Map<SoundId, Float32Array>();
+  private rng = new SeededRandom(4242);
+  /** Each sound is a recipe, synthesised the first time it is asked for (booting used to render all ~50). */
+  private readonly recipes = new Map<SoundId, () => Float32Array>();
+  private readonly cache = new Map<SoundId, Float32Array>();
 
   constructor() {
-    for (const s of ['wet-stone', 'dry-stone', 'gravel', 'grass', 'water', 'wood', 'moss', 'earth'] as const) this.buffers.set(`step-${s}`, this.footstep(s));
-    this.buffers.set('land-soft', this.land(0.5));
-    this.buffers.set('land-hard', this.land(1));
-    this.buffers.set('bell-near', this.bell(1));
-    this.buffers.set('bell-distant', this.bell(0.35));
-    this.buffers.set('diya-light', this.whoosh(0.7, 900, 3200, 0.6));
-    this.buffers.set('lantern-out', this.whoosh(0.5, 2400, 300, 0.4));
-    this.buffers.set('fire-loop', this.fireLoop(4));
-    this.buffers.set('wind-loop', this.windLoop(8, 420, 0.5));
-    this.buffers.set('wind-corridor-loop', this.windLoop(8, 220, 0.35));
-    this.buffers.set('crickets-loop', this.cricketsLoop(6));
-    this.buffers.set('drip', this.drip());
-    this.buffers.set('drone-loop', this.droneLoop(10, [55, 82.4, 110], 0.3));
-    this.buffers.set('tanpura-loop', this.tanpuraLoop(12));
-    this.buffers.set('stone-grind', this.grind(3.2));
-    this.buffers.set('memory-enter', this.shimmer(3.2, 1));
-    this.buffers.set('memory-exit', this.shimmer(2.4, -1));
-    this.buffers.set('shimmer', this.shimmer(1.4, 1));
-    this.buffers.set('tusk-break', this.crack());
-    this.buffers.set('axe-swing', this.whoosh(0.35, 400, 2600, 0.8));
-    this.buffers.set('dodge', this.whoosh(0.3, 900, 260, 0.55));
-    this.buffers.set('block-impact', this.impact(0.25, 180));
-    this.buffers.set('barrier-raise', this.grind(1.2));
-    this.buffers.set('ui-tick', this.tick());
-    this.buffers.set('ui-open', this.tone([660, 880], 0.35, 0.25));
-    this.buffers.set('mirror-turn', this.grind(1.6));
-    this.buffers.set('water-loop', this.waterLoop(6));
-    this.buffers.set('rumble', this.rumble(2.5));
-    this.buffers.set('serpent-hiss', this.hiss(1.8));
-    this.buffers.set('symbol-chime', this.tone([523.25, 659.25, 783.99], 1.6, 0.4));
-    this.buffers.set('astra-shot', this.shot());
-    this.buffers.set('astra-reload', this.reload());
-    this.buffers.set('astra-empty', this.tick());
-    this.buffers.set('asura-roar', this.roar(1.8));
-    this.buffers.set('asura-bolt', this.whoosh(0.5, 300, 1400, 0.7));
-    this.buffers.set('asura-hit', this.impact(0.18, 260));
-    this.buffers.set('asura-death', this.roar(3.2, true));
-    this.buffers.set('heart-lost', this.tone([196, 146.83], 1.4, 0.6));
-    this.buffers.set('task-complete', this.tone([392, 523.25, 659.25, 783.99], 2.6, 0.5));
-    this.buffers.set('task-begin', this.tone([130.81, 196], 2.2, 0.6));
-    this.buffers.set('om-chant-loop', this.omChant(14));
-    this.buffers.set('bow-release', this.bowRelease());
-    this.buffers.set('chakra-throw', this.chakraThrow());
-    this.buffers.set('vajra-burst', this.vajraBurst());
-    this.buffers.set('weapon-granted', this.tone([261.63, 392, 523.25, 659.25], 2.0, 0.5));
+    for (const s of ['wet-stone', 'dry-stone', 'gravel', 'grass', 'water', 'wood', 'moss', 'earth'] as const) this.recipes.set(`step-${s}`, () => this.footstep(s));
+    this.recipes.set('land-soft', () => this.land(0.5));
+    this.recipes.set('land-hard', () => this.land(1));
+    this.recipes.set('bell-near', () => this.bell(1));
+    this.recipes.set('bell-distant', () => this.bell(0.35));
+    this.recipes.set('diya-light', () => this.whoosh(0.7, 900, 3200, 0.6));
+    this.recipes.set('lantern-out', () => this.whoosh(0.5, 2400, 300, 0.4));
+    this.recipes.set('fire-loop', () => this.fireLoop(4));
+    this.recipes.set('wind-loop', () => this.windLoop(8, 420, 0.5));
+    this.recipes.set('wind-corridor-loop', () => this.windLoop(8, 220, 0.35));
+    this.recipes.set('crickets-loop', () => this.cricketsLoop(6));
+    this.recipes.set('drip', () => this.drip());
+    this.recipes.set('drone-loop', () => this.droneLoop(10, [55, 82.4, 110], 0.3));
+    this.recipes.set('tanpura-loop', () => this.tanpuraLoop(12));
+    this.recipes.set('stone-grind', () => this.grind(3.2));
+    this.recipes.set('memory-enter', () => this.shimmer(3.2, 1));
+    this.recipes.set('memory-exit', () => this.shimmer(2.4, -1));
+    this.recipes.set('shimmer', () => this.shimmer(1.4, 1));
+    this.recipes.set('tusk-break', () => this.crack());
+    this.recipes.set('axe-swing', () => this.whoosh(0.35, 400, 2600, 0.8));
+    this.recipes.set('dodge', () => this.whoosh(0.3, 900, 260, 0.55));
+    this.recipes.set('block-impact', () => this.impact(0.25, 180));
+    this.recipes.set('barrier-raise', () => this.grind(1.2));
+    this.recipes.set('ui-tick', () => this.tick());
+    this.recipes.set('ui-open', () => this.tone([660, 880], 0.35, 0.25));
+    this.recipes.set('mirror-turn', () => this.grind(1.6));
+    this.recipes.set('water-loop', () => this.waterLoop(6));
+    this.recipes.set('rumble', () => this.rumble(2.5));
+    this.recipes.set('serpent-hiss', () => this.hiss(1.8));
+    this.recipes.set('symbol-chime', () => this.tone([523.25, 659.25, 783.99], 1.6, 0.4));
+    this.recipes.set('astra-shot', () => this.shot());
+    this.recipes.set('astra-reload', () => this.reload());
+    this.recipes.set('astra-empty', () => this.tick());
+    this.recipes.set('asura-roar', () => this.roar(1.8));
+    this.recipes.set('asura-bolt', () => this.whoosh(0.5, 300, 1400, 0.7));
+    this.recipes.set('asura-hit', () => this.impact(0.18, 260));
+    this.recipes.set('asura-death', () => this.roar(3.2, true));
+    this.recipes.set('heart-lost', () => this.tone([196, 146.83], 1.4, 0.6));
+    this.recipes.set('task-complete', () => this.tone([392, 523.25, 659.25, 783.99], 2.6, 0.5));
+    this.recipes.set('task-begin', () => this.tone([130.81, 196], 2.2, 0.6));
+    this.recipes.set('om-chant-loop', () => this.omChant(14));
+    this.recipes.set('bow-release', () => this.bowRelease());
+    this.recipes.set('chakra-throw', () => this.chakraThrow());
+    this.recipes.set('vajra-burst', () => this.vajraBurst());
+    this.recipes.set('weapon-granted', () => this.tone([261.63, 392, 523.25, 659.25], 2.0, 0.5));
+  }
+
+  /** The synthesised samples for a sound (rendered on first use with a seed of its own, so the result never depends on play order). */
+  get(id: SoundId): Float32Array {
+    let data = this.cache.get(id);
+    if (data) return data;
+    const recipe = this.recipes.get(id);
+    if (!recipe) throw new Error(`SoundBank: unknown sound ${id}`);
+    let seed = 4242;
+    for (let i = 0; i < id.length; i++) seed = (Math.imul(seed, 31) + id.charCodeAt(i)) >>> 0;
+    this.rng = new SeededRandom(seed);
+    data = recipe();
+    this.cache.set(id, data);
+    return data;
+  }
+
+  /** Render a few sounds ahead of time (the first shots and hits must not hitch the fight). */
+  warm(ids: SoundId[]): void {
+    for (const id of ids) this.get(id);
+  }
+
+  /** Every sound the bank knows, not-yet-rendered ones included. */
+  ids(): SoundId[] {
+    return Array.from(this.recipes.keys());
+  }
+
+  isRendered(id: SoundId): boolean {
+    return this.cache.has(id);
   }
 
   /** 16-bit PCM WAV blob URL for Howler. */
   wavUrl(id: SoundId): string {
-    const data = this.buffers.get(id);
-    if (!data) throw new Error(`SoundBank: unknown sound ${id}`);
+    const data = this.get(id);
     return URL.createObjectURL(new Blob([encodeWav(data, SAMPLE_RATE)], { type: 'audio/wav' }));
   }
 

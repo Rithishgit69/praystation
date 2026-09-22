@@ -96,7 +96,7 @@ export class Leaderboard {
       const res = await fetch(`${r.url}/rest/v1/${r.table ?? 'scores'}`, {
         method: 'POST',
         headers: { ...this.headers(), Prefer: 'return=minimal' },
-        body: JSON.stringify({ name: run.name, hero: run.hero, rank: run.rank, seconds: Math.round(run.seconds), hearts_lost: run.heartsLost, accuracy: Math.round(run.accuracy), tasks: run.tasks, score: run.score, version: '1.4.0' }),
+        body: JSON.stringify({ name: run.name, hero: run.hero, rank: run.rank, seconds: Math.round(run.seconds), hearts_lost: run.heartsLost, accuracy: Math.round(run.accuracy), tasks: run.tasks, score: run.score, version: '1.5.0' }),
       });
       if (!res.ok) return null;
       const above = await fetch(`${r.url}/rest/v1/${r.table ?? 'scores'}?select=id&score=gt.${run.score}`, { headers: { ...this.headers(), Prefer: 'count=exact', Range: '0-0' } });

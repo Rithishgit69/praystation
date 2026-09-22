@@ -48,8 +48,15 @@ export class MapScreen implements System {
     this.ctx = ctx;
     this.legend = document.createElement('div');
     this.legend.className = 'map-legend';
-    this.legend.innerHTML = '<span class="map-title">The Temple</span><span>Click to place a waypoint · click a lit shrine to travel · M to close</span>';
-    this.root.append(this.canvas, this.legend);
+    this.legend.innerHTML = '<span class="map-title">The Temple</span><span>Click to place a waypoint · click a lit shrine to travel · M or Esc to close</span>';
+    // A visible way out on every device (touch has no M key).
+    const close = document.createElement('button');
+    close.type = 'button';
+    close.className = 'map-close';
+    close.setAttribute('aria-label', 'Close the map');
+    close.textContent = '✕  Close';
+    close.addEventListener('click', () => this.setVisible(false));
+    this.root.append(this.canvas, this.legend, close);
     engine.uiRoot.appendChild(this.root);
     this.canvas.addEventListener('pointerdown', (e) => {
       this.dragging = true;
@@ -219,6 +226,8 @@ export class MapScreen implements System {
     this.engine.uiBlocking = v;
     this.engine.input.gameplayBlocked = v || this.engine.devMenu.isVisible;
     this.engine.input.mouse.lockOnClick = !v;
+    if (v) window.addEventListener('keydown', this.onKey);
+    else window.removeEventListener('keydown', this.onKey);
     if (v) {
       this.engine.input.mouse.unlock();
       this.canvas.width = window.innerWidth;
@@ -229,6 +238,10 @@ export class MapScreen implements System {
     }
   }
 
+  private readonly onKey = (e: KeyboardEvent): void => {
+    if (this.visible && e.code === 'Escape') this.setVisible(false);
+  };
+
   update(): void {
     if (this.engine.input.pressed('map')) this.setVisible(!this.visible);
     if (this.visible) this.draw();
@@ -236,6 +249,7 @@ export class MapScreen implements System {
 
   dispose(): void {
     window.removeEventListener('eka:back', this.onBack);
+    window.removeEventListener('keydown', this.onKey);
     this.root.remove();
   }
 }

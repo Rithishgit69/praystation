@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.5.0 — 2026-09-22
+
+- **The climax.** When the fifth asura falls, the temple's lord is revealed: before the mountain
+  gateway the traveller kneels with joined hands and a small golden Ganesha idol rises to its full
+  height while the diyas light one by one, marigold petals fall, the halo blazes, the Om swells, two
+  bells toll and dawn comes up behind the gate (`src/missions/Climax.ts`, the ornate idol in
+  `src/world/props/Statue.ts`); a new narrator line introduces Ekadanta. Then the results and the
+  leaderboard. The figure is only revealed and honoured — never fought, handled or damaged.
+- A small sandstone Ganesha shrine with two diyas now stands on the north dais of every arena, so the
+  temple reads as his from Task 1.
+- **Phones.** The game plays in landscape only: held upright it stands still behind a "turn your
+  phone" card; the first tap asks the browser for fullscreen and a landscape lock. The temple map no
+  longer opens from the compass in mission mode (it could not be closed by touch), and story mode's
+  map gained a Close button and Esc.
+- **Faster start.** Booting is about five times quicker on a phone: procedural textures bake at half
+  resolution there, mission mode skips the story murals, and the sound bank now synthesises each
+  sound on first use (fight sounds warmed in idle time behind the title card) instead of all fifty at
+  once.
+- **Animation.** The traveller's legs are now solved with two-bone IK from planted feet: each foot
+  stays put through its stance and swings forward in an arc, knees bend and lock like real knees,
+  the stride and cadence follow the speed, arm and hip swing are timed to the foot strikes, and the
+  head turns toward the villain while no weapon is out. Villains recoil when hit and, when broken,
+  reel back, collapse and dissolve as the vice burns out of them (no more shrinking away). The
+  camera widens a little at a sprint, dips on landing and rolls a few degrees through a dodge.
+
 ## 1.4.0 — 2026-09-22
 
 - **Room to fight.** Every task now takes place on its own purpose-built arena — a clear floor 60–70 m

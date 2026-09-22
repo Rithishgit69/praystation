@@ -15,6 +15,11 @@ export interface CameraFollowTarget {
   readonly excludeCollider: RAPIER.Collider | null;
   /** True while a weapon is out: no auto-realign, the player owns the aim. */
   readonly holdingWeapon: boolean;
+  /** 0 → 1 through a dodge burst and its direction from facing (the camera rolls with it). */
+  readonly dodgeProgress?: number;
+  readonly dodgeAngle?: number;
+  /** True while sprinting (the view widens a little). */
+  readonly sprinting?: boolean;
 }
 
 const DEFAULT_BOOM = 4.8;
@@ -45,6 +50,9 @@ export class CameraRig implements System {
   cinematic = false;
   /** 0..1 aim-down-sights blend: closer over the shoulder, slower look. */
   aim = 0;
+  /** Extra field of view (degrees) from movement: the sprint widens the view; the weapon adds it to its own. */
+  fovExtra = 0;
+  private roll = 0;
   /** Impact shake amount (decays). */
   private shakeAmount = 0;
   private kickPitch = 0;
@@ -198,6 +206,20 @@ export class CameraRig implements System {
     this.tmpPos.copy(this.tmpShoulder).addScaledVector(this.tmpLook, -this.currentBoom);
     cam.position.copy(this.tmpPos);
     cam.lookAt(this.tmpPos.x + this.tmpLook.x, this.tmpPos.y + this.tmpLook.y, this.tmpPos.z + this.tmpLook.z);
+    // Feel: a sprint widens the view; a dodge rolls the camera a few degrees into the roll.
+    const sprintFov = this.target.sprinting && this.target.horizontalSpeed > 4 ? 5 : 0;
+    this.fovExtra = snap ? sprintFov : damp(this.fovExtra, sprintFov, 4, dt);
+    if (!this.target.holdingWeapon) {
+      const fov = 58 + this.fovExtra;
+      if (Math.abs(cam.fov - fov) > 0.05) {
+        cam.fov = fov;
+        cam.updateProjectionMatrix();
+      }
+    }
+    const dp = this.target.dodgeProgress ?? 0;
+    const wantRoll = dp > 0 ? Math.sin(dp * Math.PI) * 0.05 * Math.sign(Math.sin(this.target.dodgeAngle ?? 0) || 1) : 0;
+    this.roll = snap ? wantRoll : damp(this.roll, wantRoll, 14, dt);
+    if (Math.abs(this.roll) > 1e-4) cam.rotateZ(this.roll);
   }
 
   /** Flat forward vector of the camera (for movement relative to view). */

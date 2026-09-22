@@ -108,6 +108,14 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 /* Map screen */
 .mapscreen { position: absolute; inset: 0; z-index: 30; }
 .mapscreen canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
+.rotate-gate { position: fixed; inset: 0; z-index: 200; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 40%, #16223a 0%, #070b14 70%); color: var(--ink); text-align: center; pointer-events: auto; }
+.rotate-gate-inner { padding: 24px; max-width: 320px; }
+.rotate-gate h2 { font-family: var(--display); font-weight: 400; letter-spacing: 0.08em; color: var(--gold); font-size: 22px; margin: 18px 0 8px; }
+.rotate-gate p { color: var(--muted); font-size: 15px; margin: 0; }
+.rotate-gate-phone { width: 46px; height: 82px; margin: 0 auto; border: 3px solid var(--gold); border-radius: 9px; position: relative; animation: rotate-phone 2.4s ease-in-out infinite; }
+.rotate-gate-phone::after { content: ''; position: absolute; left: 50%; bottom: 6px; width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; border: 2px solid var(--gold); }
+@keyframes rotate-phone { 0%, 20% { transform: rotate(0deg); } 55%, 80% { transform: rotate(-90deg); } 100% { transform: rotate(0deg); } }
+.map-close { position: absolute; right: calc(16px + env(safe-area-inset-right)); top: calc(14px + env(safe-area-inset-top)); padding: 10px 18px; font-family: var(--display); font-size: 13px; letter-spacing: 0.08em; color: var(--gold); background: rgba(8,12,22,0.7); border: 1px solid rgba(217,179,112,0.5); border-radius: 4px; cursor: pointer; pointer-events: auto; }
 .map-legend { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted); font-size: 13px; pointer-events: none; }
 .map-title { font-family: var(--display); font-size: 18px; letter-spacing: 0.12em; color: var(--gold); }
 
@@ -120,6 +128,7 @@ html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden;
 
 /* Mission HUD */
 .mhud { position: absolute; inset: 0; pointer-events: none; --u: min(1vw, 1.78vh); }
+.mhud.cinematic .mhud-lives, .mhud.cinematic .mhud-lock-hint { opacity: 0; transition: opacity 0.8s; }
 .mhud-lives { position: absolute; top: calc(7.4 * var(--u) + env(safe-area-inset-top)); left: calc(2.4 * var(--u) + env(safe-area-inset-left)); }
 .mhud-hearts { display: flex; gap: calc(0.6 * var(--u)); }
 .mhud-heart { width: calc(2.4 * var(--u)); height: calc(2.4 * var(--u)); color: #e8425a; filter: drop-shadow(0 0 6px rgba(232,66,90,0.7)); transition: color 0.4s, filter 0.4s, transform 0.4s; }

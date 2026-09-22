@@ -46,6 +46,10 @@ const mat = (color: number, roughness = 0.85, metalness = 0): THREE.MeshStandard
  */
 /** Height of the dodge-roll pivot above the feet. */
 const ROLL_PIVOT_Y = 0.62;
+/** Leg bone lengths (hip → knee, knee → sole) and the planted share of each foot's cycle. */
+const THIGH = 0.45;
+const SHIN = 0.48;
+/* stance share and half stride vary with speed: a walk plants long, a sprint barely touches. */
 const TWO_PI = Math.PI * 2;
 const wrapAngle = (a: number): number => Math.atan2(Math.sin(a), Math.cos(a));
 const smoothstep = (t: number): number => t * t * (3 - 2 * t);
@@ -71,8 +75,15 @@ export class CharacterMesh {
   private braid: THREE.Group | null = null;
   private readonly scarfTails: THREE.Mesh[] = [];
   private readonly scarfTailBase: Float32Array[] = [];
-  private phase = 0;
-  private blend = { walk: 0, jog: 0, sprint: 0, crouch: 0, air: 0, land: 0, dodge: 0 };
+  /** Gait cycle in steps (the left foot at 0, the right at 0.5); advances by distance travelled. */
+  private gait = 0;
+  private blend = { walk: 0, jog: 0, sprint: 0, crouch: 0, air: 0, land: 0, dodge: 0, pray: 0 };
+  /** Kneel with joined hands (the climax): blended in over ~1.5 s while true. */
+  pray = false;
+  /** World point the head turns toward when no weapon is out (the villain during its card); null to look ahead. */
+  lookTarget: THREE.Vector3 | null = null;
+  private lookYaw = 0;
+  private lookPitch = 0;
   private breathe = 0;
   private legYaw = 0;
   private lean = 0;
@@ -356,9 +367,10 @@ export class CharacterMesh {
       air: state === 'air' && !dodging ? 1 : 0,
       land: state === 'land-hard' ? 1 : state === 'land-soft' ? 0.4 : 0,
       dodge: dodging ? 1 : 0,
+      pray: this.pray ? 1 : 0,
     };
     const b = this.blend;
-    for (const k of Object.keys(b) as Array<keyof typeof b>) b[k] = damp(b[k], tgt[k], k === 'land' ? 18 : k === 'dodge' ? 22 : 10, dt);
+    for (const k of Object.keys(b) as Array<keyof typeof b>) b[k] = damp(b[k], tgt[k], k === 'land' ? 18 : k === 'dodge' ? 22 : k === 'pray' ? 2.2 : 10, dt);
     this.recoil = Math.max(0, this.recoil - dt * 11);
     this.flinchAmount = Math.max(0, this.flinchAmount - dt * 4);
     this.speedSmooth = damp(this.speedSmooth, horizontalSpeed, 6, dt);
@@ -374,23 +386,65 @@ export class CharacterMesh {
     const legTarget = horizontalSpeed > 0.3 ? clamp(backward ? wrapAngle(mo.moveAngle + Math.PI) : mo.moveAngle, -1.2, 1.2) : 0;
     this.legYaw = damp(this.legYaw, legTarget, 10, dt);
     this.legs.rotation.y = this.legYaw;
-    const stride = lerp(1.1, 1.9, clamp(horizontalSpeed / sprintSpeed, 0, 1));
-    if (horizontalSpeed > 0.05 && !dodging) this.phase += (horizontalSpeed / stride) * TWO_PI * dt * (backward ? -1 : 1);
-    else this.phase = damp(this.phase, Math.round(this.phase / Math.PI) * Math.PI, 8, dt);
-    const p = this.phase;
+    // Feet plant: each foot has a stance (planted, moving back under the body at exactly the body's
+    // speed) and a swing (an arc forward). The cycle advances by distance, so nothing slides. The legs
+    // are then solved with two-bone IK to reach the foot, which gives real knee bends and heel strikes.
+    const speedK = clamp(horizontalSpeed / sprintSpeed, 0, 1);
+    const stance = lerp(0.62, 0.38, speedK);
+    const half = lerp(0.42, 0.78, speedK); // the foot travels from +half to −half while planted
+    if (horizontalSpeed > 0.05 && !dodging) this.gait += ((stance * horizontalSpeed) / (2 * half)) * dt * (backward ? -1 : 1);
+    else {
+      // Coming to rest: finish the step to the nearest planted pose (both feet under the body).
+      const rest = Math.round(this.gait * 2) / 2;
+      this.gait = damp(this.gait, rest, 8, dt);
+    }
+    const p = this.gait * TWO_PI;
     const s = Math.sin(p);
-    const c = Math.cos(p);
+    const sa = Math.cos(p); // arm / hip swing: at its extreme when a foot lands
     const swing = lerp(0.44, 0.98, b.sprint) * moving * (1 - b.crouch * 0.5);
-    // Thighs swing like pendulums; each knee flexes through its forward swing and lands straight.
-    const kneeL = Math.max(0, c) * swing * 1.35 + Math.max(0, -s) * swing * 0.25;
-    const kneeR = Math.max(0, -c) * swing * 1.35 + Math.max(0, s) * swing * 0.25;
+    const footLift = lerp(0.07, 0.16, speedK);
     const tuck = b.air * 0.55 + b.dodge * 1.1;
-    this.lThigh.rotation.x = s * swing - b.air * 0.35 - b.dodge * 1.2 + b.crouch * -0.6;
-    this.rThigh.rotation.x = -s * swing - b.air * 0.2 - b.dodge * 1.2 + b.crouch * -0.6;
-    this.lThigh.rotation.z = 0.02 + b.air * 0.06;
-    this.rThigh.rotation.z = -0.02 - b.air * 0.06;
-    this.lShin.rotation.x = kneeL + 0.08 + b.crouch * 0.9 + tuck + b.land * 0.5;
-    this.rShin.rotation.x = kneeR + 0.08 + b.crouch * 0.9 + tuck + b.land * 0.5;
+    const kneel = b.pray;
+    // Body height this frame (the IK needs it): bob at double time, drops for crouch / landing / roll / kneel.
+    const bob = Math.abs(s) * lerp(0.02, 0.055, b.sprint) * moving;
+    const hipsBase = (this.variant === 'female' ? 0.93 : 0.95) - ROLL_PIVOT_Y;
+    this.hips.position.y = hipsBase + bob - b.crouch * 0.42 - b.land * 0.22 - b.dodge * 0.3 - kneel * 0.44;
+    const hipsHeight = ROLL_PIVOT_Y + this.hips.position.y; // hip joint height above the soles
+    const gaitWeight = clamp(1 - b.air - b.dodge - b.pray - b.crouch, 0, 1);
+    const legsIK: Array<[THREE.Group, THREE.Group, number]> = [
+      [this.lThigh, this.lShin, 0],
+      [this.rThigh, this.rShin, 0.5],
+    ];
+    for (const [thigh, shin, offset] of legsIK) {
+      // Foot position along the direction of travel (+z is forward in the rig).
+      const phi = ((this.gait + offset) % 1 + 1) % 1;
+      let z: number;
+      let y = 0;
+      if (phi < stance) z = half - (2 * half * phi) / stance;
+      else {
+        const u = (phi - stance) / (1 - stance);
+        z = -half + 2 * half * smoothstep(u);
+        y = footLift * Math.sin(Math.PI * u);
+      }
+      z *= moving;
+      y *= moving;
+      // Two-bone IK in the sagittal plane: hip → knee (THIGH) → sole (SHIN).
+      const ty = -(hipsHeight - 0.02) + y;
+      const tz = z;
+      const d = clamp(Math.hypot(ty, tz), Math.abs(THIGH - SHIN) + 0.01, THIGH + SHIN - 0.005);
+      const gamma = Math.atan2(tz, -ty);
+      const delta = Math.acos(clamp((THIGH * THIGH + d * d - SHIN * SHIN) / (2 * THIGH * d), -1, 1));
+      const knee = Math.PI - Math.acos(clamp((THIGH * THIGH + SHIN * SHIN - d * d) / (2 * THIGH * SHIN), -1, 1));
+      // Positive x rotation swings backward, so a forward foot (+gamma) is a negative thigh angle.
+      const ikThigh = -(gamma + delta);
+      const ikShin = knee;
+      // Pose-driven legs for the air, the roll, the crouch and the kneel.
+      const poseThigh = (-b.air * 0.3 - b.dodge * 1.2 + b.crouch * -0.6) * (1 - kneel) + kneel * 0.1 + (offset === 0 ? -b.air * 0.1 : 0);
+      const poseShin = (0.08 + b.crouch * 0.9 + tuck + b.land * 0.5) * (1 - kneel) + kneel * 1.62;
+      thigh.rotation.x = ikThigh * gaitWeight + poseThigh * (1 - gaitWeight);
+      shin.rotation.x = ikShin * gaitWeight + poseShin * (1 - gaitWeight);
+      thigh.rotation.z = (offset === 0 ? 1 : -1) * (0.02 + b.air * 0.06 + kneel * 0.08);
+    }
 
     const armSwing = swing * 0.75;
     const recoilBack = this.recoil * 0.22;
@@ -401,7 +455,7 @@ export class CharacterMesh {
       const a = this.aim;
       // Camera pitch is positive looking down; the arms lower with it (less negative x).
       const pitch = a ? a.pitch * 0.75 : 0;
-      const bobArm = Math.sin(p) * 0.03 * moving - this.flinchAmount * 0.25;
+      const bobArm = s * 0.03 * moving - this.flinchAmount * 0.25;
       const bow = a?.weapon === 'dhanush';
       const draw = bow ? a.draw : 0;
       const ads = a?.aiming ?? 0;
@@ -424,33 +478,39 @@ export class CharacterMesh {
       // Walking arms swing opposite the legs with the elbow bending on the forward swing; at a sprint
       // the elbows stay bent and pump. In the air the arms lift; in a roll they cross over the chest.
       const pump = b.sprint;
-      this.lUpperArm.rotation.x = -s * armSwing * (1 - pump * 0.35) + b.air * -0.7 + pump * 0.15 - b.dodge * 0.9 - this.flinchAmount * 0.6;
-      this.rUpperArm.rotation.x = s * armSwing * (1 - pump * 0.35) + b.air * -0.7 + pump * 0.15 - b.dodge * 0.9 - this.flinchAmount * 0.6;
+      this.lUpperArm.rotation.x = sa * armSwing * (1 - pump * 0.35) + b.air * -0.7 + pump * 0.15 - b.dodge * 0.9 - this.flinchAmount * 0.6;
+      this.rUpperArm.rotation.x = -sa * armSwing * (1 - pump * 0.35) + b.air * -0.7 + pump * 0.15 - b.dodge * 0.9 - this.flinchAmount * 0.6;
       this.lUpperArm.rotation.z = 0.14 + pump * 0.12 + b.air * 0.5 - b.dodge * 0.3;
       this.rUpperArm.rotation.z = -0.14 - pump * 0.12 - b.air * 0.5 + b.dodge * 0.3;
-      this.lForearm.rotation.x = -0.3 - Math.max(0, -s) * armSwing * 0.9 - pump * 1.3 - b.dodge * 1.4 - b.air * 0.3;
-      this.rForearm.rotation.x = -0.3 - Math.max(0, s) * armSwing * 0.9 - pump * 1.3 - b.dodge * 1.4 - b.air * 0.3;
+      this.lForearm.rotation.x = -0.3 - Math.max(0, -sa) * armSwing * 0.9 - pump * 1.3 - b.dodge * 1.4 - b.air * 0.3;
+      this.rForearm.rotation.x = -0.3 - Math.max(0, sa) * armSwing * 0.9 - pump * 1.3 - b.dodge * 1.4 - b.air * 0.3;
+    }
+
+    if (b.pray > 0.001) {
+      // Anjali: the upper arms come forward, the forearms fold up and inward so the palms meet at the chest.
+      const k = b.pray;
+      const mix = (cur: number, to: number): number => cur + (to - cur) * k;
+      this.lUpperArm.rotation.x = mix(this.lUpperArm.rotation.x, -0.55);
+      this.rUpperArm.rotation.x = mix(this.rUpperArm.rotation.x, -0.55);
+      this.lUpperArm.rotation.z = mix(this.lUpperArm.rotation.z, 0.42);
+      this.rUpperArm.rotation.z = mix(this.rUpperArm.rotation.z, -0.42);
+      this.lForearm.rotation.x = mix(this.lForearm.rotation.x, -2.05);
+      this.rForearm.rotation.x = mix(this.rForearm.rotation.x, -2.05);
     }
 
     // Body: double-time bob, hip sway and roll, crouch, land squash, idle breathing and weight shift.
     this.breathe = Math.sin(elapsed * 1.4) * 0.5 + 0.5;
     const idle = 1 - moving;
-    const bob = Math.abs(s) * lerp(0.02, 0.055, b.sprint) * moving;
-    const crouchDrop = b.crouch * 0.42;
-    const landDrop = b.land * 0.22;
-    const dodgeDrop = b.dodge * 0.3;
-    const hipsBase = (this.variant === 'female' ? 0.93 : 0.95) - ROLL_PIVOT_Y;
-    this.hips.position.y = hipsBase + bob - crouchDrop - landDrop - dodgeDrop;
-    this.hips.position.x = s * 0.018 * moving + Math.sin(elapsed * 0.6) * 0.012 * idle;
-    this.hips.rotation.y = -s * 0.09 * moving;
-    this.hips.rotation.z = -s * 0.05 * moving + Math.sin(elapsed * 0.6) * 0.02 * idle;
+    this.hips.position.x = sa * 0.018 * moving + Math.sin(elapsed * 0.6) * 0.012 * idle;
+    this.hips.rotation.y = -sa * 0.09 * moving;
+    this.hips.rotation.z = -sa * 0.05 * moving + Math.sin(elapsed * 0.6) * 0.02 * idle;
     this.hips.rotation.x = 0;
-    this.torso.rotation.x = lerp(0.03, 0.24, b.sprint) * moving + this.lean + b.crouch * 0.55 + b.land * 0.35 + b.dodge * 0.7 + idle * this.breathe * 0.015 - this.flinchAmount * 0.18 - this.recoil * 0.03;
-    this.torso.rotation.y = s * 0.11 * moving;
+    this.torso.rotation.x = lerp(0.03, 0.24, b.sprint) * moving + this.lean + b.crouch * 0.55 + b.land * 0.35 + b.dodge * 0.7 + idle * this.breathe * 0.015 - this.flinchAmount * 0.18 - this.recoil * 0.03 + kneel * 0.16;
+    this.torso.rotation.y = sa * 0.11 * moving;
     this.torso.rotation.z = -this.hips.rotation.z * 0.8 + this.turnLean;
     this.torso.scale.y = 1 + idle * this.breathe * 0.012;
     // The head stays level and looks where the body goes; idle, it glances around slowly.
-    this.head.rotation.x = -this.torso.rotation.x * 0.6 - this.flinchAmount * 0.25;
+    this.head.rotation.x = -this.torso.rotation.x * 0.6 - this.flinchAmount * 0.25 + kneel * 0.42;
     this.head.rotation.y = -this.torso.rotation.y * 0.8 + this.legYaw * 0.15 + Math.sin(elapsed * 0.35) * 0.08 * idle;
     this.head.rotation.z = -this.torso.rotation.z * 0.6;
     if (this.holdWeapon && this.aim) {
@@ -458,6 +518,22 @@ export class CharacterMesh {
       this.torso.rotation.x += this.aim.pitch * 0.12;
       this.head.rotation.x += this.aim.pitch * 0.35;
     }
+    // Look-at: with no weapon out the head (and a little of the torso) turns toward the target.
+    let wantYaw = 0;
+    let wantPitch = 0;
+    if (this.lookTarget && !this.holdWeapon && !this.pray) {
+      const dx = this.lookTarget.x - this.root.position.x;
+      const dz = this.lookTarget.z - this.root.position.z;
+      const dy = this.lookTarget.y - (this.root.position.y + 1.5);
+      // The rig faces +z; yaw here is relative to the root's heading.
+      wantYaw = clamp(wrapAngle(Math.atan2(dx, dz) - this.root.rotation.y), -1.1, 1.1);
+      wantPitch = clamp(-Math.atan2(dy, Math.hypot(dx, dz)), -0.5, 0.45);
+    }
+    this.lookYaw = damp(this.lookYaw, wantYaw, 5, dt);
+    this.lookPitch = damp(this.lookPitch, wantPitch, 5, dt);
+    this.head.rotation.y += this.lookYaw * 0.75;
+    this.head.rotation.x += this.lookPitch * 0.8;
+    this.torso.rotation.y += this.lookYaw * 0.18;
 
     // Dodge roll: one full turn around the mid-body pivot, in the direction of the dodge.
     if (dodging) {
@@ -492,7 +568,7 @@ export class CharacterMesh {
     // The braid swings with the stride and streams back at speed.
     if (this.braid) {
       this.braid.rotation.x = -0.15 - lift * 0.55 - b.air * 0.4;
-      this.braid.rotation.z = Math.sin(elapsed * 2.6) * 0.04 + s * 0.12 * moving;
+      this.braid.rotation.z = Math.sin(elapsed * 2.6) * 0.04 + sa * 0.12 * moving;
     }
   }
 

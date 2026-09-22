@@ -111,6 +111,11 @@ export class MissionHUD implements System {
     this.bossFill.classList.toggle('shielded', shielded);
     this.bossText.textContent = shielded ? `${Math.ceil(hp)} / ${max}  ·  SHIELDED` : `${Math.ceil(hp)} / ${max}`;
   }
+  /** Cinematic: hearts, name and health step out of the frame (banners still show). */
+  setCinematic(v: boolean): void {
+    this.root.classList.toggle('cinematic', v);
+  }
+
   setWeaponVisible(v: boolean): void {
     this.ammoEl.hidden = !v;
     this.crosshair.hidden = !v;

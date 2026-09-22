@@ -182,6 +182,13 @@ export class GltfAsura implements AsuraAvatar {
   hitFlash(): void {
     this.flash = 1;
   }
+  setDissolve(k: number): void {
+    for (const m of this.materials) {
+      m.transparent = true;
+      m.opacity = 1 - k;
+      m.depthWrite = k < 0.6;
+    }
+  }
   setEnraged(on: boolean): void {
     this.enraged = on;
   }
